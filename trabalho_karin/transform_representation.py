@@ -1,8 +1,6 @@
 import json
 import time
-
-
-
+import helper
 
 date_pattern = "%Y-%m-%d"
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
@@ -25,6 +23,9 @@ with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
     for line in patients_w_sepsis_handler:
         patient = patients_w_sepsis_handler.readline()
         patient = json.load(open(line.strip(), 'r'))
-        print(patient['admittime'])
-        filtered_object = get_data_from_admitday(patient['prescriptions'], patient['admittime'], key='startdate', date=False)
+        filtered_object = get_data_from_admitday(patient['chartevents'], patient['admittime'], key='charttime', date=False)
+        # print(filtered_object)
+        for event in filtered_object:
+            if int(event['ITEMID']) in helper.FEATURES_ITEMS_IDS:
+                print(event)
         break
