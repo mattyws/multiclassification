@@ -1,4 +1,5 @@
 import json
+import os
 import time
 import helper
 
@@ -19,13 +20,18 @@ def get_data_from_admitday(json_object, date_str, key="charttime", date=False):
         # break
     return filtered_objects
 
+print(len(helper.FEATURES_ITEMS_IDS) + len(helper.FEATURES_LABITEMS_ID))
 with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
+    all_size = 0
     for line in patients_w_sepsis_handler:
-        patient = patients_w_sepsis_handler.readline()
-        patient = json.load(open(line.strip(), 'r'))
-        filtered_object = get_data_from_admitday(patient['chartevents'], patient['admittime'], key='charttime', date=False)
-        # print(filtered_object)
-        for event in filtered_object:
-            if int(event['ITEMID']) in helper.FEATURES_ITEMS_IDS:
-                print(event)
-        break
+        all_size += os.path.getsize(line.strip())
+        # break
+        # patient = patients_w_sepsis_handler.readline()
+        # patient = json.load(open(line.strip(), 'r'))
+        # filtered_object = get_data_from_admitday(patient['chartevents'], patient['admittime'], key='charttime', date=False)
+        # # print(filtered_object)
+        # for event in filtered_object:
+        #     if int(event['ITEMID']) in helper.FEATURES_ITEMS_IDS:
+        #         print(event)
+        # break
+    print(all_size)
