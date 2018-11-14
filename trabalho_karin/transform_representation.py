@@ -91,11 +91,86 @@ def transform_equal_columns(row, features_type, prefix=""):
     return row
 
 
+def diastolic_systolic_pressure(row, prefix):
+    # Using variables to make more readable and for performance purpose
+    blood_pressure = prefix + '220052'
+    BPs_L = prefix + '224167'
+    BPs_R = prefix + '227243'
+    BPd_R = prefix + '227242'
+    BPd_L = prefix + '224643'
+    has_BPs_L = BPs_L in row.keys()
+    has_BPs_R = BPs_R in row.keys()
+    has_BPd_R = BPd_R in row.keys()
+    has_BPd_L = BPd_L in row.keys()
+
+    # Check if this rows has any of the known mean pressure ids, if it has, drop any manual pressure and return the row
+    for key in helper.PRESSURE_IDS:
+        if prefix+key in row.keys():
+            if has_BPd_L:
+                row.pop(BPd_L)
+            if has_BPs_L:
+                row.pop(BPs_L)
+            if has_BPd_R:
+                row.pop(BPd_R)
+            elif has_BPs_R:
+                row.pop(BPs_R)
+            return row
+
+    # It doesn't has any of the known mean pressure ids, check if has the manual pressure for both left and right arms, if it has,
+    # try to get the one with the higher quantity of values
+    if has_BPs_R and has_BPs_L:
+        if len(row[BPs_R]) > len(row[BPs_L]):
+            # Drop the lowest sized, and if drop the other measure for the same arm
+            row.pop(BPs_L)
+            if has_BPd_L:
+                row.pop(BPd_L)
+        else:
+            # Drop the lowest sized, and if drop the other measure for the same arm
+            row.pop(BPs_R)
+            if has_BPd_R:
+                row.pop(BPd_R)
+
+    # If it has the both measures for right arm,
+    # add the mean to the main id for blood pressure,
+    # and remove the measures for manual
+    if has_BPs_R and has_BPd_R:
+        print("Has both")
+        for i in range(len(row[BPs_R])):
+            if row[blood_pressure] is None:
+                row[blood_pressure] = []
+            mean_pressure = helper.MEAN_PRESSURE( float(row[BPd_R][i]), float(row[BPs_R][i]) )
+            row[blood_pressure].append(mean_pressure)
+        row.pop(BPd_R)
+        row.pop(BPs_R)
+    else:
+        if has_BPd_R:
+            row.pop(BPd_R)
+        if has_BPs_R:
+            row.pop(BPs_R)
+
+    # The same as before but for the left arm
+    if has_BPs_L and has_BPd_L:
+        print("Has both")
+        for i in range(len(row[BPs_L])):
+            if row[blood_pressure] is None:
+                row[blood_pressure] = []
+            mean_pressure = helper.MEAN_PRESSURE( float(row[BPd_L][i]), float(row[BPs_L][i]) )
+            row[blood_pressure].append(mean_pressure)
+        row.pop(BPd_L)
+        row.pop(BPs_L)
+    else:
+        if has_BPd_L:
+            row.pop(BPd_L)
+        if has_BPs_L:
+            row.pop(BPs_L)
+    return row
+
+
 def transform_to_row(filtered_events, features_type, prefix=""):
     row = dict()
     for event in filtered_events:
         itemid = event[itemid_label]
-        event_type = features_type[itemid]
+        event_type  = features_type[itemid]
         if prefix+itemid not in row.keys() and event_type == helper.MEAN_LABEL :
             row[prefix+itemid] = []
         elif event_type == helper.CATEGORICAL_LABEL:
@@ -105,7 +180,10 @@ def transform_to_row(filtered_events, features_type, prefix=""):
 
         if event_type == helper.MEAN_LABEL :
             try:
-                row[prefix+itemid].append(float(event[valuenum_label]))
+                if itemid in helper.FARENHEIT_ID:
+                    row[prefix + itemid].append(helper.CELCIUS(float(event[valuenum_label])))
+                else:
+                    row[prefix+itemid].append(float(event[valuenum_label]))
             except:
                 row[prefix + itemid].append(0)
         elif event_type == helper.CATEGORICAL_LABEL:
@@ -115,6 +193,7 @@ def transform_to_row(filtered_events, features_type, prefix=""):
     for key in features_type.keys():
         if prefix+key not in row:
             row[prefix+key] = None
+    row = diastolic_systolic_pressure(row, prefix)
     row = transform_equal_columns(row, features_type, prefix=prefix)
     row = transform_values(row, features_type)
     row = split_into_columns(row, features_type)
@@ -157,12 +236,12 @@ with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
     filtered_objects_total_size = 0
     table = []
     not_processes_files = 0
+    patients_with_pressure = 0
     for line in patients_w_sepsis_handler:
         print(line.strip())
         all_size += os.path.getsize(line.strip())
         patient = json.load(open(line.strip(), 'r'))
         if microbiologyevent_label in patient.keys():
-
             filtered_chartevents_object = []
             if 'chartevents' in patient.keys():
                 filtered_chartevents_object = get_data_from_admitday(patient['chartevents'], patient['admittime'],
