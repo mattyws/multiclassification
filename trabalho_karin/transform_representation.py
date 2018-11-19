@@ -25,13 +25,12 @@ interpretation_label = "interpretation"
 org_item_label = "ORG_ITEMID"
 microbiologyevent_label = "microbiologyevents"
 
-def get_itemid_from_key(key):
-    return key.split("_")[1]
+
 
 
 def transform_values(row, features_type):
     for key in row:
-        itemid = get_itemid_from_key(key)
+        itemid = helper.get_itemid_from_key(key)
         if row[key] is not None and features_type[itemid] == helper.MEAN_LABEL:
             mean = 0
             std = 0
@@ -50,7 +49,7 @@ def transform_values(row, features_type):
 def split_into_columns(row, features_type):
     new_row = dict()
     for key in row:
-        itemid = get_itemid_from_key(key)
+        itemid = helper.get_itemid_from_key(key)
         if features_type[itemid] == helper.MEAN_LABEL:
             if row[key] is not None:
                 for key2 in row[key]:
@@ -73,7 +72,7 @@ def has_equal(itemid):
 def transform_equal_columns(row, features_type, prefix=""):
     keys_to_remove = []
     for key in row.keys():
-        itemid = get_itemid_from_key(key)
+        itemid = helper.get_itemid_from_key(key)
         standard_itemid = has_equal(itemid)
         if standard_itemid != itemid:
             if row[key] is not None:

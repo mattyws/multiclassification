@@ -1,3 +1,65 @@
+import csv
+import numpy as np
+import pandas
+from scipy.stats import randint as sp_randint
+from scipy.stats import expon as sp_expon
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from sklearn.tree.tree import DecisionTreeClassifier
+
+
+def get_itemid_from_key(key):
+    return key.split("_")[1]
+
+def load_csv_file(csv_file_path, class_label):
+    data = pandas.read_csv(csv_file_path)
+    classes = data[class_label]
+    data = data.drop(class_label, axis=1)
+    return data, classes
+
+def generate_random_numbers_tuple():
+    while True:
+        result = []
+        size = sp_randint(1, 10).rvs()
+        for i in range(size):
+            result.append(sp_expon(scale=50).rvs())
+        yield tuple(result)
+
+class RandIntMatrix(object):
+    def __init__(self, low, high):
+        self.low = low
+        self.high = high
+        self.shape = sp_randint(1, 3).rvs()
+
+    def rvs(self, random_state=None):
+        return sp_randint(self.low, self.high).rvs(size=self.shape)
+
+# generate_random_numbers_tuple()
+
+PARAM_DISTS = {
+    type(DecisionTreeClassifier()): {
+        'criterion': ['gini', 'entropy'],
+        'max_depth': sp_randint(3, 8)
+    },
+    type(SVC()): {
+        'C': sp_expon(scale=100),
+        'gamma': sp_expon(scale=.1),
+        'max_iter': [300],
+        'kernel': ['rbf', 'linear', 'sigmoid'],
+    },
+    type(MLPClassifier()): {
+        'hidden_layer_sizes': RandIntMatrix(50, 300),
+        'max_iter': [300],
+        'activation': ['relu', 'tanh', 'logistic']
+    },
+    type(RandomForestClassifier()): {
+        'n_estimators': sp_randint(10, 25),
+        'criterion': ['gini', 'entropy'],
+        'max_depth': [3, 5, 7, None]
+    }
+}
+
 YESNO_LABEL = "yes/no"
 CATEGORICAL_LABEL = "categorical"
 MEAN_LABEL = "mean"
