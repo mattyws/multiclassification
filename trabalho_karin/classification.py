@@ -1,6 +1,7 @@
 import csv
 import itertools
 import numpy
+import pandas
 from sklearn import svm
 from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
@@ -8,6 +9,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network.multilayer_perceptron import MLPClassifier
+from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing.label import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 import numpy as np
@@ -39,18 +41,21 @@ def preprocess(data):
             encoder.fit(data[column].tolist())
             data[column] = encoder.transform(data[column])
         elif data.dtypes[column] == float:
-            data[column].fillna(-1, inplace=True)
+            data[column].fillna(0, inplace=True)
         elif data.dtypes[column] == int:
             data[column].fillna(0, inplace=True)
     return data
 
+def normalize(df):
+    normalized_df = (df - df.mean()) / df.std()
+    return normalized_df
 
 def preprocess_classes(classes):
     encoder = LabelEncoder()
     encoder.fit(classes)
     return encoder.transform(classes)
 
-csv_file_path = 'sepsis_pre_processado.csv'
+csv_file_path = 'sepsis_file.csv'
 class_label = "organism_resistence"
 
 data, classes = helper.load_csv_file(csv_file_path, class_label)
@@ -59,13 +64,16 @@ classes = preprocess_classes(classes)
 
 data, search_data, classes, search_classes = train_test_split(data, classes, test_size=.20, stratify=classes)
 
-classifiers = [MLPClassifier(), DecisionTreeClassifier(), svm.SVC(), RandomForestClassifier()]
+classifiers = [MLPClassifier()]#, DecisionTreeClassifier(), svm.SVC(), RandomForestClassifier()]
 search_iterations = 40
 i = 0
+
+
 while i < len(classifiers):
     print("======= Param search {} ======".format(type(classifiers[i])))
     random_search = RandomizedSearchCV(classifiers[i], param_distributions=helper.PARAM_DISTS[type(classifiers[i])],
                                        n_iter=search_iterations, cv=5)
+    search_data = normalize(search_data)
     random_search.fit(search_data, search_classes)
     # report(random_search.cv_results_)
     classifiers[i].set_params(**random_search.best_params_)
