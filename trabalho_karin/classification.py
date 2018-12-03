@@ -124,7 +124,7 @@ for train_index, test_index in kf.split(data):
         kfold_result[type(classifier)] = accuracy
         i+=1
     results.append(kfold_result)
-with open('result_{}.csv'.format(csv_file_path.split('.')[0]), 'w') as result_file_handler:
+with open('results/result_{}.csv'.format(csv_file_path.split('.')[0]), 'w') as result_file_handler:
     writer = csv.DictWriter(result_file_handler, fieldnames=results[0].keys())
     writer.writeheader()
     for row in results:
