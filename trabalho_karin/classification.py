@@ -36,7 +36,7 @@ def report(results, n_top=3):
 def preprocess(data):
     for column in data:
         if data.dtypes[column] == object:
-            data[column].fillna("", inplace=True)
+            data[column].fillna("Não mensurado", inplace=True)
             encoder = LabelEncoder()
             encoder.fit(data[column].tolist())
             data[column] = encoder.transform(data[column])
@@ -46,16 +46,33 @@ def preprocess(data):
             data[column].fillna(0, inplace=True)
     return data
 
-def normalize(df):
-    normalized_df = (df - df.mean()) / df.std()
-    return normalized_df
+def normalize(df, mean=None, std=None):
+    if mean is None:
+        # mean = df.mean()
+        # std = df.std()
+        # normalized_df = pandas.DataFrame(columns=df.columns)
+        # for column in df.columns:
+        #     if std[column] == 0:
+        #         print(column)
+        #         print("std é 0")
+        #         exit(0)
+        #     normalized_df[column] = (df[column] - mean[column]) / std[column]
+        #     normalized_df[column] = normalized_df[column].values.astype('float')
+        # return normalized_df, (mean, std)
+        normalized_df = (df - df.mean()) / df.std()
+        normalized_df.fillna(0, inplace=True)
+        return normalized_df, (df.mean(), df.std())
+    else:
+        normalized_df = (df - mean) / std
+        normalized_df.fillna(0, inplace=True)
+        return normalized_df, (mean, std)
 
 def preprocess_classes(classes):
     encoder = LabelEncoder()
     encoder.fit(classes)
     return encoder.transform(classes)
 
-csv_file_path = 'sepsis_file.csv'
+csv_file_path = 'sepsis_feature_selection_ga.csv'
 class_label = "organism_resistence"
 
 data, classes = helper.load_csv_file(csv_file_path, class_label)
@@ -64,16 +81,16 @@ classes = preprocess_classes(classes)
 
 data, search_data, classes, search_classes = train_test_split(data, classes, test_size=.20, stratify=classes)
 
-classifiers = [MLPClassifier()]#, DecisionTreeClassifier(), svm.SVC(), RandomForestClassifier()]
+classifiers = [MLPClassifier(), DecisionTreeClassifier(), svm.SVC(), RandomForestClassifier()]
 search_iterations = 40
 i = 0
 
-
+mean_std_pair = None
 while i < len(classifiers):
     print("======= Param search {} ======".format(type(classifiers[i])))
     random_search = RandomizedSearchCV(classifiers[i], param_distributions=helper.PARAM_DISTS[type(classifiers[i])],
                                        n_iter=search_iterations, cv=5)
-    search_data = normalize(search_data)
+    search_data,  mean_std_pair = normalize(search_data)
     random_search.fit(search_data, search_classes)
     # report(random_search.cv_results_)
     classifiers[i].set_params(**random_search.best_params_)
@@ -88,6 +105,8 @@ kf = KFold(n_splits=10)
 results = []
 for train_index, test_index in kf.split(data):
     data_train, data_test = data.iloc[train_index], data.iloc[test_index]
+    data_train, mean_std_pair = normalize(data_train)
+    data_test, mean_std_pair = normalize(data_test, mean=mean_std_pair[0], std=mean_std_pair[1])
     classes_train, classes_test = classes[train_index], classes[test_index]
     kfold_result = dict()
     i = 0
@@ -95,7 +114,12 @@ for train_index, test_index in kf.split(data):
         classifier = classifiers[i]
         print("======= Training {} ======".format(type(classifier)))
         classifier.fit(data_train, classes_train)
-        predicted = classifier.predict(data_test)
+        try:
+            predicted = classifier.predict(data_test)
+        except:
+            for colum in data_test.columns:
+                print(data_test[colum])
+                exit(1)
         accuracy = accuracy_score(classes_test, predicted)
         kfold_result[type(classifier)] = accuracy
         i+=1
