@@ -19,11 +19,21 @@ labitems_prefix = 'lab_'
 items_prefix = 'item_'
 mean_key = 'mean'
 std_key = 'std'
-csv_file_name = "sepsis_file.csv"
+csv_file_name = "sepsis_file2.csv"
 class_label = "organism_resistence"
 interpretation_label = "interpretation"
 org_item_label = "ORG_ITEMID"
 microbiologyevent_label = "microbiologyevents"
+patient_file = 'PATIENTS.csv'
+sofa_file = 'sofa.csv'
+vasopressor_file = 'vaso_flag.csv'
+
+gender_label = 'GENDER'
+ethnicity_label = 'ethnicity'
+age_label = 'age'
+sofa_label = 'sofa'
+birth_label = 'DOB'
+vaso_label = 'vasopressor'
 
 
 
@@ -40,7 +50,7 @@ def transform_values(row, features_type):
             elif len(row[key]) != 0:
                 mean = row[key][0]
                 std = 0
-            row[key] = {mean_key: mean, std_key: std}
+            row[key] = {mean_key: mean } #, std_key: std}
         elif row[key] is not None and features_type[itemid] == helper.CATEGORICAL_LABEL:
                 row[key] = Counter(row[key]).most_common(1)[0][0]
     return row
@@ -53,10 +63,12 @@ def split_into_columns(row, features_type):
         if features_type[itemid] == helper.MEAN_LABEL:
             if row[key] is not None:
                 for key2 in row[key]:
-                    new_row[key+"_"+key2] = row[key][key2]
+                    # new_row[key+"_"+key2] = row[key][key2]
+                    new_row[key] = row[key][key2]
             else:
-                new_row[key+"_"+mean_key] = None
-                new_row[key+"_"+std_key] = 0
+                # new_row[key+"_"+mean_key] = None
+                new_row[key] = None
+                # new_row[key+"_"+std_key] = 0
         else:
             new_row[key] = row[key]
     return new_row
@@ -230,60 +242,102 @@ def get_organism_class(events):
     return "S"
 
 
+def get_patient_age(patient_id, admittime_str):
+    admittime = time.strptime(admittime_str, datetime_pattern)
+    with open(patient_file, 'r') as patient_file_handler:
+        dict_reader = csv.DictReader(patient_file_handler)
+        for row in dict_reader:
+            if row['subject_id'.upper()] == patient_id:
+                dob = time.strptime(row[birth_label], datetime_pattern)
+                difference = admittime.tm_year - dob.tm_year - ((admittime.tm_mon, dob.tm_mday) < (admittime.tm_mon, dob.tm_mday))
+                return difference
+    return None
+
+
+def get_admission_sofa(hadm_id):
+    with open(sofa_file, 'r') as sofa_file_handler:
+        dict_reader = csv.DictReader(sofa_file_handler)
+        for row in dict_reader:
+            if row['hadm_id'] == hadm_id:
+                return row['sofa']
+    return None
+
+
+def get_admission_vasopressor(hadm_id):
+    with open(vasopressor_file, 'r') as vasopressor_file_handler:
+        dict_reader = csv.DictReader(vasopressor_file_handler)
+        for row in dict_reader:
+            if row['hadm_id'] == hadm_id:
+                return row['vaso_flag']
+    return None
+
+
 with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
-    all_size = 0
-    filtered_objects_total_size = 0
-    table = []
-    not_processes_files = 0
-    patients_with_pressure = 0
-    for line in patients_w_sepsis_handler:
-        print(line.strip().split('/')[-1])
-        all_size += os.path.getsize(line.strip())
-        patient = json.load(open(line.strip(), 'r'))
-        if microbiologyevent_label in patient.keys():
-            filtered_chartevents_object = []
-            if 'chartevents' in patient.keys():
-                filtered_chartevents_object = get_data_from_admitday(patient['chartevents'], patient['admittime'],
-                                                                     key='charttime', date=False)
-                filtered_objects_total_size += sys.getsizeof(filtered_chartevents_object)
-
-            # filtered_prescriptions_object = None
-            # if 'prescriptions' in patient.keys():
-            #     filtered_prescriptions_object = get_data_from_admitday(patient['prescriptions'], patient['admittime'],
-            #                                                            key='startdate', date=True)
-            #     filtered_objects_total_size += sys.getsizeof(filtered_prescriptions_object)
-
-            filtered_labevents_object = []
-            if 'labevents' in patient.keys():
-                filtered_labevents_object = get_data_from_admitday(patient['labevents'], patient['admittime'],
-                                                                       key='charttime', date=False)
-                filtered_objects_total_size += sys.getsizeof(filtered_labevents_object)
-
-            new_filtered_chartevents = []
-            for event in filtered_chartevents_object:
-                if event[itemid_label] in helper.FEATURES_ITEMS_LABELS.keys():
-                    new_filtered_chartevents.append(event)
-
-            new_filtered_labevents = []
-            for event in filtered_labevents_object:
-                if event[itemid_label] in helper.FEATURES_LABITEMS_LABELS.keys():
-                    new_filtered_labevents.append(event)
-
-            row_object = transform_to_row(new_filtered_chartevents, helper.FEATURES_ITEMS_TYPE, prefix=items_prefix)
-            row_labevent = transform_to_row(new_filtered_labevents, helper.FEATURES_LABITEMS_TYPE, prefix=labitems_prefix)
-
-            for key in row_labevent.keys():
-                row_object[key] = row_labevent[key]
-            row_object[class_label] = get_organism_class(patient[microbiologyevent_label])
-            table.append(row_object)
-        else:
-            not_processes_files += 1
-    pp.pprint(table)
     with open(csv_file_name, 'w') as csv_file_handler:
-        writer = csv.DictWriter(csv_file_handler, table[0].keys())
-        writer.writeheader()
-        for row in table:
-            writer.writerow(row)
+        csv_writer = None
+        all_size = 0
+        filtered_objects_total_size = 0
+        table = []
+        not_processes_files = 0
+        patients_with_pressure = 0
+        for line in patients_w_sepsis_handler:
+            print(line.strip().split('/')[-1])
+            all_size += os.path.getsize(line.strip())
+            patient = json.load(open(line.strip(), 'r'))
+            if microbiologyevent_label in patient.keys():
+                filtered_chartevents_object = []
+                if 'chartevents' in patient.keys():
+                    filtered_chartevents_object = get_data_from_admitday(patient['chartevents'], patient['admittime'],
+                                                                         key='charttime', date=False)
+                    filtered_objects_total_size += sys.getsizeof(filtered_chartevents_object)
+
+                # filtered_prescriptions_object = None
+                # if 'prescriptions' in patient.keys():
+                #     filtered_prescriptions_object = get_data_from_admitday(patient['prescriptions'], patient['admittime'],
+                #                                                            key='startdate', date=True)
+                #     filtered_objects_total_size += sys.getsizeof(filtered_prescriptions_object)
+
+                filtered_labevents_object = []
+                if 'labevents' in patient.keys():
+                    filtered_labevents_object = get_data_from_admitday(patient['labevents'], patient['admittime'],
+                                                                           key='charttime', date=False)
+                    filtered_objects_total_size += sys.getsizeof(filtered_labevents_object)
+
+                new_filtered_chartevents = []
+                for event in filtered_chartevents_object:
+                    if event[itemid_label] in helper.FEATURES_ITEMS_LABELS.keys():
+                        new_filtered_chartevents.append(event)
+
+                new_filtered_labevents = []
+                for event in filtered_labevents_object:
+                    if event[itemid_label] in helper.FEATURES_LABITEMS_LABELS.keys():
+                        new_filtered_labevents.append(event)
+
+                row_object = transform_to_row(new_filtered_chartevents, helper.FEATURES_ITEMS_TYPE, prefix=items_prefix)
+                row_labevent = transform_to_row(new_filtered_labevents, helper.FEATURES_LABITEMS_TYPE, prefix=labitems_prefix)
+
+                for key in row_labevent.keys():
+                    row_object[key] = row_labevent[key]
+                row_object[class_label] = get_organism_class(patient[microbiologyevent_label])
+                row_object[gender_label] = patient[gender_label]
+                row_object[ethnicity_label] = patient[ethnicity_label]
+                row_object[age_label.lower()] = get_patient_age(patient['subject_id'], patient['admittime'])
+                row_object[sofa_label] = get_admission_sofa(patient['hadm_id'])
+                row_object[vaso_label] = get_admission_vasopressor(patient['hadm_id'])
+                if csv_writer is None:
+                    csv_writer = csv.DictWriter(csv_file_handler, row_object.keys())
+                    csv_writer.writeheader()
+                csv_writer.writerow(row_object)
+                # pp.pprint(row_object)
+                # exit()
+                # table.append(row_object)
+            else:
+                not_processes_files += 1
+    # pp.pprint(table)
+
+
+        # for row in table:
+        #     writer.writerow(row)
 
     print("Number of files that do not had microbiologyevents : {}".format(not_processes_files))
     print("Size of files processed : {} bytes".format(all_size))

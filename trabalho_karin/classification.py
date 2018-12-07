@@ -16,22 +16,10 @@ import numpy as np
 
 from trabalho_karin import helper
 
-def write_on_log(text):
+def write_on_log(file, text):
     print(text)
-    with open('result.log', 'a+') as result_file_handler:
+    with open("log_{}".format(file), 'a+') as result_file_handler:
         result_file_handler.write(text+'\n')
-
-# Utility function to report best scores
-def report(results, n_top=3):
-    for i in range(1, n_top + 1):
-        candidates = np.flatnonzero(results['rank_test_score'] == i)
-        for candidate in candidates:
-            write_on_log("Model with rank: {0}".format(i))
-            write_on_log("Mean validation score: {0:.3f} (std: {1:.3f})".format(
-                  results['mean_test_score'][candidate],
-                  results['std_test_score'][candidate]))
-            write_on_log("Parameters: {0}".format(results['params'][candidate]))
-            write_on_log("")
 
 def preprocess(data):
     for column in data:
@@ -46,26 +34,10 @@ def preprocess(data):
             data[column].fillna(0, inplace=True)
     return data
 
-def normalize(df, mean=None, std=None):
-    if mean is None:
-        # mean = df.mean()
-        # std = df.std()
-        # normalized_df = pandas.DataFrame(columns=df.columns)
-        # for column in df.columns:
-        #     if std[column] == 0:
-        #         print(column)
-        #         print("std é 0")
-        #         exit(0)
-        #     normalized_df[column] = (df[column] - mean[column]) / std[column]
-        #     normalized_df[column] = normalized_df[column].values.astype('float')
-        # return normalized_df, (mean, std)
-        normalized_df = (df - df.mean()) / df.std()
-        normalized_df.fillna(0, inplace=True)
-        return normalized_df, (df.mean(), df.std())
-    else:
-        normalized_df = (df - mean) / std
-        normalized_df.fillna(0, inplace=True)
-        return normalized_df, (mean, std)
+def normalize(df, mean, std):
+    normalized_df = (df - mean) / std
+    normalized_df.fillna(0, inplace=True)
+    return normalized_df
 
 def preprocess_classes(classes):
     encoder = LabelEncoder()
@@ -92,21 +64,22 @@ while i < len(classifiers):
                                        n_iter=search_iterations, cv=5)
     search_data,  mean_std_pair = normalize(search_data)
     random_search.fit(search_data, search_classes)
-    # report(random_search.cv_results_)
     classifiers[i].set_params(**random_search.best_params_)
     i += 1
-write_on_log("========== Begin algorithm params =========")
+write_on_log(csv_file_path.split('.')[0], "========== Begin algorithm params =========")
 for classifier in classifiers:
-    write_on_log(str(type(classifier)))
-    write_on_log(str(classifier.get_params()))
-write_on_log("========== End algorithm params =========")
+    write_on_log(csv_file_path.split('.')[0], str(type(classifier)))
+    write_on_log(csv_file_path.split('.')[0], str(classifier.get_params()))
+write_on_log(csv_file_path.split('.')[0], "========== End algorithm params =========")
 
 kf = KFold(n_splits=10)
 results = []
 for train_index, test_index in kf.split(data):
     data_train, data_test = data.iloc[train_index], data.iloc[test_index]
-    data_train, mean_std_pair = normalize(data_train)
-    data_test, mean_std_pair = normalize(data_test, mean=mean_std_pair[0], std=mean_std_pair[1])
+    mean = data_train.mean()
+    std = data_train.std()
+    data_train = normalize(data_train, mean, std)
+    data_test = normalize(data_test, mean, std)
     classes_train, classes_test = classes[train_index], classes[test_index]
     kfold_result = dict()
     i = 0
