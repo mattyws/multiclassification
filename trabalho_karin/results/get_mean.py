@@ -8,7 +8,7 @@ with open(mean_file, 'w') as mean_file_handler:
     dict_writer = None
     means = []
     for file in files:
-        if '.csv' in file and file != mean_file:
+        if file.startswith('result_') and '.csv' in file and file != mean_file:
             with open(file, 'r') as file_handler:
                 data = pd.read_csv(file_handler)
                 data_means = data.mean() * 100

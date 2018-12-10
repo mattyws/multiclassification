@@ -49,8 +49,8 @@ PARAM_DISTS = {
         'kernel': ['rbf', 'linear', 'sigmoid'],
     },
     type(MLPClassifier()): {
-        'hidden_layer_sizes': RandIntMatrix(50, 300),
-        'max_iter': [300],
+        'hidden_layer_sizes': RandIntMatrix(12, 128),
+        'max_iter': [500],
         'activation': ['relu', 'tanh', 'logistic']
     },
     type(RandomForestClassifier()): {
