@@ -14,10 +14,24 @@ DATA_FIELDS = {
                        'FORMULARY_DRUG_CD', 'NDC', 'PROD_STRENGTH', 'DOSE_VAL_RX', 'DOSE_UNIT_RX', 'FORM_VAL_DISP',
                        'FORM_UNIT_DISP', 'ROUTE'],
     'CPTEVENTS' : ['CHARTDATE', 'CPT_CD', 'CPT_NUMBER', 'CPT_SUFFIX', 'SECTIONHEADER', 'SUBSECTIONHEADER',
-                   'DESCRIPTION']
+                   'DESCRIPTION'],
+    'INPUTEVENTS_CV' : ['AMOUNT', 'AMOUNTUOM', 'RATE', 'RATEUOM', 'STORETIME', 'CHARTTIME', 'STOPPED', 'NEWBOTTLE'],
+    'INPUTEVENTS_MV' : ['STARTTIME', 'ENDTIME', 'AMOUNT', 'AMOUNTUOM', 'RATE', 'RATEUOM', 'CANCELREASON']
 }
 
 D_ITEMS_RELATION = {
+    'INPUTEVENTS_CV' : {
+        'ITEMID' : {
+            'ITEMID' : 'ITEMID',
+            'LABEL' : 'ITEM'
+        }
+    },
+    'INPUTEVENTS_MV' : {
+        'ITEMID' : {
+            'ITEMID' : 'ITEMID',
+            'LABEL' : 'ITEM'
+        }
+    },
     'OUTPUTEVENTS' : {
         'ITEMID' : {
             'ITEMID' : 'ITEMID',

@@ -19,8 +19,11 @@ d_items_csv_path = csv_file_path+'D_ITEMS.csv'
 d_labitems_csv_path = csv_file_path+'D_LABITEMS.csv'
 patient_csv_path = csv_file_path+'PATIENTS.csv'
 
-paths = ['OUTPUTEVENTS', 'CHARTEVENTS', 'PROCEDURES_ICD', 'MICROBIOLOGYEVENTS',
-         'LABEVENTS', 'DIAGNOSES_ICD', 'NOTEEVENTS', 'PRESCRIPTIONS', 'CPTEVENTS']
+paths = [
+    'OUTPUTEVENTS', 'CHARTEVENTS', 'PROCEDURES_ICD', 'MICROBIOLOGYEVENTS',
+    'LABEVENTS', 'DIAGNOSES_ICD', 'NOTEEVENTS', 'PRESCRIPTIONS', 'CPTEVENTS',
+    'INPUTEVENTS_CV', 'INPUTEVENTS_MV'
+]
 
 with open(admissions_csv_path, 'r') as admissions_csv_file:
     # Open and reading dictionaries

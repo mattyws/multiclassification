@@ -45,10 +45,11 @@ def preprocess_classes(classes):
     return encoder.transform(classes)
 
 csv_file_paths = [
-    # 'original/sepsis_feature_selection_filter_0_5_pearson.csv',
-    # 'original/sepsis_feature_selection_filter_0_75_pearson.csv',
+    'original/sepsis_feature_selection_filter_0_5_pearson.csv',
+    'original/sepsis_feature_selection_filter_0_75_pearson.csv',
     'original/sepsis_feature_selection_ga.csv',
-    'original_mean/sepsis_feature_selection_filter_0_75_pearson.csv'
+    'original/sepsis_file.csv'
+    # 'original_mean/sepsis_feature_selection_filter_0_75_pearson.csv'
     # 'original_mean/sepsis_file_header_sem_desvio_padrao.csv',
     # 'second/sepsis_feature_selection_filter_0_5_pearson.csv',
     # 'second/sepsis_feature_selection_filter_0_75_pearson (1).csv',

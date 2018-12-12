@@ -5,8 +5,11 @@ from time import time
 
 mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 csv_file_path = mimic_data_path+"csv/"
-files = ['OUTPUTEVENTS', 'CHARTEVENTS', 'PROCEDURES_ICD', 'MICROBIOLOGYEVENTS',
-         'LABEVENTS', 'DIAGNOSES_ICD', 'NOTEEVENTS', 'PRESCRIPTIONS', 'CPTEVENTS']
+files = [
+    # 'OUTPUTEVENTS', 'CHARTEVENTS', 'PROCEDURES_ICD', 'MICROBIOLOGYEVENTS',
+    # 'LABEVENTS', 'DIAGNOSES_ICD', 'NOTEEVENTS', 'PRESCRIPTIONS', 'CPTEVENTS',
+    'INPUTEVENTS_CV', 'INPUTEVENTS_MV'
+]
 
 
 def writeBuffer(writer, buffer):
