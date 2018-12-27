@@ -37,22 +37,43 @@ def compressStringToBytes(inputString):
     compressor.write(chunk)
 
 mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
-compressed_sepsis3_json_files_path  = "/home/mattyws/Documentos/mimic/data/compressed_json_sepsis/"
-compressed_nosepsis3_json_files_path  = "/home/mattyws/Documentos/mimic/data/compressed_json_sepsis/no_sepsis/"
+compressed_sepsis3_json_files_path  = "/home/mattyws/Documents/compressed_json_sepsis/"
+compressed_nosepsis3_json_files_path  = "/home/mattyws/Documents/compressed_json_sepsis/no_sepsis/"
+
+decompressed_sepsis3_json_files_path  = "/home/mattyws/Documents/json_sepsis/"
+decompressed_nosepsis3_json_files_path  = "/home/mattyws/Documents/json_sepsis/no_sepsis/"
+
 sepsis3_json_files_path = mimic_data_path+"json_sepsis/"
 
-#COMPRESS
+# #COMPRESS
+# files_visited = 0
+# for dir, path, files in os.walk(sepsis3_json_files_path):
+#     for file in files:
+#         files_visited += 1
+#         if files_visited % 100 == 0:
+#             print("Visited files {}".format(files_visited))
+#         with open(dir+'/'+file, 'r') as json_file_handler:
+#             content = json_file_handler.read()
+#             if "no_sepsis" in dir:
+#                 path_new_file = compressed_nosepsis3_json_files_path+file
+#             else:
+#                 path_new_file = compressed_sepsis3_json_files_path + file
+#             with open(path_new_file, 'wb') as compressed_file_handler:
+#                 compressed_file_handler.write(compressStringToBytes(content))
+
+
+#DECOMPRESS
 files_visited = 0
-for dir, path, files in os.walk(sepsis3_json_files_path):
+for dir, path, files in os.walk(compressed_sepsis3_json_files_path):
     for file in files:
         files_visited += 1
         if files_visited % 100 == 0:
             print("Visited files {}".format(files_visited))
-        with open(dir+'/'+file, 'r') as json_file_handler:
+        with open(dir+'/'+file, 'rb') as json_file_handler:
             content = json_file_handler.read()
             if "no_sepsis" in dir:
-                path_new_file = compressed_nosepsis3_json_files_path+file
+                path_new_file = decompressed_nosepsis3_json_files_path+file
             else:
-                path_new_file = compressed_sepsis3_json_files_path + file
-            with open(path_new_file, 'wb') as compressed_file_handler:
-                compressed_file_handler.write(compressStringToBytes(content))
+                path_new_file = decompressed_sepsis3_json_files_path + file
+            with open(path_new_file, 'w') as decompressed_file_handler:
+                decompressed_file_handler.write(decompressBytesToString(content))
