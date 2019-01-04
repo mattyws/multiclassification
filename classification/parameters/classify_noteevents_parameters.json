@@ -1,0 +1,30 @@
+{
+  "sepsisFilesPath" : "/home/mattyws/Documents/no_sepsis_noteevents",
+  "noSepsisFilesPath" : "/home/mattyws/Documents/sepsis_noteevents",
+  "modelCheckpointPath" : "noteevents_checkpoint/",
+  "modelConfigPath" : "noteevents_checkpoint/config.json",
+  "datasetFilesFileName" : "datasetFiles.pkl",
+  "datasetLabelsFileName" : "datasetLabels.pkl",
+  "trainingGeneratorPath" : "noteevents_checkpoint/dataTrainGenerator.pkl",
+  "testingGeneratorPath" : "noteevents_checkpoint/dataTestGenerator.pkl",
+  "embeddingSize" : 200,
+  "maxWords": null,
+  "outputUnits": [
+    64,
+    32
+  ],
+  "numOutputNeurons": 1,
+  "loss": "binary_crossentropy",
+  "layersActivations": [
+    "relu",
+    "relu"
+  ],
+  "gru": true,
+  "useDropout": true,
+  "dropout": 0.3,
+  "trainingEpochs": 10,
+  "batchSize": 1,
+  "word2vecWindow": 4,
+  "wordd2vecIter": 1
+}
+        

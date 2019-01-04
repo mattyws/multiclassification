@@ -1,163 +1,189 @@
 import json
 import os
+import pickle
 
 import keras
-from keras import backend as K
+
 import gensim
 import math
 from random import shuffle
 
 import numpy
+from keras.callbacks import ModelCheckpoint
 from nltk import regexp_tokenize
 from sklearn.metrics.classification import f1_score
 from sklearn.model_selection import train_test_split, KFold
+from sklearn.model_selection._split import StratifiedKFold
 
+from data_generators import Word2VecTextEmbeddingGenerator
 from data_representation import Word2VecEmbeddingCreator
+from keras_callbacks import SaveModelEpoch
 from model_creators import MultilayerKerasRecurrentNNCreator
+from metrics import f1, precision, recall
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-def f1(y_true, y_pred):
-    def recall(y_true, y_pred):
-        """Recall metric.
 
-        Only computes a batch-wise average of recall.
+def data_transform(dataPath, data, labels, word2vecModel, embeddingSize, batchSize, maxWords=None):
+    generator = Word2VecTextEmbeddingGenerator(dataPath, word2vecModel, batchSize, embeddingSize=embeddingSize,
+                                               iterForever=True)
+    for x, y in zip(data, labels):
+        generator.add(x, y, maxWords=maxWords)
+    return generator
 
-        Computes the recall, a metric for multi-label classification of
-        how many relevant items are selected.
-        """
-        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-        possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-        recall = true_positives / (possible_positives + K.epsilon())
-        return recall
+parametersFilePath = "parameters/classify_noteevents_parameters.json"
 
-    def precision(y_true, y_pred):
-        """Precision metric.
+#Loading parameters file
+print("========= Loading Parameters")
+parameters = None
+with open(parametersFilePath, 'r') as parametersFileHandler:
+    parameters = json.load(parametersFileHandler)
+if parameters is None:
+    exit(1)
 
-        Only computes a batch-wise average of precision.
+# only load the dataset if do not resuming a training, use script paramters for that
+if os.path.exists(parameters['modelCheckpointPath']+parameters['datasetFilesFileName']):
+    print("========= Loading previous dataset")
+    datasetFiles = []
+    datasetLabels = []
+    with open(parameters['modelCheckpointPath']+parameters['datasetFilesFileName'], 'rb') as datasetFilesHandler:
+        datasetFiles = pickle.load(datasetFilesHandler)
 
-        Computes the precision, a metric for multi-label classification of
-        how many selected items are relevant.
-        """
-        true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-        predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
-        precision = true_positives / (predicted_positives + K.epsilon())
-        return precision
-    precision = precision(y_true, y_pred)
-    recall = recall(y_true, y_pred)
-    return 2*((precision*recall)/(precision+recall+K.epsilon()))
+    with open(parameters['modelCheckpointPath']+parameters['datasetLabelsFileName'], 'rb') as datasetLabelsHandler:
+        datasetLabels = pickle.load(datasetLabelsHandler)
+else:
+    # Get files paths
+    print("========= Getting files paths")
+    datasetFiles = []
+    datasetLabels = []
+    # sepsisFiles = []
+    for dir, path, files in os.walk(parameters['sepsisFilesPath']):
+        for file in files:
+            datasetFiles.append(dir + "/" + file)
+            datasetLabels.append([1])
 
-def data_transform(data, word2vecModel, embeddingSize):
-    embeddingCreator = Word2VecEmbeddingCreator(word2vecModel, embeddingSize)
-    embeddingData = []
-    for text in data:
-        embeddingData.append(embeddingCreator.create_embedding_matrix(text))
-    return embeddingData
+    # noSepsisFiles = []
+    lenSepsisObjects = len(datasetFiles)
+    for dir, path, files in os.walk(parameters['noSepsisFilesPath']):
+        if len(datasetFiles) - lenSepsisObjects >= math.ceil(lenSepsisObjects * 1.5) :
+            break
+        for file in files:
+            datasetFiles.append(dir + "/" + file)
+            datasetLabels.append([0])
 
+    print("========= Spliting data for testing")
+    dataTrain, datasetFiles, labelsTrain, datasetLabels = train_test_split(datasetFiles, datasetLabels, stratify=datasetLabels,
+                                                                        test_size=0.002)
 
-sepsisFilesPath = "/home/mattyws/Documents/no_sepsis_noteevents"
-noSepsisFilesPath = "/home/mattyws/Documents/sepsis_noteevents"
+    print("========= Saving dataset files array")
+    with open(parameters['modelCheckpointPath']+parameters['datasetFilesFileName'], 'wb') as datasetFilesHandler:
+        pickle.dump(datasetFiles, datasetFilesHandler, pickle.HIGHEST_PROTOCOL)
 
-embeddingSize = 200
+    with open(parameters['modelCheckpointPath']+parameters['datasetLabelsFileName'], 'wb') as datasetLabelsHandler:
+        pickle.dump(datasetLabels, datasetLabelsHandler, pickle.HIGHEST_PROTOCOL)
 
-# Get files paths
-sepsisFiles = []
-for dir, path, files in os.walk(sepsisFilesPath):
-    for file in files:
-        sepsisFiles.append(dir + "/" + file)
+if len(datasetFiles) == 0 or len(datasetLabels) == 0:
+    raise ValueError("Dataset files is empty!")
 
-noSepsisFiles = []
-for dir, path, files in os.walk(noSepsisFilesPath):
-    for file in files:
-        noSepsisFiles.append(dir + "/" + file)
-
-# Generating objects, this objects will be shuffle in the vector and then they will be separated into class and data vectors
-noteeventsObjects = []
-for filePath in sepsisFiles:
-    with open(filePath) as file_handler:
-        jsonObject = json.load(file_handler)
-        texts = []
-        for object in jsonObject:
-            texts.append(object['text'])
-        noteeventsObjects.append({'texts':texts, 'class':[1]})
-
-lenSepsisObjects = len(noteeventsObjects)
-for filePath in noSepsisFiles:
-    if len(noteeventsObjects) - lenSepsisObjects >= math.ceil(lenSepsisObjects * 1.5) :
-        break
-    with open(filePath) as file_handler:
-        jsonObject = json.load(file_handler)
-        texts = []
-        for object in jsonObject:
-            texts.append(object['text'])
-        noteeventsObjects.append({'texts': texts, 'class': [0]})
-
-shuffle(noteeventsObjects)
-# Separating data and class from the noteevents_objects
-
+print("========= Loading texts from files")
 data = []
-labels = []
-for noteevent in noteeventsObjects:
-    data.append('\n'.join(noteevent['texts']))
-    labels.append(noteevent['class'])
-
-dataTrain, data, labelsTrain, labels = train_test_split(data, labels, stratify=labels, test_size=0.4)
+for filePath in datasetFiles:
+    with open(filePath) as file_handler:
+        jsonObject = json.load(file_handler)
+        texts = []
+        for object in jsonObject:
+            texts.append(object['text'])
+        data.append('\n'.join(texts))
+labels = datasetLabels
 
 #TODO: proper preprocess the data
-data = numpy.array(data)
-labels = numpy.array(labels)
-
+print("========= Preprocessing data")
 new_data = []
 for d in data:
     new_data.append(regexp_tokenize(d.lower(), pattern='\w+|\$[\d\.]+|\S+'))
 
-kf = KFold(n_splits=5, random_state=15)
+data = numpy.array(new_data)
+labels = numpy.array(labels)
 
-# Network Parameters
-inputShape = (None, embeddingSize)
-outputUnits = [128, 64]
-numOutputNeurons = 1
-loss = 'binary_crossentropy'
-layersActivations = ['relu', 'relu']
-gru=True
-useDropout=True
-dropout=0.3
-trainingEpochs = 100
 
-word2vecWindow = 4
-wordd2vecIter = 150
+kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
+inputShape = (parameters['maxWords'], parameters['embeddingSize'])
 
 i = 1
-f1_folds = []
-for trainIndex, testIndex in kf.split(data):
+metrics_fold = []
 
+labelsForStratifiedKFold = []
+for label in labels:
+    labelsForStratifiedKFold.append(label[0])
+
+config = None
+if os.path.exists(parameters['modelConfigPath']):
+    with open(parameters['modelConfigPath'], 'r') as configHandler:
+        config = json.load(configHandler)
+
+# ====================== Script that start training new models
+for trainIndex, testIndex in kf.split(data, labelsForStratifiedKFold):
+    if config is not None and config['fold'] > i:
+        print("Pass fold {}".format(i))
+        i += 1
+        continue
+    if config is not None and config['epoch'] == parameters['trainingEpochs']:
+        print("Pass fold {}-".format(i))
+        i += 1
+        continue
     # Training an instance of Word2Vec model with the training data
     print("======== Fold {} ========".format(i))
+
+    # If exists a valid config  to resume a training
+    if config is not None and config['fold'] == i and config['epoch'] < parameters['trainingEpochs']:
+        epochs = parameters['trainingEpochs'] - config['epoch']
+
+        print("========= Loading generators")
+        with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
+            dataTrainGenerator = pickle.load(trainingGeneratorHandler)
+
+        with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
+            dataTestGenerator = pickle.load(testingGeneratorHandler)
+
+        kerasAdapter = MultilayerKerasRecurrentNNCreator.create_from_path(config['filepath'],
+                                                custom_objects={'f1':f1, 'precision':precision, 'recall':recall})
+        configSaver = SaveModelEpoch(parameters['modelConfigPath'],
+                                     parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
+    else:
+        # Training new fold
+        print("========= Training word2vec")
+        word2vecModel = gensim.models.Word2Vec(data[trainIndex], size = parameters['embeddingSize'], min_count=1,
+                                               window=parameters['word2vecWindow'],
+                                               iter=parameters['wordd2vecIter'], sg=1)
+        dataTrainGenerator = data_transform('./data', data[trainIndex], labels[trainIndex], word2vecModel, parameters['embeddingSize'],
+                                            1, maxWords=parameters['maxWords'])
+        dataTestGenerator = data_transform('./data_test', data[testIndex], labels[testIndex], word2vecModel, parameters['embeddingSize'],
+                                           1, maxWords=parameters['maxWords'])
+        print("========= Saving generators")
+        with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
+            pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
+
+        with open(parameters['testingGeneratorPath'], 'wb') as testingGeneratorHandler:
+            pickle.dump(dataTestGenerator, testingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
+
+        modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
+                                                         loss=parameters['loss'], layersActivations=parameters['layersActivations'],
+                                                         gru=parameters['gru'], use_dropout=parameters['useDropout'],
+                                                         dropout=parameters['dropout'],
+                                                         metrics=[f1, precision, recall, keras.metrics.binary_accuracy])
+        kerasAdapter = modelCreator.create()
+        epochs = parameters['trainingEpochs']
+        configSaver = SaveModelEpoch(parameters['modelConfigPath'],
+                                     parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
+
+    modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
+    kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
+                     validationDataGenerator=dataTestGenerator, validationSteps=len(dataTestGenerator),
+                     callbacks=[modelCheckpoint, configSaver])
+    metrics_fold.append(kerasAdapter.evaluate(dataTestGenerator, batch_size=len(dataTestGenerator)))
+    dataTrainGenerator.clean_files()
+    dataTestGenerator.clean_files()
     i += 1
-    print("Training word2vec")
-    word2vecModel = gensim.models.Word2Vec(data[trainIndex], size = embeddingSize, min_count=1, window=word2vecWindow,
-                                           iter=wordd2vecIter, sg=1)
-    dataTrain = data_transform(data[trainIndex], word2vecModel, embeddingSize)
-    dataTest = data_transform(data[testIndex], word2vecModel, embeddingSize)
-    modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, outputUnits, numOutputNeurons,
-                                                     loss=loss, layersActivations=layersActivations, gru=gru,
-                                                     use_dropout=useDropout, dropout=dropout,
-                                                     metrics=[f1, keras.metrics.binary_accuracy])
-    kerasAdapter = modelCreator.create()
-    kerasAdapter.fit(dataTrain, labels[trainIndex], epochs=trainingEpochs, batch_size=len(dataTrain), validationDocs=dataTest,
-                     validationLabels=labels[testIndex], validationSteps=len(dataTest))
-    #TODO: test the recurrent model created
-    #TODO: measure the model's performance
-    predicted = kerasAdapter.predict(dataTest, batch_size=len(dataTest))
-    # passing to an list representation to use the sklearn f1_score function
-    predicted_classes = []
-    for p in predicted:
-        predicted_classes.append(p[0])
-    real_classes = []
-    for l in labels[testIndex]:
-        real_classes.append(l[0])
 
-    f1_folds.append(f1_score(real_classes, predicted_classes))
-
-print("Folds mean: {}".format( sum(f1_folds) / len(f1_folds) ))
-
+print("Folds evaluation: {}".format(metrics_fold))
+#TODO: save metrics on csv

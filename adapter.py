@@ -29,19 +29,20 @@ class ModelAdapter(object, metaclass=abc.ABCMeta):
     def load(self, filename):
         raise NotImplementedError('users must define \'load\' to use this base class')
 
+    @abc.abstractmethod
+    def evaluate(self, testDocs, batch_size=10):
+        raise NotImplementedError('users must define \'evaluate\' to use this base class')
+
 class KerasGeneratorAdapter(ModelAdapter):
 
     def __init__(self, model):
         self.model = model
 
-    def fit(self, trainDocs, trainCats, epochs=1, batch_size=10, workers=2, validationDocs=None, validationLabels=None,
-            validationSteps=None):
-        data = self.XYGenerator(trainDocs, trainCats)
-        validationData = None
-        if validationDocs is not None and validationLabels is not None:
-            validationData = self.XYGenerator(validationDocs, validationLabels)
-        self.model.fit_generator(data, batch_size, epochs=epochs, initial_epoch=0, max_q_size=1, verbose=1,
-                                 workers=workers, validation_data=validationData, validation_steps=validationSteps)
+    def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator = None,
+            validationSteps=None, callbacks=None):
+        self.model.fit_generator(dataGenerator, batch_size, epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
+                                 workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
+                                 callbacks=callbacks)
 
     def predict(self, testDocs, batch_size=10):
         result = []
@@ -53,6 +54,11 @@ class KerasGeneratorAdapter(ModelAdapter):
         result = self.model.predict(doc)
         return np.argmax(result)
 
+    def evaluate(self, testDocs, batch_size=10):
+        result = self.model.evaluate_generator(testDocs, batch_size)
+        result = {self.model.metrics_names[i] : result[i] for i in range(len(result)) }
+        return result
+
     def predict_one_array(self,doc):
         result = self.model.predict(doc)
         return result
@@ -62,29 +68,6 @@ class KerasGeneratorAdapter(ModelAdapter):
 
     def load(self, filename):
         return KerasGeneratorAdapter(load_model(filename))
-
-    class XYGenerator(object):
-        def __init__(self, train_docs, train_cats):
-            self.__docs = train_docs
-            self.__labels = train_cats
-            self.train_docs = iter(train_docs)
-            self.train_cats = iter(train_cats)
-
-        def __iter__(self):
-            return self
-
-        def __next__(self):
-            try:
-                x = np.array(next(self.train_docs))
-                y = np.array(next(self.train_cats))
-                return x, y
-            except:
-                self.train_docs = iter(self.__docs)
-                self.train_cats = iter(self.__labels)
-                return self.__next__()
-
-        def next(self):
-            return self.__next__()
 
 class SklearnAdapter(ModelAdapter):
 

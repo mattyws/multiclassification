@@ -1,5 +1,6 @@
 import abc
 
+from keras.engine.saving import load_model
 from keras.layers.convolutional import Conv2D, Conv1D
 from keras.layers.core import Dense, Dropout, Flatten
 from keras.layers.pooling import MaxPool2D, MaxPool1D, AveragePooling1D
@@ -56,6 +57,7 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         self.use_dropout = use_dropout
         self.dropout = dropout
         self.metrics = metrics
+
         self.__check_parameters()
 
     def __check_parameters(self):
@@ -95,6 +97,11 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
 
     def create(self):
         return adapter.KerasGeneratorAdapter(self.__build_model())
+
+    @staticmethod
+    def create_from_path(filepath, custom_objects=None):
+        model = load_model(filepath, custom_objects=custom_objects)
+        return adapter.KerasGeneratorAdapter(model)
 
 class KerasCovolutionalNNCreator(ModelCreator):
 

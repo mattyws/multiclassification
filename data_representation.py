@@ -22,14 +22,14 @@ class Word2VecEmbeddingCreator(object):
         :return: the 3 dimensional array representing the content of the tokenized text
         """
         if max_words is None:
-            x = np.zeros(shape=(1, len(text), self.embeddingSize), dtype='float')
+            x = np.zeros(shape=(len(text), self.embeddingSize), dtype='float')
         else:
-            x = np.zeros(shape=(1, max_words, self.embeddingSize), dtype='float')
+            x = np.zeros(shape=(max_words, self.embeddingSize), dtype='float')
         for pos, w in enumerate(text):
             if max_words is not None and pos >= max_words:
                 break
             try:
-                x[0, pos] = self.word2vecModel[w]
+                x[pos] = self.word2vecModel[w]
             except:
-                x[0, pos] = np.zeros(shape=self.embeddingSize)
+                x[pos] = np.zeros(shape=self.embeddingSize)
         return x
