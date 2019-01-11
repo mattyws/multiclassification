@@ -17,7 +17,7 @@ def get_organism_class(events):
                     return "R"
     return "S"
 
-data = pandas.read_csv('second/sepsis_file2.csv')
+data = pandas.read_csv('sepsis_file2.csv')
 data_resistent = data[data['organism_resistence'] == 'R']
 data_nonresistent = data[data['organism_resistence'] == 'S']
 

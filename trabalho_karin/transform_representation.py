@@ -8,6 +8,10 @@ import sys
 import csv
 
 import trabalho_karin.helper as helper
+import arff
+import pandas as pd
+
+from trabalho_karin import pandas2arff
 
 pp = pprint.PrettyPrinter(indent=5)
 date_pattern = "%Y-%m-%d"
@@ -23,6 +27,7 @@ csv_file_name = "sepsis_file2.csv"
 class_label = "organism_resistence"
 interpretation_label = "interpretation"
 org_item_label = "ORG_ITEMID"
+ab_name_label = 'ANTIBODY'
 microbiologyevent_label = "microbiologyevents"
 patient_file = 'PATIENTS.csv'
 sofa_file = 'sofa.csv'
@@ -101,82 +106,6 @@ def transform_equal_columns(row, features_type, prefix=""):
         row.pop(key)
     return row
 
-
-def diastolic_systolic_pressure(row, prefix):
-    # Using variables to make more readable and for performance purpose
-    blood_pressure = prefix + '220052'
-    BPs_L = prefix + '224167'
-    BPs_R = prefix + '227243'
-    BPd_R = prefix + '227242'
-    BPd_L = prefix + '224643'
-    has_BPs_L = BPs_L in row.keys()
-    has_BPs_R = BPs_R in row.keys()
-    has_BPd_R = BPd_R in row.keys()
-    has_BPd_L = BPd_L in row.keys()
-
-    # Check if this rows has any of the known mean pressure ids, if it has, drop any manual pressure and return the row
-    for key in helper.PRESSURE_IDS:
-        if prefix+key in row.keys():
-            if has_BPd_L:
-                row.pop(BPd_L)
-            if has_BPs_L:
-                row.pop(BPs_L)
-            if has_BPd_R:
-                row.pop(BPd_R)
-            elif has_BPs_R:
-                row.pop(BPs_R)
-            return row
-
-    # It doesn't has any of the known mean pressure ids, check if has the manual pressure for both left and right arms, if it has,
-    # try to get the one with the higher quantity of values
-    if has_BPs_R and has_BPs_L:
-        if len(row[BPs_R]) > len(row[BPs_L]):
-            # Drop the lowest sized, and if drop the other measure for the same arm
-            row.pop(BPs_L)
-            if has_BPd_L:
-                row.pop(BPd_L)
-        else:
-            # Drop the lowest sized, and if drop the other measure for the same arm
-            row.pop(BPs_R)
-            if has_BPd_R:
-                row.pop(BPd_R)
-
-    # If it has the both measures for right arm,
-    # add the mean to the main id for blood pressure,
-    # and remove the measures for manual
-    if has_BPs_R and has_BPd_R:
-        print("Has both")
-        for i in range(len(row[BPs_R])):
-            if row[blood_pressure] is None:
-                row[blood_pressure] = []
-            mean_pressure = helper.MEAN_PRESSURE( float(row[BPd_R][i]), float(row[BPs_R][i]) )
-            row[blood_pressure].append(mean_pressure)
-        row.pop(BPd_R)
-        row.pop(BPs_R)
-    else:
-        if has_BPd_R:
-            row.pop(BPd_R)
-        if has_BPs_R:
-            row.pop(BPs_R)
-
-    # The same as before but for the left arm
-    if has_BPs_L and has_BPd_L:
-        print("Has both")
-        for i in range(len(row[BPs_L])):
-            if row[blood_pressure] is None:
-                row[blood_pressure] = []
-            mean_pressure = helper.MEAN_PRESSURE( float(row[BPd_L][i]), float(row[BPs_L][i]) )
-            row[blood_pressure].append(mean_pressure)
-        row.pop(BPd_L)
-        row.pop(BPs_L)
-    else:
-        if has_BPd_L:
-            row.pop(BPd_L)
-        if has_BPs_L:
-            row.pop(BPs_L)
-    return row
-
-
 def transform_to_row(filtered_events, features_type, prefix=""):
     row = dict()
     for event in filtered_events:
@@ -204,10 +133,31 @@ def transform_to_row(filtered_events, features_type, prefix=""):
     for key in features_type.keys():
         if prefix+key not in row:
             row[prefix+key] = None
-    row = diastolic_systolic_pressure(row, prefix)
     row = transform_equal_columns(row, features_type, prefix=prefix)
     row = transform_values(row, features_type)
     row = split_into_columns(row, features_type)
+    return row
+
+def transform_all_features_to_row(events, prefix=""):
+    row = dict()
+    for event in events:
+        itemid = event[itemid_label]
+
+        if prefix + itemid not in row.keys():
+            row[prefix + itemid] = []
+
+        try:
+            event_value = float(event[value_label])
+        except ValueError:
+            event_value = event[value_label]
+
+        row[prefix + itemid].append(event_value)
+    for key in row.keys():
+        if type(row[key][0]) == type(int) or type(row[key][0]) == type(float):
+            row[key] = sum(row[key]) / len(row[key])
+        else:
+            row[key] = Counter(row[key]).most_common(1)[0][0]
+    row = pd.DataFrame(row, index=[0])
     return row
 
 def get_data_from_admitday(json_object, date_str, key="charttime", date=False):
@@ -226,18 +176,37 @@ def get_data_from_admitday(json_object, date_str, key="charttime", date=False):
         # break
     return filtered_objects
 
-print(len(helper.FEATURES_ITEMS_LABELS.keys()) + len(helper.FEATURES_LABITEMS_LABELS.keys()))
+# print(len(helper.FEATURES_ITEMS_LABELS.keys()) + len(helper.FEATURES_LABITEMS_LABELS.keys()))
 
+def get_antibiotics_classes():
+    antibiotics_classes = dict()
+    with open('AB_class') as antibiotics_classes_handler:
+        antibiotics = []
+        ab_class = ''
+        for line in antibiotics_classes_handler:
+            if len(line.strip()) != 0:
+                if line.startswith('\t'):
+                    antibiotics.append(line.strip())
+                else:
+                    if len(antibiotics) != 0:
+                        for antibiotic in antibiotics:
+                            antibiotics_classes[antibiotic] = ab_class
+                    ab_class = line.strip()
+                    antibiotics = []
+        if len(antibiotics) != 0:
+            for antibiotic in antibiotics:
+                antibiotics_classes[antibiotic] = ab_class
+    return antibiotics_classes
 
-def get_organism_class(events):
+def get_organism_class(events, ab_classes):
     organism_count = dict()
     for event in events:
         if org_item_label in event.keys():
             if event[org_item_label] not in organism_count.keys():
-                organism_count[event[org_item_label]] = 0
+                organism_count[event[org_item_label]] = set()
             if event[interpretation_label] == 'R':
-                organism_count[event[org_item_label]] += 1
-                if organism_count[event[org_item_label]] == 3:
+                organism_count[event[org_item_label]].add(ab_classes[event[ab_name_label]])
+                if len(organism_count[event[org_item_label]]) == 3:
                     return "R"
     return "S"
 
@@ -277,25 +246,26 @@ with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
         csv_writer = None
         all_size = 0
         filtered_objects_total_size = 0
-        table = []
+        table = pd.DataFrame([])
         not_processes_files = 0
         patients_with_pressure = 0
+        total_events_measured = 0
+        total_labevents_measured = 0
+        labitems_dict = dict()
+        chartevents_dict = dict()
+        ab_classes = get_antibiotics_classes()
         for line in patients_w_sepsis_handler:
             print(line.strip().split('/')[-1])
             all_size += os.path.getsize(line.strip())
             patient = json.load(open(line.strip(), 'r'))
-            if microbiologyevent_label in patient.keys():
+            patient_age = get_patient_age(patient['subject_id'], patient['admittime'])
+            if microbiologyevent_label in patient.keys() and (patient_age > 18 and patient_age < 80):
                 filtered_chartevents_object = []
+                print("Getting events")
                 if 'chartevents' in patient.keys():
                     filtered_chartevents_object = get_data_from_admitday(patient['chartevents'], patient['admittime'],
                                                                          key='charttime', date=False)
                     filtered_objects_total_size += sys.getsizeof(filtered_chartevents_object)
-
-                # filtered_prescriptions_object = None
-                # if 'prescriptions' in patient.keys():
-                #     filtered_prescriptions_object = get_data_from_admitday(patient['prescriptions'], patient['admittime'],
-                #                                                            key='startdate', date=True)
-                #     filtered_objects_total_size += sys.getsizeof(filtered_prescriptions_object)
 
                 filtered_labevents_object = []
                 if 'labevents' in patient.keys():
@@ -305,40 +275,95 @@ with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
 
                 new_filtered_chartevents = []
                 for event in filtered_chartevents_object:
-                    if event[itemid_label] in helper.FEATURES_ITEMS_LABELS.keys():
+                    if event['ITEMID'] not in chartevents_dict.keys():
+                        chartevents_dict[event['ITEMID']] = dict()
+                        chartevents_dict[event['ITEMID']]['label'] = event['ITEM']
+                        chartevents_dict[event['ITEMID']]['count'] = 0
+                    chartevents_dict[event['ITEMID']]['count'] += 1
+                    if len(event['error']) != 0 and int(event['error']) == 0:
                         new_filtered_chartevents.append(event)
 
-                new_filtered_labevents = []
-                for event in filtered_labevents_object:
-                    if event[itemid_label] in helper.FEATURES_LABITEMS_LABELS.keys():
-                        new_filtered_labevents.append(event)
+                total_events_measured += len(new_filtered_chartevents)
+                total_labevents_measured += len(filtered_labevents_object)
 
-                row_object = transform_to_row(new_filtered_chartevents, helper.FEATURES_ITEMS_TYPE, prefix=items_prefix)
-                row_labevent = transform_to_row(new_filtered_labevents, helper.FEATURES_LABITEMS_TYPE, prefix=labitems_prefix)
+                for event in filtered_labevents_object:
+                    if event['ITEMID'] not in labitems_dict.keys():
+                        labitems_dict[event['ITEMID']] = dict()
+                        labitems_dict[event['ITEMID']]['label'] = event['ITEM']
+                        labitems_dict[event['ITEMID']]['count'] = 0
+                    labitems_dict[event['ITEMID']]['count'] += 1
+
+                # new_filtered_chartevents = []
+                # for event in filtered_chartevents_object:
+                #     if event[itemid_label] in helper.FEATURES_ITEMS_LABELS.keys():
+                #         new_filtered_chartevents.append(event)
+                #         chartevents_set.add(event['ITEM'])
+                #
+                # # for event in filtered_chartevents_object:
+                # #     try:
+                # #         print(event['ITEM'], '--->', type(int(event['value'])), '--->', event['valuenum'])
+                # #     except ValueError:
+                # #         try:
+                # #             print(event['ITEM'], '--->', type(float(event['value'])), '--->', event['valuenum'])
+                # #         except ValueError:
+                # #             print(event['ITEM'], '--->', type(event['value']), '--->', event['valuenum'])
+                #
+                # new_filtered_labevents = []
+                # for event in filtered_labevents_object:
+                #     if event[itemid_label] in helper.FEATURES_LABITEMS_LABELS.keys():
+                #         new_filtered_labevents.append(event)
+                #         labitems_set.add(event['ITEM'])
+                #
+                # row_object = transform_to_row(new_filtered_chartevents, helper.FEATURES_ITEMS_TYPE, prefix=items_prefix)
+                # row_labevent = transform_to_row(new_filtered_labevents, helper.FEATURES_LABITEMS_TYPE, prefix=labitems_prefix)
+
+                print("Transforming to row")
+                row_object = transform_all_features_to_row(new_filtered_chartevents, prefix=items_prefix)
+                row_labevent = transform_all_features_to_row(filtered_labevents_object, prefix=labitems_prefix)
 
                 for key in row_labevent.keys():
                     row_object[key] = row_labevent[key]
-                row_object[class_label] = get_organism_class(patient[microbiologyevent_label])
+                row_object[class_label] = get_organism_class(patient[microbiologyevent_label], ab_classes)
                 row_object[gender_label] = patient[gender_label]
                 row_object[ethnicity_label] = patient[ethnicity_label]
-                row_object[age_label.lower()] = get_patient_age(patient['subject_id'], patient['admittime'])
+                row_object[age_label.lower()] = patient_age
                 row_object[sofa_label] = get_admission_sofa(patient['hadm_id'])
                 row_object[vaso_label] = get_admission_vasopressor(patient['hadm_id'])
-                if csv_writer is None:
-                    csv_writer = csv.DictWriter(csv_file_handler, row_object.keys())
-                    csv_writer.writeheader()
-                csv_writer.writerow(row_object)
+
+                # if csv_writer is None:
+                #     csv_writer = csv.DictWriter(csv_file_handler, row_object.keys())
+                #     csv_writer.writeheader()
+                # csv_writer.writerow(row_object)
                 # pp.pprint(row_object)
                 # exit()
+                table = pd.concat([table, row_object], ignore_index=True)
                 # table.append(row_object)
             else:
                 not_processes_files += 1
-    # pp.pprint(table)
 
-
+        # Getting all fields in file
+        # fieldnames = sorted(list(set(k for d in table for k in d)))
+        # csv_writer = csv.DictWriter(csv_file_handler, fieldnames, quotechar='\"', quoting=csv.QUOTE_NONNUMERIC)
+        # csv_writer.writeheader()
         # for row in table:
-        #     writer.writerow(row)
+        #     csv_writer.writerow(row)
+        table.to_csv(csv_file_name, na_rep="?", quoting=csv.QUOTE_NONNUMERIC)
+        arff.dump(csv_file_name.replace('.csv', '.arff'), table.values, names=table.columns )
+        pandas2arff.pandas2arff(table, csv_file_name.replace('.csv', '_2.arff'))
 
-    print("Number of files that do not had microbiologyevents : {}".format(not_processes_files))
-    print("Size of files processed : {} bytes".format(all_size))
-    print("Total size of filtered variables : {} bytes".format(filtered_objects_total_size))
+        print("Number of files that do not had microbiologyevents : {}".format(not_processes_files))
+        print("Size of files processed : {} bytes".format(all_size))
+        print("Total size of filtered variables : {} bytes".format(filtered_objects_total_size))
+        print("Total events measured: {} chartevents, {} labevents".format(total_events_measured, total_labevents_measured))
+
+        with open('labevents_in_dataset.csv', 'w+') as labitems_handler:
+            for item in labitems_dict.keys():
+                labitems_handler.write('{},{},{}\n'.format(item, labitems_dict[item]['label'].replace(',', ' - '),
+                                                           labitems_dict[item]['count']))
+
+        with open('chartevents_in_dataset.csv', 'w+') as chart_handler:
+            for item in chartevents_dict.keys():
+                chart_handler.write('{},{},{}\n'.format(item, chartevents_dict[item]['label'].replace(',', ' - '),
+                                                        chartevents_dict[item]['count']))
+
+
