@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 import pprint
 import statistics
@@ -140,6 +141,7 @@ def transform_to_row(filtered_events, features_type, prefix=""):
 
 def transform_all_features_to_row(events, prefix=""):
     row = dict()
+    range_re = re.compile('\d-\d')
     for event in events:
         itemid = event[itemid_label]
 
@@ -149,14 +151,48 @@ def transform_all_features_to_row(events, prefix=""):
         try:
             event_value = float(event[value_label])
         except ValueError:
-            event_value = event[value_label]
-
+            if range_re.match(event[value_label]):
+                print(event[value_label])
+                numbers = re.findall('\d+', event[value_label])
+                numbers = [int(n) for n in numbers]
+                event_value = sum(numbers) / len(numbers)
+            elif event[value_label].startswith('LESS THAN') or event[value_label].startswith('<'):
+                numbers = re.findall('\d+', event[value_label])[0]
+                if len(numbers) == 0:
+                    event_value = 0
+                else:
+                    event_value = float(numbers[0])
+            elif event[value_label].startswith('GREATER THAN') or event[value_label].startswith('>'):
+                numbers = re.findall('\d+', event[value_label])[-1]
+                if len(numbers) == 0:
+                    event_value = 0
+                else:
+                    event_value = float(numbers[0])
+            else:
+                event_value = event[value_label]
         row[prefix + itemid].append(event_value)
     for key in row.keys():
-        if type(row[key][0]) == type(int) or type(row[key][0]) == type(float):
-            row[key] = sum(row[key]) / len(row[key])
+        types = set()
+        for value in row[key]:
+            types.add(type(value))
+        types = list(types)
+        if len(types) == 1:
+            if types[0] == type(int) or types[0] == type(float):
+                row[key] = sum(row[key]) / len(row[key])
+            else:
+                row[key] = Counter(row[key]).most_common(1)[0][0]
         else:
-            row[key] = Counter(row[key]).most_common(1)[0][0]
+            print(key, row[key])
+            for i in range(len(row[key])):
+                if type(row[key][i]) == type(str()):
+                    if row[key][i].lower() == 'notdone':
+                        row[key][i] = 0
+                    if range_re.match(event[value_label]):
+                        print(event[value_label])
+                        numbers = re.findall('\d+', event[value_label])
+                        numbers = [int(n) for n in numbers]
+                        row[key][i] = sum(numbers) / len(numbers)
+            row[key] = sum(row[key]) / len(row[key])
     row = pd.DataFrame(row, index=[0])
     return row
 
