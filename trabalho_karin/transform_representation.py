@@ -141,58 +141,98 @@ def transform_to_row(filtered_events, features_type, prefix=""):
 
 def transform_all_features_to_row(events, prefix=""):
     row = dict()
-    range_re = re.compile('\d-\d')
+    range_re = re.compile('\d+-\d+')
+    # Register events and get their types
     for event in events:
         itemid = event[itemid_label]
-
+        # Register the key on the dictionary
         if prefix + itemid not in row.keys():
             row[prefix + itemid] = []
-
+        # Register event type (float or string)
         try:
-            event_value = float(event[value_label])
+            event_value = float(event[value_label].strip())
         except ValueError:
-            if range_re.match(event[value_label]):
-                print(event[value_label])
-                numbers = re.findall('\d+', event[value_label])
-                numbers = [int(n) for n in numbers]
-                event_value = sum(numbers) / len(numbers)
-            elif event[value_label].startswith('LESS THAN') or event[value_label].startswith('<'):
-                numbers = re.findall('\d+', event[value_label])[0]
-                if len(numbers) == 0:
-                    event_value = 0
-                else:
-                    event_value = float(numbers[0])
-            elif event[value_label].startswith('GREATER THAN') or event[value_label].startswith('>'):
-                numbers = re.findall('\d+', event[value_label])[-1]
-                if len(numbers) == 0:
-                    event_value = 0
-                else:
-                    event_value = float(numbers[0])
-            else:
-                event_value = event[value_label]
+            event_value = event[value_label].strip()
         row[prefix + itemid].append(event_value)
+    # Loop all keys in the dictionary
     for key in row.keys():
+        # This will register the type of each value in the series
         types = set()
         for value in row[key]:
             types.add(type(value))
+        # Change to list to handle better
         types = list(types)
+        # If the list has only one type in
         if len(types) == 1:
+            # If they are numeric, get the mean
             if types[0] == type(int) or types[0] == type(float):
                 row[key] = sum(row[key]) / len(row[key])
             else:
+                # If they are string, get the most common
                 row[key] = Counter(row[key]).most_common(1)[0][0]
         else:
-            print(key, row[key])
-            for i in range(len(row[key])):
-                if type(row[key][i]) == type(str()):
-                    if row[key][i].lower() == 'notdone':
-                        row[key][i] = 0
-                    if range_re.match(event[value_label]):
-                        print(event[value_label])
-                        numbers = re.findall('\d+', event[value_label])
-                        numbers = [int(n) for n in numbers]
-                        row[key][i] = sum(numbers) / len(numbers)
-            row[key] = sum(row[key]) / len(row[key])
+            # Here we have mixed types on the series, here we will handle the most known cases
+            # It is assumed that the final value are numerics
+            if key == 'item_228308':
+                exit()
+            else:
+                for i in range(len(row[key])):
+                    if type(row[key][i]) == type(str()):
+                        if row[key][i].lower() == 'notdone':
+                            row[key][i] = 0
+                        elif row[key][i].lower() == 'neg':
+                            row[key][i] = -1
+                        elif row[key][i].lower() == 'tr':
+                            row[key][i] = None
+                        elif len(row[key][i].strip() ) == 0:
+                            row[key][i] = None
+                        elif range_re.match(row[key][i]):
+                            numbers = re.findall('\d+', row[key][i])
+                            numbers = [int(n) for n in numbers]
+                            try:
+                                row[key][i] = sum(numbers) / len(numbers)
+                            except:
+                                print(numbers)
+                                print("erro no regex", row[key], row[key][i])
+                        elif row[key][i].startswith('LESS THAN') or row[key][i].startswith('<'):
+                            numbers = re.findall('\d+', row[key][i])
+                            if len(numbers) == 0:
+                                row[key][i] = 0
+                            else:
+                                row[key][i] = float(numbers[0])
+                        elif row[key][i].startswith('GREATER THAN') or row[key][i].startswith('>'):
+                            numbers = re.findall('\d+', row[key][i])
+                            if len(numbers) == 0:
+                                row[key][i] = 0
+                            else:
+                                row[key][i] = float(numbers[0])
+                        elif row[key][i].startswith('EXCEEDS REFERENCE RANGE OF'):
+                            numbers = re.findall('\d+', row[key][i])
+                            if len(numbers) == 0:
+                                row[key][i] = 0
+                            else:
+                                row[key][i] = float(numbers[0])
+                        elif 'IS HIGHEST MEASURED PTT' in row[key][i]:
+                            numbers = re.findall('\d+', row[key][i])
+                            if len(numbers) == 0:
+                                row[key][i] = 0
+                            else:
+                                row[key][i] = float(numbers[0])
+                        elif 'UNABLE TO REPORT' in row[key][i] or 'VERIFIED BY REPLICATE ANALYSIS' in row[key][i]:
+                            row[key][i] = None
+                        elif row[key][i].lower() == 'mod':
+                            row[key][i] = None
+                        else:
+                            print(row[key][i])
+                row[key] = [w for w in row[key] if w is not None]
+                try:
+                    row[key] = sum(row[key]) / len(row[key])
+                except:
+                    print("Deu erro aqui: ", key, row[key])
+    removeKeys = ['item_228308']
+    for key in removeKeys:
+        if key in row.keys():
+            row.pop(key)
     row = pd.DataFrame(row, index=[0])
     return row
 
