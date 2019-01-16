@@ -173,8 +173,12 @@ def transform_all_features_to_row(events, prefix=""):
         else:
             # Here we have mixed types on the series, here we will handle the most known cases
             # It is assumed that the final value are numerics
-            if key == 'item_228308':
-                exit()
+            if key == 'lab_51463':
+                for i in range(len(row[key])):
+                    if row[key][i] == 'FEW':
+                        row[key][i] = 1
+                    elif row[key][i] == 'MANY':
+                        row[key][i] = 2
             else:
                 for i in range(len(row[key])):
                     if type(row[key][i]) == type(str()):
@@ -194,13 +198,18 @@ def transform_all_features_to_row(events, prefix=""):
                             except:
                                 print(numbers)
                                 print("erro no regex", row[key], row[key][i])
+                        elif re.match('\d+ C', row[key][i]) :
+                            numbers = re.findall('\d+', row[key][i])
+                            numbers = [int(n) for n in numbers]
+                            row[key][i] = numbers[0]
                         elif row[key][i].startswith('LESS THAN') or row[key][i].startswith('<'):
                             numbers = re.findall('\d+', row[key][i])
                             if len(numbers) == 0:
                                 row[key][i] = 0
                             else:
                                 row[key][i] = float(numbers[0])
-                        elif row[key][i].startswith('GREATER THAN') or row[key][i].startswith('>'):
+                        elif row[key][i].startswith('GREATER THAN') or row[key][i].startswith('>')\
+                                or row[key][i].startswith('GREATER THEN'):
                             numbers = re.findall('\d+', row[key][i])
                             if len(numbers) == 0:
                                 row[key][i] = 0
@@ -220,15 +229,22 @@ def transform_all_features_to_row(events, prefix=""):
                                 row[key][i] = float(numbers[0])
                         elif 'UNABLE TO REPORT' in row[key][i] or 'VERIFIED BY REPLICATE ANALYSIS' in row[key][i]:
                             row[key][i] = None
+                        elif 'ERROR' in row[key][i] or 'UNABLE' in row[key][i]:
+                            row[key][i] = None
+                        elif 'VERIFIED BY DILUTION' in row[key][i]:
+                            row[key][i] = None
                         elif row[key][i].lower() == 'mod':
                             row[key][i] = None
                         else:
-                            print(row[key][i])
+                            print(row[key][i], "====================================================")
+                            continue
                 row[key] = [w for w in row[key] if w is not None]
                 try:
                     row[key] = sum(row[key]) / len(row[key])
                 except:
-                    print("Deu erro aqui: ", key, row[key])
+                    print("Deu erro aqui: ", key, row[key], '====================================')
+                    row[key] = row[key][0]
+                    continue
     removeKeys = ['item_228308']
     for key in removeKeys:
         if key in row.keys():
@@ -337,7 +353,7 @@ with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
             patient_age = get_patient_age(patient['subject_id'], patient['admittime'])
             if microbiologyevent_label in patient.keys() and (patient_age > 18 and patient_age < 80):
                 filtered_chartevents_object = []
-                print("Getting events")
+                # print("Getting events")
                 if 'chartevents' in patient.keys():
                     filtered_chartevents_object = get_data_from_admitday(patient['chartevents'], patient['admittime'],
                                                                          key='charttime', date=False)
@@ -393,7 +409,7 @@ with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
                 # row_object = transform_to_row(new_filtered_chartevents, helper.FEATURES_ITEMS_TYPE, prefix=items_prefix)
                 # row_labevent = transform_to_row(new_filtered_labevents, helper.FEATURES_LABITEMS_TYPE, prefix=labitems_prefix)
 
-                print("Transforming to row")
+                # print("Transforming to row")
                 row_object = transform_all_features_to_row(new_filtered_chartevents, prefix=items_prefix)
                 row_labevent = transform_all_features_to_row(filtered_labevents_object, prefix=labitems_prefix)
 
