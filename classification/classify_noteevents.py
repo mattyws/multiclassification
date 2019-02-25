@@ -1,3 +1,4 @@
+import csv
 import json
 import os
 import pickle
@@ -72,8 +73,8 @@ else:
             datasetLabels.append([0])
 
     print("========= Spliting data for testing")
-    dataTrain, datasetFiles, labelsTrain, datasetLabels = train_test_split(datasetFiles, datasetLabels, stratify=datasetLabels,
-                                                                        test_size=0.002)
+    dataTrain, datasetFiles, labelsTrain, datasetLabels = train_test_split(datasetFiles, datasetLabels,
+                                                                           stratify=datasetLabels, test_size=0.2)
 
     print("========= Saving dataset files array")
     with open(parameters['modelCheckpointPath']+parameters['datasetFilesFileName'], 'wb') as datasetFilesHandler:
@@ -110,8 +111,6 @@ kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 inputShape = (parameters['maxWords'], parameters['embeddingSize'])
 
 i = 1
-metrics_fold = []
-
 labelsForStratifiedKFold = []
 for label in labels:
     labelsForStratifiedKFold.append(label[0])
@@ -122,68 +121,80 @@ if os.path.exists(parameters['modelConfigPath']):
         config = json.load(configHandler)
 
 # ====================== Script that start training new models
-for trainIndex, testIndex in kf.split(data, labelsForStratifiedKFold):
-    if config is not None and config['fold'] > i:
-        print("Pass fold {}".format(i))
+with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
+    dictWriter = None
+    for trainIndex, testIndex in kf.split(data, labelsForStratifiedKFold):
+        print(len(trainIndex))
+        if config is not None and config['fold'] > i:
+            print("Pass fold {}".format(i))
+            i += 1
+            continue
+        if config is not None and config['epoch'] == parameters['trainingEpochs']:
+            print("Pass fold {}-".format(i))
+            i += 1
+            continue
+        # Training an instance of Word2Vec model with the training data
+        print("======== Fold {} ========".format(i))
+
+        # If exists a valid config  to resume a training
+        if config is not None and config['fold'] == i and config['epoch'] < parameters['trainingEpochs']:
+            epochs = parameters['trainingEpochs'] - config['epoch']
+
+            print("========= Loading generators")
+            with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
+                dataTrainGenerator = pickle.load(trainingGeneratorHandler)
+
+            with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
+                dataTestGenerator = pickle.load(testingGeneratorHandler)
+
+            kerasAdapter = MultilayerKerasRecurrentNNCreator.create_from_path(config['filepath'],
+                                                    custom_objects={'f1':f1, 'precision':precision, 'recall':recall})
+            configSaver = SaveModelEpoch(parameters['modelConfigPath'],
+                                         parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
+        else:
+            # Training new fold
+            print("========= Training word2vec")
+            word2vecModel = gensim.models.Word2Vec(data[trainIndex], size = parameters['embeddingSize'], min_count=1,
+                                                   window=parameters['word2vecWindow'],
+                                                   iter=parameters['wordd2vecIter'], sg=1)
+            dataTrainGenerator = data_transform('./data', data[trainIndex], labels[trainIndex], word2vecModel, parameters['embeddingSize'],
+                                                1, maxWords=parameters['maxWords'])
+            dataTestGenerator = data_transform('./data_test', data[testIndex], labels[testIndex], word2vecModel, parameters['embeddingSize'],
+                                               1, maxWords=parameters['maxWords'])
+            print("========= Saving generators")
+            with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
+                pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
+
+            with open(parameters['testingGeneratorPath'], 'wb') as testingGeneratorHandler:
+                pickle.dump(dataTestGenerator, testingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
+
+            modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
+                                                             loss=parameters['loss'], layersActivations=parameters['layersActivations'],
+                                                             gru=parameters['gru'], use_dropout=parameters['useDropout'],
+                                                             dropout=parameters['dropout'],
+                                                             metrics=[f1, precision, recall, keras.metrics.binary_accuracy])
+            kerasAdapter = modelCreator.create()
+            epochs = parameters['trainingEpochs']
+            configSaver = SaveModelEpoch(parameters['modelConfigPath'],
+                                         parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
+
+        modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
+        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
+                         validationDataGenerator=dataTestGenerator, validationSteps=len(dataTestGenerator),
+                         callbacks=[modelCheckpoint, configSaver])
+        result = kerasAdapter.evaluate(dataTestGenerator, batch_size=len(dataTestGenerator))
+        result["fold"] = i
+        if dictWriter is None:
+            dictWriter = csv.DictWriter(cvsFileHandler, result.keys())
+        if config['fold'] == 1:
+            dictWriter.writeheader()
+        dictWriter.writerow(result)
+        dataTrainGenerator.clean_files()
+        dataTestGenerator.clean_files()
         i += 1
-        continue
-    if config is not None and config['epoch'] == parameters['trainingEpochs']:
-        print("Pass fold {}-".format(i))
-        i += 1
-        continue
-    # Training an instance of Word2Vec model with the training data
-    print("======== Fold {} ========".format(i))
 
-    # If exists a valid config  to resume a training
-    if config is not None and config['fold'] == i and config['epoch'] < parameters['trainingEpochs']:
-        epochs = parameters['trainingEpochs'] - config['epoch']
-
-        print("========= Loading generators")
-        with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
-            dataTrainGenerator = pickle.load(trainingGeneratorHandler)
-
-        with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
-            dataTestGenerator = pickle.load(testingGeneratorHandler)
-
-        kerasAdapter = MultilayerKerasRecurrentNNCreator.create_from_path(config['filepath'],
-                                                custom_objects={'f1':f1, 'precision':precision, 'recall':recall})
-        configSaver = SaveModelEpoch(parameters['modelConfigPath'],
-                                     parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
-    else:
-        # Training new fold
-        print("========= Training word2vec")
-        word2vecModel = gensim.models.Word2Vec(data[trainIndex], size = parameters['embeddingSize'], min_count=1,
-                                               window=parameters['word2vecWindow'],
-                                               iter=parameters['wordd2vecIter'], sg=1)
-        dataTrainGenerator = data_transform('./data', data[trainIndex], labels[trainIndex], word2vecModel, parameters['embeddingSize'],
-                                            1, maxWords=parameters['maxWords'])
-        dataTestGenerator = data_transform('./data_test', data[testIndex], labels[testIndex], word2vecModel, parameters['embeddingSize'],
-                                           1, maxWords=parameters['maxWords'])
-        print("========= Saving generators")
-        with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
-            pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
-
-        with open(parameters['testingGeneratorPath'], 'wb') as testingGeneratorHandler:
-            pickle.dump(dataTestGenerator, testingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
-
-        modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
-                                                         loss=parameters['loss'], layersActivations=parameters['layersActivations'],
-                                                         gru=parameters['gru'], use_dropout=parameters['useDropout'],
-                                                         dropout=parameters['dropout'],
-                                                         metrics=[f1, precision, recall, keras.metrics.binary_accuracy])
-        kerasAdapter = modelCreator.create()
-        epochs = parameters['trainingEpochs']
-        configSaver = SaveModelEpoch(parameters['modelConfigPath'],
-                                     parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
-
-    modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
-    kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
-                     validationDataGenerator=dataTestGenerator, validationSteps=len(dataTestGenerator),
-                     callbacks=[modelCheckpoint, configSaver])
-    metrics_fold.append(kerasAdapter.evaluate(dataTestGenerator, batch_size=len(dataTestGenerator)))
-    dataTrainGenerator.clean_files()
-    dataTestGenerator.clean_files()
-    i += 1
-
-print("Folds evaluation: {}".format(metrics_fold))
-#TODO: save metrics on csv
+with open(parameters['resultFilePath'], 'w') as cvsFileHandler:
+    dictWriter = csv.DictWriter(cvsFileHandler, metrics_fold[0].keys())
+    dictWriter.writeheader()
+    for result in metrics_fold:
+        dictWriter.writerow(result)
