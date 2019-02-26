@@ -336,6 +336,29 @@ def get_admission_vasopressor(hadm_id):
                 return row['vaso_flag']
     return None
 
+def generate_patient_admissions_dict():
+    admissions_df = pd.read_csv('./ADMISSIONS.csv')
+    patients_admissions = dict()
+    for index, row in admissions_df.iterrows():
+        if row['SUBJECT_ID'] not in patients_admissions.keys():
+            patients_admissions[str(row['SUBJECT_ID'])] = dict()
+        patients_admissions[str(row['SUBJECT_ID'])][str(row['HADM_ID'])] = row['ADMITTIME']
+    return patients_admissions
+
+def get_patients_previous_admissions(patient_id, current_admit_id, current_admit_time, patient_admissions_dict):
+    current_admit_strptime = time.strptime(current_admit_time, datetime_pattern)
+    num_previous_admission = 0
+    for patient_admission in patient_admissions_dict[patient_id].keys():
+        if patient_admission != current_admit_id:
+            patient_admission_strptime = time.strptime(patient_admissions_dict[patient_id][patient_admission],
+                                                       datetime_pattern)
+            difference = current_admit_strptime.tm_year - patient_admission_strptime.tm_year
+            if difference >= 0 and difference <= 1 :
+                num_previous_admission += 1
+    return num_previous_admission
+
+print("========== Generating patient admissions dictionary ==========")
+patients_admissions = generate_patient_admissions_dict()
 
 with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
     with open(csv_file_name, 'w') as csv_file_handler:
@@ -356,6 +379,9 @@ with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
             patient = json.load(open(line.strip(), 'r'))
             patient_age = get_patient_age(patient['subject_id'], patient['admittime'])
             if microbiologyevent_label in patient.keys() and (patient_age > 18 and patient_age < 80):
+                num_previous_admission = get_patients_previous_admissions(patient['subject_id'], patient['hadm_id'],
+                                                                          patient['admittime'], patients_admissions)
+                print("Number of previous admissions", num_previous_admission)
                 filtered_chartevents_object = []
                 # print("Getting events")
                 if 'chartevents' in patient.keys():
@@ -419,21 +445,17 @@ with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
 
                 for key in row_labevent.keys():
                     row_object[key] = row_labevent[key]
+                row_object['subject_id'] = patient['subject_id']
+                row_object['hadm_id'] = patient['hadm_id']
                 row_object[class_label] = get_organism_class(patient[microbiologyevent_label], ab_classes)
                 row_object[gender_label] = patient[gender_label]
                 row_object[ethnicity_label] = patient[ethnicity_label]
                 row_object[age_label.lower()] = patient_age
+                row_object['prev_hadm'] = num_previous_admission
                 row_object[sofa_label] = get_admission_sofa(patient['hadm_id'])
                 row_object[vaso_label] = get_admission_vasopressor(patient['hadm_id'])
 
-                # if csv_writer is None:
-                #     csv_writer = csv.DictWriter(csv_file_handler, row_object.keys())
-                #     csv_writer.writeheader()
-                # csv_writer.writerow(row_object)
-                # pp.pprint(row_object)
-                # exit()
                 table = pd.concat([table, row_object], ignore_index=True)
-                # table.append(row_object)
             else:
                 not_processes_files += 1
 
