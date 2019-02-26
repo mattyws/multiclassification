@@ -9,10 +9,7 @@ import sys
 import csv
 
 import trabalho_karin.helper as helper
-import arff
 import pandas as pd
-
-from trabalho_karin import pandas2arff
 
 pp = pprint.PrettyPrinter(indent=5)
 date_pattern = "%Y-%m-%d"
@@ -177,8 +174,12 @@ def transform_all_features_to_row(events, prefix=""):
                 for i in range(len(row[key])):
                     if row[key][i] == 'FEW':
                         row[key][i] = 1
-                    elif row[key][i] == 'MANY':
+                    elif row[key][i] == 'MOD':
                         row[key][i] = 2
+                    elif row[key][i] == 'MANY':
+                        row[key][i] = 3
+                row[key] = [float(w) for w in row[key] if w is not None]
+                row[key] = sum(row[key]) / len(row[key])
             else:
                 for i in range(len(row[key])):
                     if type(row[key][i]) == type(str()):
@@ -249,7 +250,10 @@ def transform_all_features_to_row(events, prefix=""):
     for key in removeKeys:
         if key in row.keys():
             row.pop(key)
-    row = pd.DataFrame(row, index=[0])
+    try:
+        row = pd.DataFrame(row, index=[0])
+    except:
+        pp.pprint(row)
     return row
 
 def get_data_from_admitday(json_object, date_str, key="charttime", date=False):
@@ -440,8 +444,6 @@ with open('sepsis_patients4', 'r') as patients_w_sepsis_handler:
         # for row in table:
         #     csv_writer.writerow(row)
         table.to_csv(csv_file_name, na_rep="?", quoting=csv.QUOTE_NONNUMERIC)
-        arff.dump(csv_file_name.replace('.csv', '.arff'), table.values, names=table.columns )
-        pandas2arff.pandas2arff(table, csv_file_name.replace('.csv', '_2.arff'))
 
         print("Number of files that do not had microbiologyevents : {}".format(not_processes_files))
         print("Size of files processed : {} bytes".format(all_size))

@@ -7,6 +7,7 @@
   "datasetLabelsFileName" : "datasetLabels.pkl",
   "trainingGeneratorPath" : "noteevents_checkpoint/dataTrainGenerator.pkl",
   "testingGeneratorPath" : "noteevents_checkpoint/dataTestGenerator.pkl",
+  "resultFilePath" : "noteevents_checkpoint/result.csv",
   "embeddingSize" : 200,
   "maxWords": null,
   "outputUnits": [
@@ -22,9 +23,9 @@
   "gru": true,
   "useDropout": true,
   "dropout": 0.3,
-  "trainingEpochs": 10,
+  "trainingEpochs": 30,
   "batchSize": 1,
   "word2vecWindow": 4,
-  "wordd2vecIter": 1
+  "wordd2vecIter": 70
 }
         
