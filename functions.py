@@ -1,5 +1,11 @@
+import os
+import sys
 from datetime import datetime, timedelta
 import time
+import re
+
+from os.path import exists, join, abspath
+from os import pathsep
 
 
 DATE_PATTERN = "%Y-%m-%d"
@@ -44,3 +50,47 @@ def filter_since_time(events_object, time_str, max_interval, datetime_pattern=DA
             if difference >= 0 and difference <= max_interval:
                 filtered_objects.append(event)
     return filtered_objects
+
+
+
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+    '''
+    return [ atoi(c) for c in re.split(r'(\d+)', text) ]
+
+
+def search_file(filename, search_path):
+    """Given a search path, find file
+    """
+    file_path = None
+    for path in search_path:
+        if exists(join(path, filename)):
+            file_path = path
+            break
+    if file_path:
+        return abspath(join(file_path, filename))
+    return None
+
+def get_file_path_from_id(id, search_paths):
+    file_path = search_file('{}.json'.format(id), search_paths)
+    return file_path
+
+def get_files_by_ids(ids, search_paths):
+    """
+    Get the path to the json files from a list of ids
+    :param ids: the ids to search for file
+    :param search_paths: the paths where the json files are listed
+    :return: a dictionary of id : path to json file or None in case of no file found
+    """
+    files_paths = dict()
+    for id in ids:
+        path = get_file_path_from_id(id, search_paths)
+        files_paths[id] = path
+    return files_paths

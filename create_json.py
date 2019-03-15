@@ -65,45 +65,48 @@ with open(admissions_csv_path, 'r') as admissions_csv_file:
         admission_time = admission_row['ADMITTIME']
         admission_time = datetime.datetime.strptime(admission_time, "%Y-%m-%d %H:%M:%S")
         admission_json_object_path = json_files_path+str(admission_time.year)
+        json_file_name = admission_json_object_path+'/'+admission_row['HADM_ID']+'.json'
         #Separating json files by year
         if not os.path.exists(admission_json_object_path):
             os.mkdir(admission_json_object_path)
 
-        admission_json_object = dict()
-        for field in DATA_FIELDS['ADMISSIONS']:
-            admission_json_object[field.lower()] = admission_row[field]
-        admission_json_object['GENDER'] = patients[admission_row['SUBJECT_ID']]['GENDER']
+        if not os.path.exists(json_file_name):
+            print("Creating {}".format(json_file_name))
+            admission_json_object = dict()
+            for field in DATA_FIELDS['ADMISSIONS']:
+                admission_json_object[field.lower()] = admission_row[field]
+            admission_json_object['GENDER'] = patients[admission_row['SUBJECT_ID']]['GENDER']
 
-        for path in paths:
-            data_path = mimic_data_path+path
-            file_csv_path = data_path + "/{}_{}.csv".format(path, admission_row["HADM_ID"])
-            fields = DATA_FIELDS[path]
-            if os.path.exists(file_csv_path):
-                admission_json_object[path.lower()] = []
-                with open(file_csv_path, 'r') as file_csv:
-                    file_csv_dictreader = csv.DictReader(file_csv)
-                    for file_row in file_csv_dictreader:
-                        row_new_object = dict()
-                        for field in fields:
-                            row_new_object[field.lower()] = file_row[field]
-                        # Adding fields for d_items
-                        if path in D_ITEMS_RELATION.keys():
-                            for key in D_ITEMS_RELATION[path].keys():
-                                if key in file_row.keys() and file_row[key] in d_items.keys():
-                                    for kkey in D_ITEMS_RELATION[path][key].keys():
-                                        if kkey in d_items[file_row[key]]:
-                                            row_new_object[D_ITEMS_RELATION[path][key][kkey]] = d_items[file_row[key]][kkey]
-                        if path in D_LABITEMS_RELATION.keys():
-                            for key in D_LABITEMS_RELATION[path].keys():
-                                if key in file_row.keys() and file_row[key] in d_labitems.keys():
-                                    for kkey in D_LABITEMS_RELATION[path][key].keys():
-                                        if kkey in d_labitems[file_row[key]]:
-                                            row_new_object[D_LABITEMS_RELATION[path][key][kkey]] = d_labitems[file_row[key]][kkey]
-                        admission_json_object[path.lower()].append(row_new_object)
+            for path in paths:
+                data_path = mimic_data_path+path
+                file_csv_path = data_path + "/{}_{}.csv".format(path, admission_row["HADM_ID"])
+                fields = DATA_FIELDS[path]
+                if os.path.exists(file_csv_path):
+                    admission_json_object[path.lower()] = []
+                    with open(file_csv_path, 'r') as file_csv:
+                        file_csv_dictreader = csv.DictReader(file_csv)
+                        for file_row in file_csv_dictreader:
+                            row_new_object = dict()
+                            for field in fields:
+                                row_new_object[field.lower()] = file_row[field]
+                            # Adding fields for d_items
+                            if path in D_ITEMS_RELATION.keys():
+                                for key in D_ITEMS_RELATION[path].keys():
+                                    if key in file_row.keys() and file_row[key] in d_items.keys():
+                                        for kkey in D_ITEMS_RELATION[path][key].keys():
+                                            if kkey in d_items[file_row[key]]:
+                                                row_new_object[D_ITEMS_RELATION[path][key][kkey]] = d_items[file_row[key]][kkey]
+                            if path in D_LABITEMS_RELATION.keys():
+                                for key in D_LABITEMS_RELATION[path].keys():
+                                    if key in file_row.keys() and file_row[key] in d_labitems.keys():
+                                        for kkey in D_LABITEMS_RELATION[path][key].keys():
+                                            if kkey in d_labitems[file_row[key]]:
+                                                row_new_object[D_LABITEMS_RELATION[path][key][kkey]] = d_labitems[file_row[key]][kkey]
+                            admission_json_object[path.lower()].append(row_new_object)
 
-        # pp.pprint(admission_json_object)
-        with open(admission_json_object_path+'/'+admission_row['HADM_ID']+'.json', 'w') as admission_json_file:
-            json.dump(admission_json_object, admission_json_file, sort_keys=True, indent=4, separators=(', ', ': '))
-        num_rows_processed += 1
-        if num_rows_processed % 1000 == 0:
-            print("============ {} rows processed ============".format(num_rows_processed))
+            # pp.pprint(admission_json_object)
+            with open(json_file_name, 'w') as admission_json_file:
+                json.dump(admission_json_object, admission_json_file, sort_keys=True, indent=4, separators=(', ', ': '))
+            num_rows_processed += 1
+            if num_rows_processed % 1000 == 0:
+                print("============ {} rows processed ============".format(num_rows_processed))

@@ -1,6 +1,6 @@
 {
-  "sepsisFilesPath" : "/home/mattyws/Documents/no_sepsis_noteevents",
-  "noSepsisFilesPath" : "/home/mattyws/Documents/sepsis_noteevents",
+  "noSepsisFilesPath" : "/home/mattyws/Documents/no_sepsis_noteevents",
+  "sepsisFilesPath" : "/home/mattyws/Documents/sepsis_noteevents",
   "modelCheckpointPath" : "noteevents_checkpoint/",
   "modelConfigPath" : "noteevents_checkpoint/config.json",
   "datasetFilesFileName" : "datasetFiles.pkl",
