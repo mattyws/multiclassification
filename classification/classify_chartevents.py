@@ -2,6 +2,10 @@ import csv
 import json
 import os
 import pickle
+from datetime import datetime
+
+import pandas as pd
+import chartevents_features
 
 import keras
 
@@ -22,6 +26,7 @@ from model_creators import MultilayerKerasRecurrentNNCreator
 from metrics import f1, precision, recall
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
 
 def data_transform(dataPath, data, labels, word2vecModel, embeddingSize, batchSize, maxWords=None):
@@ -31,7 +36,7 @@ def data_transform(dataPath, data, labels, word2vecModel, embeddingSize, batchSi
         generator.add(x, y, maxWords=maxWords)
     return generator
 
-parametersFilePath = "parameters/classify_noteevents_parameters.json"
+parametersFilePath = "parameters/classify_chartevents_parameters.json"
 
 #Loading parameters file
 print("========= Loading Parameters")
@@ -40,6 +45,9 @@ with open(parametersFilePath, 'r') as parametersFileHandler:
     parameters = json.load(parametersFileHandler)
 if parameters is None:
     exit(1)
+
+if not os.path.exists(parameters['modelCheckpointPath']):
+    os.mkdir(parameters['modelCheckpointPath'])
 
 # only load the dataset if do not resuming a training, use script paramters for that
 if os.path.exists(parameters['modelCheckpointPath']+parameters['datasetFilesFileName']):
@@ -85,15 +93,22 @@ else:
 if len(datasetFiles) == 0 or len(datasetLabels) == 0:
     raise ValueError("Dataset files is empty!")
 
-print("========= Loading texts from files")
+#TODO : mudar aqui para ler o arquivo e filtrar os dados até hora da infecção - parameters['hoursBeforeInfectionPoe']
+
+print("========= Loading sepsis3-df-no-exclusions.csv")
+sepsis3_df = pd.read_csv('../sepsis3-df-no-exclusions.csv')
+sepsis3_df = sepsis3_df[sepsis3_df['sepsis-3'] == 1]
+print("========= Loading data from files")
 data = []
-for filePath in datasetFiles:
-    with open(filePath) as file_handler:
-        jsonObject = json.load(file_handler)
-        texts = []
-        for object in jsonObject:
-            texts.append(object['text'])
-        data.append('\n'.join(texts))
+for filePath, label in zip(datasetFiles, datasetLabels):
+    patient_matrix = []
+    csvObject = pd.read_csv(filePath)
+    print(csvObject.keys())
+    break
+
+exit(1)
+
+# TODO: FINISH THE DATA READING AND PREPROCESSING
 labels = datasetLabels
 
 #TODO: proper preprocess the data

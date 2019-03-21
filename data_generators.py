@@ -6,6 +6,69 @@ from keras.utils import Sequence
 
 from data_representation import Word2VecEmbeddingCreator
 
+class CharteventsDataGenerator(Sequence):
+
+    def __init__(self, dataPath, batchSize, iterForever=False):
+        self.batchSize = batchSize
+        self.dataPath = dataPath
+        if self.dataPath[-1] != '/':
+            self.dataPath += '/'
+        if not os.path.exists(self.dataPath):
+            os.mkdir(self.dataPath)
+        self.iterForever = iterForever
+        self.__filesList = []
+        self.__labels = []
+        self.__iterPos = 0
+
+    def add(self, matrix, label):
+        fileName = self.__save_object(matrix)
+        self.__filesList.append(fileName)
+        self.__labels.append(label)
+
+    def __save_object(self, embeddingObject):
+        fileName = uuid.uuid4().hex
+        while fileName in self.__filesList:
+            fileName = uuid.uuid4().hex
+        fileName = self.dataPath + fileName + '.pkl'
+        with open(fileName, 'wb+') as pickleFileHandler:
+            try:
+                pickle.dump(embeddingObject, pickleFileHandler, pickle.HIGHEST_PROTOCOL)
+            except Exception as e:
+                print(e)
+        return fileName
+
+    def __load(self, fileName):
+        x = None
+        with open(fileName, 'rb') as pklFileHandler:
+            x = pickle.load(pklFileHandler)
+        return np.array(x)
+
+    def clean_files(self):
+        for file in self.__filesList:
+            os.remove(file)
+        self.__filesList = []
+        self.__labels = []
+
+    def __iter__(self):
+        return self
+
+    def __getitem__(self, idx):
+        """
+        Its assumed that we deliver only one data at each batch
+        :param idx:
+        :return:
+        """
+        # batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
+        # batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
+        batch_x = np.array([self.__load(self.__filesList[idx])])
+        batch_y = np.array(self.__labels[idx])
+
+        # return np.array([self.__load(file_name) for file_name in batch_x]), np.array(batch_y)
+        return batch_x, batch_y
+
+    def __len__(self):
+        return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
+
 
 class Word2VecTextEmbeddingGenerator(Sequence):
     def __init__(self, dataPath, word2vecModel, batchSize, embeddingSize=200, iterForever=False):

@@ -1,0 +1,27 @@
+{
+    "noSepsisFilesPath": "/home/mattyws/Documentos/mimic/data/no_sepsis_chartevents",
+    "sepsisFilesPath": "/home/mattyws/Documentos/mimic/data/sepsis_chartevents",
+    "modelCheckpointPath": "chartevents_checkpoint/",
+    "modelConfigPath": "chartevents_checkpoint/config.json",
+    "datasetFilesFileName": "datasetFiles.pkl",
+    "datasetLabelsFileName": "datasetLabels.pkl",
+    "trainingGeneratorPath": "chartevents_checkpoint/dataTrainGenerator.pkl",
+    "testingGeneratorPath": "chartevents_checkpoint/dataTestGenerator.pkl",
+    "resultFilePath": "chartevents_checkpoint/result.csv",
+    "hoursBeforeInfectionPoe" : 4,
+    "outputUnits": [
+        64,
+        32
+    ],
+    "numOutputNeurons": 1,
+    "loss": "binary_crossentropy",
+    "layersActivations": [
+        "relu",
+        "relu"
+    ],
+    "gru": true,
+    "useDropout": true,
+    "dropout": 0.3,
+    "trainingEpochs": 30,
+    "batchSize": 1
+}

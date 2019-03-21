@@ -1,12 +1,9 @@
 import abc
 
-from keras.engine.saving import load_model
-from keras.layers.convolutional import Conv2D, Conv1D
-from keras.layers.core import Dense, Dropout, Flatten
-from keras.layers.pooling import MaxPool2D, MaxPool1D, AveragePooling1D
+from keras.models import load_model
+from keras.layers.core import Dense, Dropout
 from keras.layers.recurrent import LSTM, GRU
 from keras.models import Sequential
-from keras.optimizers import SGD
 from sklearn.neural_network.multilayer_perceptron import MLPClassifier
 
 import adapter
@@ -102,76 +99,6 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
     def create_from_path(filepath, custom_objects=None):
         model = load_model(filepath, custom_objects=custom_objects)
         return adapter.KerasGeneratorAdapter(model)
-
-class KerasCovolutionalNNCreator(ModelCreator):
-
-    #TODO: Finish this class
-    def __init__(self, input_shape=None, num_class=8, loss='mse', optimizer='sgd'):
-        self.input_shape = input_shape
-        self.loss = loss
-        self.optimizer = optimizer
-        self.num_class=num_class
-
-    def __build_model(self):
-        model = Sequential()
-        model.add(Conv1D(256, kernel_size=8, activation='relu', padding='same', input_shape=self.input_shape))
-        model.add(AveragePooling1D(pool_size=1, padding="same"))
-        # model.add(Dropout(0.5))
-        # model.add(Conv1D(128, kernel_size=3, activation='elu', padding='same'))
-        # model.add(AveragePooling1D(pool_size=1, padding="same"))
-        # model.add(Dropout(0.5))
-        # model.add(Conv1D(16, kernel_size=5, activation='elu', padding='same'))
-        # model.add(MaxPool1D(pool_size=1, padding="same"))
-        # model.add(Conv1D(16, kernel_size=5, activation='elu', padding='same'))
-        # model.add(Dropout(0.25))
-
-        # model.add(Dropout(0.25))
-        model.add(Flatten())
-        model.add(Dense(128))
-        model.add(Dropout(0.5))
-        model.add(Dense(self.num_class, activation='tanh'))
-        # sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=['accuracy'])
-        return model
-
-    def create(self):
-        return adapter.KerasGeneratorAdapter(self.__build_model())
-
-class KerasMultilayerPerceptron(ModelCreator):
-
-    def __init__(self, num_class=8, input_dim=200, layers=1, hidden_units=[20], use_dropout=True, dropout=0.5):
-        if len(hidden_units) != layers:
-            raise ValueError("The hidden_units must have the size of the number of layers.")
-        self.input_dim = input_dim
-        self.layers = layers
-        self.hidden_units = hidden_units
-        self.use_dropout = use_dropout
-        self.dropout = dropout
-        self.num_class = num_class
-
-    def __build_model(self):
-        model = Sequential()
-        i = 0
-        for i in range(self.layers):
-            model.add(Dense(self.hidden_units[i], activation='relu', input_dim=self.input_dim))
-            if self.use_dropout:
-                model.add(Dropout(self.dropout))
-        model.add(Dense(self.num_class, activation='softmax'))
-        sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-        model.compile(loss='categorical_crossentropy',
-                      optimizer=sgd,
-                      metrics=['accuracy'])
-        return model
-
-    def create(self):
-        return adapter.KerasGeneratorAdapter(self.__build_model())
-
-# class SimpleKerasCovolutionalNNCreator(ModelCreator):
-#
-#     def __build_model(self):
-#
-#
-#     def create(self):
 
 class SklearnNeuralNetwork(ModelCreator):
 
