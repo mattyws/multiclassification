@@ -101,10 +101,12 @@ sepsis3_df = sepsis3_df[sepsis3_df['sepsis-3'] == 1]
 print("========= Loading data from files")
 data = []
 for filePath, label in zip(datasetFiles, datasetLabels):
+    hadm_id = filePath.split('/')[-1].split('.')[0]
+    # Get rows from sepsis-df that match with this hadm_id
+    hadm_rows = sepsis3_df[sepsis3_df['hadm_id'] == int(hadm_id)]
     patient_matrix = []
     csvObject = pd.read_csv(filePath)
-    print(csvObject.keys())
-    break
+    csvObject.drop(columns=['itemid', 'label'], axis=1)
 
 exit(1)
 

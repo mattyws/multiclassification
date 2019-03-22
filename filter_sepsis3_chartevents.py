@@ -53,6 +53,11 @@ for index, row in sepsis3_df.iterrows():
         if diff.days > 0:
             # Create a dictionary of events that occur in the patient, and add all timestamps where that event appear
             events_in_patient = dict()
+            # Adding marker to infection time
+            events_in_patient['-1'] = dict()
+            events_in_patient['-1']['itemid'] = -1
+            events_in_patient['-1']['label'] = 'suspected_infection_time_poe'
+            events_in_patient['-1'][row['suspected_infection_time_poe']] = True
             print("==== Looping events for {} ====".format(row['hadm_id']))
             for item in json_admission[features_event_label]:
                 # Get values and store into a variable, just to read easy and if the labels change
