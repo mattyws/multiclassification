@@ -7,7 +7,7 @@ import pprint
 from data_fields import DATA_FIELDS, D_ITEMS_RELATION, D_LABITEMS_RELATION
 
 pp = pprint.PrettyPrinter(indent=5)
-mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
+mimic_data_path = "/home/mattyws/Documents/mimic_data/"
 csv_file_path = mimic_data_path+"csv/"
 json_files_path = mimic_data_path+"json/"
 if not os.path.exists(json_files_path):

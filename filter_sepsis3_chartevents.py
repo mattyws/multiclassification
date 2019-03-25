@@ -11,7 +11,7 @@ import functions
 
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
 features_event_label = 'chartevents'
-mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
+mimic_data_path = "/home/mattyws/Documents/mimic_data/"
 events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
 no_sepsis_events_files_path = mimic_data_path + 'no_sepsis_{}/'.format(features_event_label)
 if not os.path.exists(no_sepsis_events_files_path):
@@ -39,7 +39,11 @@ for index, row in sepsis3_df.iterrows():
     # If the file isn't found, ignore this admission
     if sepsis_admissions_paths[row['hadm_id']]:
         # Open the json file, transform the date to a datetime representation, and calculate the difference
-        json_admission = json.load(open(sepsis_admissions_paths[row['hadm_id']], 'r'))
+        try:
+            json_admission = json.load(open(sepsis_admissions_paths[row['hadm_id']], 'r'))
+        except:
+            print("Error in file {}".format(sepsis_admissions_paths[row['hadm_id']]))
+            exit(1)
         # If the admission was already processed, there is no reason to add it again
         if os.path.exists(events_files_path +'{}.csv'.format(row['hadm_id'])):
             print("{} already exists!".format(events_files_path +'{}.csv'.format(row['hadm_id'])))

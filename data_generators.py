@@ -6,7 +6,39 @@ from keras.utils import Sequence
 
 from data_representation import Word2VecEmbeddingCreator
 
-class CharteventsDataGenerator(Sequence):
+class EmbeddingObjectSaver(object):
+    def __init__(self, path):
+        self.path = path
+
+    def save(self, embeddingObject):
+        return self.__save_object(embeddingObject)
+
+    def __save_object(self, embeddingObject):
+        fileName = uuid.uuid4().hex
+        while os.path.exists(fileName):
+            fileName = uuid.uuid4().hex
+        fileName = self.path + fileName + '.pkl'
+        with open(fileName, 'wb+') as pickleFileHandler:
+            try:
+                pickle.dump(embeddingObject, pickleFileHandler, pickle.HIGHEST_PROTOCOL)
+            except Exception as e:
+                print(e)
+        return fileName
+
+class EmbeddingObjectLoader(object):
+
+    def load(self, filePath):
+        return self.__load(filePath)
+
+    def __load(self, fileName):
+        x = None
+        with open(fileName, 'rb') as pklFileHandler:
+            x = pickle.load(pklFileHandler)
+        return np.array(x)
+
+
+#  TODO : data generator só devem receber uma lista de arquivos, separar lógica de salvar os objetos da lógica do generator
+class LogitudinalDataGenerator(Sequence):
 
     def __init__(self, dataPath, batchSize, iterForever=False):
         self.batchSize = batchSize

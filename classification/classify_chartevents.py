@@ -2,7 +2,7 @@ import csv
 import json
 import os
 import pickle
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 import chartevents_features
@@ -93,20 +93,44 @@ else:
 if len(datasetFiles) == 0 or len(datasetLabels) == 0:
     raise ValueError("Dataset files is empty!")
 
-#TODO : mudar aqui para ler o arquivo e filtrar os dados até hora da infecção - parameters['hoursBeforeInfectionPoe']
-
-print("========= Loading sepsis3-df-no-exclusions.csv")
-sepsis3_df = pd.read_csv('../sepsis3-df-no-exclusions.csv')
-sepsis3_df = sepsis3_df[sepsis3_df['sepsis-3'] == 1]
 print("========= Loading data from files")
 data = []
+time_before_suspicious_timedelta = timedelta(hours=parameters['hoursBeforeInfectionPoe'])
 for filePath, label in zip(datasetFiles, datasetLabels):
     hadm_id = filePath.split('/')[-1].split('.')[0]
     # Get rows from sepsis-df that match with this hadm_id
-    hadm_rows = sepsis3_df[sepsis3_df['hadm_id'] == int(hadm_id)]
     patient_matrix = []
     csvObject = pd.read_csv(filePath)
-    csvObject.drop(columns=['itemid', 'label'], axis=1)
+    # Get supicious infection timestamp
+    suspicous_series = csvObject[csvObject['itemid'] == -1].drop(columns=['itemid', 'label']).iloc[0].dropna()
+    suspicious_timestamp = suspicous_series.keys()[0]
+    suspicious_datetime = datetime.strptime(suspicious_timestamp, DATETIME_PATTERN)
+    # Filter features
+    csvObject = csvObject[csvObject['itemid'].isin(chartevents_features.FEATURES_ITEMS_LABELS.keys())]
+    # TODO : add rows with null values for all feature that is not in the data
+    # Drop unecessary columns
+    csvObject = csvObject.drop(columns=['itemid', 'label'])
+    # Drop timestamp coluns that are not in the range of [admission_time, infection_time - hoursBeforeInfection]
+    keys_to_drop = []
+    for key in csvObject.keys():
+        try:
+            key_datetime = datetime.strptime(key, DATETIME_PATTERN)
+            if key_datetime > suspicious_datetime - time_before_suspicious_timedelta:
+                keys_to_drop.append(key)
+        except:
+            print(key)
+            keys_to_drop.append(key)
+    csvObject = csvObject.drop(columns=keys_to_drop)
+    # TODO : load and save files
+    data_matrix = []
+    for key in csvObject.keys():
+        data_matrix.append(csvObject[key])
+    data_matrix = numpy.transpose(data_matrix)
+    print(data_matrix.shape)
+
+    exit()
+
+# TODO : separete preprocessing script from training script
 
 exit(1)
 
