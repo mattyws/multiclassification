@@ -1,14 +1,18 @@
 {
-    "noSepsisFilesPath": "/home/mattyws/Documents/mimic_data/no_sepsis_chartevents",
-    "sepsisFilesPath": "/home/mattyws/Documents/mimic_data/sepsis_chartevents",
+    "noSepsisFilesPath": "/home/mattyws/Documentos/mimic/data/no_sepsis_chartevents",
+    "sepsisFilesPath": "/home/mattyws/Documentos/mimic/data/sepsis_chartevents",
     "modelCheckpointPath": "chartevents_checkpoint/",
     "modelConfigPath": "chartevents_checkpoint/config.json",
+    "allDataPath" : "./data/",
+    "trainingDataPath" :  "./dataTrainigChartevents/",
+    "testingDataPath" : "./dataTestChartevents/",
     "datasetFilesFileName": "datasetFiles.pkl",
     "datasetLabelsFileName": "datasetLabels.pkl",
     "trainingGeneratorPath": "chartevents_checkpoint/dataTrainGenerator.pkl",
     "testingGeneratorPath": "chartevents_checkpoint/dataTestGenerator.pkl",
     "resultFilePath": "chartevents_checkpoint/result.csv",
     "hoursBeforeInfectionPoe" : 4,
+    "dataLength" : null,
     "outputUnits": [
         64,
         32

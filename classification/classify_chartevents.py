@@ -19,7 +19,7 @@ from sklearn.metrics.classification import f1_score
 from sklearn.model_selection import train_test_split, KFold
 from sklearn.model_selection._split import StratifiedKFold
 
-from data_generators import Word2VecTextEmbeddingGenerator
+from data_generators import Word2VecTextEmbeddingGenerator, EmbeddingObjectSaver, LongitudinalDataGenerator
 from data_representation import Word2VecEmbeddingCreator
 from keras_callbacks import SaveModelEpoch
 from model_creators import MultilayerKerasRecurrentNNCreator
@@ -27,14 +27,6 @@ from metrics import f1, precision, recall
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
-
-
-def data_transform(dataPath, data, labels, word2vecModel, embeddingSize, batchSize, maxWords=None):
-    generator = Word2VecTextEmbeddingGenerator(dataPath, word2vecModel, batchSize, embeddingSize=embeddingSize,
-                                               iterForever=True)
-    for x, y in zip(data, labels):
-        generator.add(x, y, maxWords=maxWords)
-    return generator
 
 parametersFilePath = "parameters/classify_chartevents_parameters.json"
 
@@ -49,121 +41,29 @@ if parameters is None:
 if not os.path.exists(parameters['modelCheckpointPath']):
     os.mkdir(parameters['modelCheckpointPath'])
 
-# only load the dataset if do not resuming a training, use script paramters for that
-if os.path.exists(parameters['modelCheckpointPath']+parameters['datasetFilesFileName']):
-    print("========= Loading previous dataset")
-    datasetFiles = []
-    datasetLabels = []
-    with open(parameters['modelCheckpointPath']+parameters['datasetFilesFileName'], 'rb') as datasetFilesHandler:
-        datasetFiles = pickle.load(datasetFilesHandler)
+data = np.array([parameters["allDataPath"] + x for x in os.listdir(parameters["allDataPath"])])
+# Get label for stratified k-fold
+allDataGenerator = LongitudinalDataGenerator(data, 1)
+labelsForStratified = []
+for d in range(len(allDataGenerator)):
+    labelsForStratified.append(allDataGenerator[d][1][0][0])
 
-    with open(parameters['modelCheckpointPath']+parameters['datasetLabelsFileName'], 'rb') as datasetLabelsHandler:
-        datasetLabels = pickle.load(datasetLabelsHandler)
-else:
-    # Get files paths
-    print("========= Getting files paths")
-    datasetFiles = []
-    datasetLabels = []
-    # sepsisFiles = []
-    for dir, path, files in os.walk(parameters['sepsisFilesPath']):
-        for file in files:
-            datasetFiles.append(dir + "/" + file)
-            datasetLabels.append([1])
-
-    # noSepsisFiles = []
-    lenSepsisObjects = len(datasetFiles)
-    for dir, path, files in os.walk(parameters['noSepsisFilesPath']):
-        if len(datasetFiles) - lenSepsisObjects >= math.ceil(lenSepsisObjects * 1.5) :
-            break
-        for file in files:
-            datasetFiles.append(dir + "/" + file)
-            datasetLabels.append([0])
-
-    print("========= Spliting data for testing")
-    dataTrain, datasetFiles, labelsTrain, datasetLabels = train_test_split(datasetFiles, datasetLabels,
-                                                                           stratify=datasetLabels, test_size=0.2)
-
-    print("========= Saving dataset files array")
-    with open(parameters['modelCheckpointPath']+parameters['datasetFilesFileName'], 'wb') as datasetFilesHandler:
-        pickle.dump(datasetFiles, datasetFilesHandler, pickle.HIGHEST_PROTOCOL)
-
-    with open(parameters['modelCheckpointPath']+parameters['datasetLabelsFileName'], 'wb') as datasetLabelsHandler:
-        pickle.dump(datasetLabels, datasetLabelsHandler, pickle.HIGHEST_PROTOCOL)
-
-if len(datasetFiles) == 0 or len(datasetLabels) == 0:
-    raise ValueError("Dataset files is empty!")
-
-print("========= Loading data from files")
-data = []
-time_before_suspicious_timedelta = timedelta(hours=parameters['hoursBeforeInfectionPoe'])
-for filePath, label in zip(datasetFiles, datasetLabels):
-    hadm_id = filePath.split('/')[-1].split('.')[0]
-    # Get rows from sepsis-df that match with this hadm_id
-    patient_matrix = []
-    csvObject = pd.read_csv(filePath)
-    # Get supicious infection timestamp
-    suspicous_series = csvObject[csvObject['itemid'] == -1].drop(columns=['itemid', 'label']).iloc[0].dropna()
-    suspicious_timestamp = suspicous_series.keys()[0]
-    suspicious_datetime = datetime.strptime(suspicious_timestamp, DATETIME_PATTERN)
-    # Filter features
-    csvObject = csvObject[csvObject['itemid'].isin(chartevents_features.FEATURES_ITEMS_LABELS.keys())]
-    # TODO : add rows with null values for all feature that is not in the data
-    # Drop unecessary columns
-    csvObject = csvObject.drop(columns=['itemid', 'label'])
-    # Drop timestamp coluns that are not in the range of [admission_time, infection_time - hoursBeforeInfection]
-    keys_to_drop = []
-    for key in csvObject.keys():
-        try:
-            key_datetime = datetime.strptime(key, DATETIME_PATTERN)
-            if key_datetime > suspicious_datetime - time_before_suspicious_timedelta:
-                keys_to_drop.append(key)
-        except:
-            print(key)
-            keys_to_drop.append(key)
-    csvObject = csvObject.drop(columns=keys_to_drop)
-    # TODO : load and save files
-    data_matrix = []
-    for key in csvObject.keys():
-        data_matrix.append(csvObject[key])
-    data_matrix = numpy.transpose(data_matrix)
-    print(data_matrix.shape)
-
-    exit()
-
-# TODO : separete preprocessing script from training script
-
-exit(1)
-
-# TODO: FINISH THE DATA READING AND PREPROCESSING
-labels = datasetLabels
-
-#TODO: proper preprocess the data
 print("========= Preprocessing data")
-new_data = []
-for d in data:
-    new_data.append(regexp_tokenize(d.lower(), pattern='\w+|\$[\d\.]+|\S+'))
-
-data = numpy.array(new_data)
-labels = numpy.array(labels)
-
+#TODO : preprocessing for classification
 
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
-inputShape = (parameters['maxWords'], parameters['embeddingSize'])
-
-i = 1
-labelsForStratifiedKFold = []
-for label in labels:
-    labelsForStratifiedKFold.append(label[0])
+inputShape = (parameters['dataLength'], len(chartevents_features.FEATURES_ITEMS_LABELS.keys()))
 
 config = None
 if os.path.exists(parameters['modelConfigPath']):
     with open(parameters['modelConfigPath'], 'r') as configHandler:
         config = json.load(configHandler)
 
+i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
     dictWriter = None
-    for trainIndex, testIndex in kf.split(data, labelsForStratifiedKFold):
+    for trainIndex, testIndex in kf.split(data, labelsForStratified):
         print(len(trainIndex))
         if config is not None and config['fold'] > i:
             print("Pass fold {}".format(i))
@@ -192,15 +92,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             configSaver = SaveModelEpoch(parameters['modelConfigPath'],
                                          parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
         else:
-            # Training new fold
-            print("========= Training word2vec")
-            word2vecModel = gensim.models.Word2Vec(data[trainIndex], size = parameters['embeddingSize'], min_count=1,
-                                                   window=parameters['word2vecWindow'],
-                                                   iter=parameters['wordd2vecIter'], sg=1)
-            dataTrainGenerator = data_transform('./data', data[trainIndex], labels[trainIndex], word2vecModel, parameters['embeddingSize'],
-                                                1, maxWords=parameters['maxWords'])
-            dataTestGenerator = data_transform('./data_test', data[testIndex], labels[testIndex], word2vecModel, parameters['embeddingSize'],
-                                               1, maxWords=parameters['maxWords'])
+            dataTrainGenerator = LongitudinalDataGenerator(data[trainIndex], 1)
+            dataTestGenerator = LongitudinalDataGenerator(data[testIndex], 1)
             print("========= Saving generators")
             with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
                 pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
@@ -232,9 +125,3 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTrainGenerator.clean_files()
         dataTestGenerator.clean_files()
         i += 1
-
-with open(parameters['resultFilePath'], 'w') as cvsFileHandler:
-    dictWriter = csv.DictWriter(cvsFileHandler, metrics_fold[0].keys())
-    dictWriter.writeheader()
-    for result in metrics_fold:
-        dictWriter.writerow(result)

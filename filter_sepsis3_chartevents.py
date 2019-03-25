@@ -11,7 +11,7 @@ import functions
 
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
 features_event_label = 'chartevents'
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
 no_sepsis_events_files_path = mimic_data_path + 'no_sepsis_{}/'.format(features_event_label)
 if not os.path.exists(no_sepsis_events_files_path):
@@ -92,8 +92,11 @@ for index, row in sepsis3_df.iterrows():
             for event_id in events_in_patient.keys():
                 events = pd.DataFrame(events_in_patient[event_id], index=[0])
                 patient_data = pd.concat([patient_data, events], ignore_index=True)
-            print("==== Creating csv ====")
-            patient_data.to_csv(events_files_path +'{}.csv'.format(row['hadm_id']), quoting=csv.QUOTE_NONNUMERIC, index=False)
+            if len(patient_data) != 0:
+                print("==== Creating csv ====")
+                patient_data.to_csv(events_files_path +'{}.csv'.format(row['hadm_id']), quoting=csv.QUOTE_NONNUMERIC, index=False)
+            else:
+                print("Error in file {}, events is empty".format(sepsis_admissions_paths[row['hadm_id']]))
     else:
         print("Admission {} not found: ".format(row['hadm_id']))
 
@@ -153,6 +156,9 @@ for index, row in no_sepsis3_df.iterrows():
             for event_id in events_in_patient.keys():
                 events = pd.DataFrame(events_in_patient[event_id], index=[0])
                 patient_data = pd.concat([patient_data, events], ignore_index=True)
-            print("==== Creating csv ====")
-            patient_data.to_csv(no_sepsis_events_files_path + '{}.csv'.format(json_admission['hadm_id']), quoting=csv.QUOTE_NONNUMERIC,
-                                index=False)
+            if len(patient_data) != 0:
+                print("==== Creating csv ====")
+                patient_data.to_csv(no_sepsis_events_files_path + '{}.csv'.format(json_admission['hadm_id']), quoting=csv.QUOTE_NONNUMERIC,
+                                    index=False)
+            else:
+                print("Error in file {}, events is empty".format(no_sepsis_admissions_paths[row['hadm_id']]))
