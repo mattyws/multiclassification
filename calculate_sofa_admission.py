@@ -35,17 +35,26 @@ def get_respiration_score(pao2fio2, is_vent):
     :param is_vent: if the patient is on ventilation
     :return: a number between 0-4 depending on the value of PaO2FiO2
     """
+    # if pao2fio2 is not None:
+    #     if is_vent:
+    #         if pao2fio2 < 100:
+    #             return 4
+    #         elif pao2fio2 < 200:
+    #             return 3
+    #     else:
+    #         if pao2fio2 < 300:
+    #             return 2
+    #         elif pao2fio2 < 400:
+    #             return 1
     if pao2fio2 is not None:
-        if is_vent:
-            if pao2fio2 < 100:
-                return 4
-            elif pao2fio2 < 200:
-                return 3
-        else:
-            if pao2fio2 < 300:
-                return 2
-            elif pao2fio2 < 400:
-                return 1
+        if pao2fio2 < 100:
+            return 4
+        elif pao2fio2 < 220:
+            return 3
+        elif pao2fio2 < 300:
+            return 2
+        elif pao2fio2 < 400:
+            return 1
     return 0
 
 def get_liver_score(bilirubin):
@@ -99,7 +108,7 @@ def get_neurological_score(gcs):
     if gcs is not None:
         if gcs >= 13 and gcs <= 14: return 1
         elif gcs >= 10 and gcs <= 12: return 2
-        elif gcs >= 6 and gcs <= 0 : return 3
+        elif gcs >= 6 and gcs <= 9 : return 3
         elif gcs < 6: return 4
     return 0
 
@@ -132,7 +141,7 @@ def get_closest_value(events, time):
 
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
 # Using variables for the paths to the files
-mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
+mimic_data_path = "/home/mattyws/Documents/mimic_data/"
 csv_file_path = mimic_data_path+"csv/"
 sofa_scores_files_path = mimic_data_path+"sofa_scores_admission/"
 chartevents_path = mimic_data_path+'CHARTEVENTS/'

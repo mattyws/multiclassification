@@ -5,7 +5,7 @@ import pandas as pd
 
 
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
-mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
+mimic_data_path = "/home/mattyws/Documents/mimic_data/"
 sofa_scores_files_path = mimic_data_path+"sofa_scores_admission/"
 
 sepsis3_df_no_exclusions = pd.read_csv('sepsis3-df-no-exclusions.csv')
@@ -13,12 +13,15 @@ infected_icu = sepsis3_df_no_exclusions[sepsis3_df_no_exclusions['suspected_infe
 infected_icu['intime'] = pd.to_datetime(infected_icu['intime'], format=datetime_pattern)
 infected_icu['outtime'] = pd.to_datetime(infected_icu['outtime'], format=datetime_pattern)
 
+admissions = pd.read_csv('./ADMISSIONS.csv')
+
 sepsis3_patients = pd.DataFrame([])
 less_7 = 0
 metavision = 0
 file_errors = 0
 errors_metavision = 0
 for index, infected_patient in infected_icu.iterrows():
+    admission = admissions[admissions['HADM_ID'] == infected_patient['hadm_id']].iloc[0]
     aux_patient = None
     try:
         intime = infected_patient['intime']
@@ -43,15 +46,14 @@ for index, infected_patient in infected_icu.iterrows():
     patient_sofa_scores = patient_sofa_scores.truncate(before=infection_time - timedelta(hours=48))
     patient_sofa_scores = patient_sofa_scores.truncate(after=infection_time + timedelta(hours=24))
     # patient_sofa_scores = patient_sofa_scores.set_index('timestep').sort_index()
-
     # If is empty, pass this icu
     if len(patient_sofa_scores) == 0:
         continue
     # Get the sofa score for the beginning of the window
     begin_sofa_score = patient_sofa_scores.iloc[0]
-    for index, sofa_score in patient_sofa_scores.iterrows():
+    for i, sofa_score in patient_sofa_scores.iterrows():
         # print("sofa", sofa_score,"begin", begin_sofa_score)
-        if sofa_score['sofa_score']- begin_sofa_score['sofa_score'] >= 2:
+        if sofa_score['sofa_score'] - begin_sofa_score['sofa_score'] >= 2:
             aux_patient = dict()
             aux_patient['time_sepsis'] = sofa_score.name
             aux_patient['hadm_id'] = infected_patient['hadm_id']
@@ -72,7 +74,6 @@ for index, infected_patient in infected_icu.iterrows():
         sepsis3_patients = pd.concat([sepsis3_patients, aux_patient], ignore_index=True)
     elif aux_patient is not None and (aux_patient['time_sepsis'] - intime).seconds/3600 < 7:
         less_7 += 1
-
 
 print(len(sepsis3_patients))
 print(less_7)
