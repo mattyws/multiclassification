@@ -28,13 +28,14 @@ def get_coagulation_score(platelet):
             return 1
     return 0
 
-def get_respiration_score(pao2fio2, is_vent):
+def get_respiration_score(pao2fio2, is_vent, sao2fio2=None):
     """
     Get sofa score for respiration function
     :param pao2fio2: the value of PaO2FiO2
     :param is_vent: if the patient is on ventilation
     :return: a number between 0-4 depending on the value of PaO2FiO2
     """
+    #With ventilation 2165
     # if pao2fio2 is not None:
     #     if is_vent:
     #         if pao2fio2 < 100:
@@ -46,6 +47,7 @@ def get_respiration_score(pao2fio2, is_vent):
     #             return 2
     #         elif pao2fio2 < 400:
     #             return 1
+    # Without ventilation
     if pao2fio2 is not None:
         if pao2fio2 < 100:
             return 4
@@ -55,6 +57,22 @@ def get_respiration_score(pao2fio2, is_vent):
             return 2
         elif pao2fio2 < 400:
             return 1
+    # With sao2fio2
+    # if pao2fio2 is not None:
+    #     if pao2fio2 < 100:
+    #         return 4
+    #     elif pao2fio2 < 220:
+    #         return 3
+    #     elif pao2fio2 < 300:
+    #         return 2
+    #     elif pao2fio2 < 400:
+    #         return 1
+    # else:
+    #     if sao2fio2 is not None:
+    #         if sao2fio2 >= 221 and sao2fio2 <= 301 : return 1
+    #         elif sao2fio2 >= 142 and sao2fio2 <= 220: return 2
+    #         elif sao2fio2 >= 67 and sao2fio2 <= 141: return 3
+    #         elif sao2fio2 < 67 : return 4
     return 0
 
 def get_liver_score(bilirubin):
