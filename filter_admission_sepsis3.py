@@ -5,7 +5,7 @@ import pandas as pd
 
 
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 sofa_scores_files_path = mimic_data_path+"sofa_scores_admission/"
 
 sepsis3_df_no_exclusions = pd.read_csv('sepsis3-df-no-exclusions.csv')

@@ -3,6 +3,9 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 import numpy as np
+
+from get_sofa_parameters import get_gcs_events
+
 """
 This script calculates the SOFA for each admission per hour for the whole period.
 The SOFA calculation is based on https://github.com/MIT-LCP/mimic-code/blob/master/concepts/severityscores/sofa.sql
@@ -194,13 +197,13 @@ dobutamine_mv_ids = [221653]
 # Variables for the csv created by the sql dependencies
 print("=== Loading csv ===")
 patients = pd.read_csv(csv_file_path+'PATIENTS.csv')
-bloodgasarterial = pd.read_csv(mimic_data_path+'bloodgasarterial.csv')
-gcs = pd.read_csv(mimic_data_path+'gcs.csv')
-labs = pd.read_csv(mimic_data_path+'labs.csv')
-urine_output = pd.read_csv(mimic_data_path+'urineoutput.csv')
-vitals = pd.read_csv(mimic_data_path+'vitals.csv')
+# bloodgasarterial = pd.read_csv(mimic_data_path+'bloodgasarterial.csv')
+# gcs = pd.read_csv(mimic_data_path+'gcs.csv')
+# labs = pd.read_csv(mimic_data_path+'labs.csv')
+# urine_output = pd.read_csv(mimic_data_path+'urineoutput.csv')
+# vitals = pd.read_csv(mimic_data_path+'vitals.csv')
 echodata = pd.read_csv(mimic_data_path+'echodata.csv')
-ventdurations = pd.read_csv(mimic_data_path+'ventdurations.csv')
+# ventdurations = pd.read_csv(mimic_data_path+'ventdurations.csv')
 
 # Reading the icustays.csv downloaded at the mimic repository
 admissions = pd.read_csv(csv_file_path + 'ADMISSIONS.csv')
@@ -212,8 +215,14 @@ for index, admission in admissions.iterrows():
     admittime_datetime = datetime.strptime(admission['ADMITTIME'], datetime_pattern)
     age = admittime_datetime.year - dob_datetime.year - ((admittime_datetime.month, admittime_datetime.day)
                                                          < (dob_datetime.month, dob_datetime.day))
+    try:
+        dischtime_datetime = datetime.strptime(admission['DISCHTIME'], datetime_pattern)
+    except:
+        print("Admission do not have dischtime, ignore this stay", admission['DISCHTIME'])
+        continue
     if not admission['HADM_ID'] or age < 16:
         continue
+    print('Admit {}; Disch {}'.format(admittime_datetime, dischtime_datetime))
     # Get events on chartevents that are associated to this icu stay
     admit_chartevents = None
     try:
@@ -238,6 +247,12 @@ for index, admission in admissions.iterrows():
         weights = weights[(weights['VALUENUM'].notna()) & (weights['ERROR'] != 1)]
         # Transform datetime
         weights['CHARTTIME'] = pd.to_datetime(weights['CHARTTIME'], format=datetime_pattern)
+
+        # Get GCS scores
+        admit_gcs = get_gcs_events(admit_chartevents, admittime_datetime, dischtime_datetime)
+        exit()
+
+
     # Get the weight from echo data if the patient is missing the weight event
     admit_echodata = echodata[echodata['hadm_id'] == admission['HADM_ID']]
     # Transform datetime
@@ -312,51 +327,47 @@ for index, admission in admissions.iterrows():
         admit_dobutamine_rate['CHARTTIME'] = pd.to_datetime(admit_dobutamine_rate['CHARTTIME'], format=datetime_pattern)
         admit_dobutamine_rate = admit_dobutamine_rate.set_index('CHARTTIME').sort_index()
 
-    admit_ventdurations = ventdurations[ventdurations['hadm_id'] == admission['HADM_ID']]
-    admit_ventdurations['starttime'] = pd.to_datetime(admit_ventdurations['starttime'], format=datetime_pattern)
-    admit_ventdurations['endtime'] = pd.to_datetime(admit_ventdurations['endtime'], format=datetime_pattern)
 
-    admit_bloodgasarterial = bloodgasarterial[bloodgasarterial['hadm_id'] == admission['HADM_ID']]
-    admit_vitals = vitals[vitals['hadm_id'] == admission['HADM_ID']]
-    admit_gcs = gcs[gcs['hadm_id'] == admission['HADM_ID']]
-    admit_labs = labs[labs['hadm_id'] == admission['HADM_ID']]
-
-    # Get variables to calculate the SOFA score
-    admit_platelet_min = admit_labs[['charttime', 'platelet_min']].dropna()
-    admit_platelet_min['charttime'] = pd.to_datetime(admit_platelet_min['charttime'], format=datetime_pattern)
-    admit_platelet_min = admit_platelet_min.set_index('charttime').sort_index()
-
-    admit_urine_output = urine_output[urine_output['hadm_id'] == admission['HADM_ID']][['charttime', 'urineoutput']]
-    admit_urine_output['charttime'] = pd.to_datetime(admit_urine_output['charttime'], format=datetime_pattern)
-    admit_urine_output = admit_urine_output.set_index('charttime').sort_index()
-
-    admit_bilirubin_max = admit_labs[['charttime', 'bilirubin_max']].dropna()
-    admit_bilirubin_max['charttime'] = pd.to_datetime(admit_bilirubin_max['charttime'], format=datetime_pattern)
-    admit_bilirubin_max = admit_bilirubin_max.set_index('charttime').sort_index()
-
-    admit_creatinine_max = admit_labs[['charttime', 'creatinine_max']].dropna()
-    admit_creatinine_max['charttime'] = pd.to_datetime(admit_creatinine_max['charttime'], format=datetime_pattern)
-    admit_creatinine_max = admit_creatinine_max.set_index('charttime').sort_index()
-
-    admit_mingcs = admit_gcs[['charttime', 'mingcs']].dropna()
-    admit_mingcs['charttime'] = pd.to_datetime(admit_mingcs['charttime'], format=datetime_pattern)
-    admit_mingcs = admit_mingcs.set_index('charttime').sort_index()
-
-    admit_pao2fio2 = admit_bloodgasarterial[['charttime', 'pao2fio2']].dropna()
-    admit_pao2fio2['charttime'] = pd.to_datetime(admit_pao2fio2['charttime'], format=datetime_pattern)
-    admit_pao2fio2 = admit_pao2fio2.set_index('charttime').sort_index()
-
-    admit_meanbp = admit_vitals[['charttime', 'meanbp_min']].dropna()
-    admit_meanbp['charttime'] = pd.to_datetime(admit_meanbp['charttime'], format=datetime_pattern)
-    admit_meanbp = admit_meanbp.set_index('charttime').sort_index()
+    # admit_ventdurations = ventdurations[ventdurations['hadm_id'] == admission['HADM_ID']]
+    # admit_ventdurations['starttime'] = pd.to_datetime(admit_ventdurations['starttime'], format=datetime_pattern)
+    # admit_ventdurations['endtime'] = pd.to_datetime(admit_ventdurations['endtime'], format=datetime_pattern)
+    #
+    # admit_bloodgasarterial = bloodgasarterial[bloodgasarterial['hadm_id'] == admission['HADM_ID']]
+    # admit_vitals = vitals[vitals['hadm_id'] == admission['HADM_ID']]
+    # admit_gcs = gcs[gcs['hadm_id'] == admission['HADM_ID']]
+    # admit_labs = labs[labs['hadm_id'] == admission['HADM_ID']]
+    #
+    # # Get variables to calculate the SOFA score
+    # admit_platelet_min = admit_labs[['charttime', 'platelet_min']].dropna()
+    # admit_platelet_min['charttime'] = pd.to_datetime(admit_platelet_min['charttime'], format=datetime_pattern)
+    # admit_platelet_min = admit_platelet_min.set_index('charttime').sort_index()
+    #
+    # admit_urine_output = urine_output[urine_output['hadm_id'] == admission['HADM_ID']][['charttime', 'urineoutput']]
+    # admit_urine_output['charttime'] = pd.to_datetime(admit_urine_output['charttime'], format=datetime_pattern)
+    # admit_urine_output = admit_urine_output.set_index('charttime').sort_index()
+    #
+    # admit_bilirubin_max = admit_labs[['charttime', 'bilirubin_max']].dropna()
+    # admit_bilirubin_max['charttime'] = pd.to_datetime(admit_bilirubin_max['charttime'], format=datetime_pattern)
+    # admit_bilirubin_max = admit_bilirubin_max.set_index('charttime').sort_index()
+    #
+    # admit_creatinine_max = admit_labs[['charttime', 'creatinine_max']].dropna()
+    # admit_creatinine_max['charttime'] = pd.to_datetime(admit_creatinine_max['charttime'], format=datetime_pattern)
+    # admit_creatinine_max = admit_creatinine_max.set_index('charttime').sort_index()
+    #
+    # admit_mingcs = admit_gcs[['charttime', 'mingcs']].dropna()
+    # admit_mingcs['charttime'] = pd.to_datetime(admit_mingcs['charttime'], format=datetime_pattern)
+    # admit_mingcs = admit_mingcs.set_index('charttime').sort_index()
+    #
+    # admit_pao2fio2 = admit_bloodgasarterial[['charttime', 'pao2fio2']].dropna()
+    # admit_pao2fio2['charttime'] = pd.to_datetime(admit_pao2fio2['charttime'], format=datetime_pattern)
+    # admit_pao2fio2 = admit_pao2fio2.set_index('charttime').sort_index()
+    #
+    # admit_meanbp = admit_vitals[['charttime', 'meanbp_min']].dropna()
+    # admit_meanbp['charttime'] = pd.to_datetime(admit_meanbp['charttime'], format=datetime_pattern)
+    # admit_meanbp = admit_meanbp.set_index('charttime').sort_index()
 
     # Loop from the intime of the icustay to the outtime, adding 1 hour each step
     timestep = datetime.strptime(admission['ADMITTIME'], datetime_pattern)
-    try:
-        dischtime_datetime = datetime.strptime(admission['DISCHTIME'], datetime_pattern)
-    except:
-        print("Admission do not have dischtime, ignore this stay", admission['DISCHTIME'])
-        continue
     admit_sofa_scores = pd.DataFrame([])
     print("=== Calculating Sofa ===")
     while timestep <= dischtime_datetime:
