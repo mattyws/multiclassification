@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
-from get_sofa_parameters import get_gcs_events
+from get_sofa_parameters import get_gcs_events, get_labs_events, get_urineoutput_events, get_vitals_events
 
 """
 This script calculates the SOFA for each admission per hour for the whole period.
@@ -166,6 +166,8 @@ mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 csv_file_path = mimic_data_path+"csv/"
 sofa_scores_files_path = mimic_data_path+"sofa_scores_admission/"
 chartevents_path = mimic_data_path+'CHARTEVENTS/'
+labevents_path = mimic_data_path+'LABEVENTS/'
+outputevents_path = mimic_data_path+'OUTPUTEVENTS/'
 inputevents_mv_path = mimic_data_path+'INPUTEVENTS_MV/'
 inputevents_cv_path = mimic_data_path+'INPUTEVENTS_CV/'
 # Auxiliary variables for events ids
@@ -230,7 +232,7 @@ for index, admission in admissions.iterrows():
     except:
         pass
     if admit_chartevents is not None:
-        admit_chartevents = admit_chartevents[admit_chartevents['HADM_ID'] == admission['HADM_ID']]
+        # admit_chartevents = admit_chartevents[admit_chartevents['HADM_ID'] == admission['HADM_ID']]
         # Calculate the weight for each time that appears. Convert all weight that are not in KG to KG
         # Get weight events in KG
         weights = admit_chartevents[admit_chartevents['ITEMID'].isin(weights_kg_ids)]
@@ -250,7 +252,27 @@ for index, admission in admissions.iterrows():
 
         # Get GCS scores
         admit_gcs = get_gcs_events(admit_chartevents, admittime_datetime, dischtime_datetime)
+        admit_vitals = get_vitals_events(admit_chartevents, admittime_datetime, dischtime_datetime)
+        print(admit_vitals)
         exit()
+
+    admit_labevents = None
+    try:
+        admit_labevents = pd.read_csv(labevents_path + 'LABEVENTS_{}.csv'.format(admission['HADM_ID']))
+    except:
+        pass
+    if admit_labevents is not None:
+        admit_labs = get_labs_events(admit_labevents, admittime_datetime, dischtime_datetime)
+
+    admit_outputevents = None
+    try:
+        admit_outputevents = pd.read_csv(outputevents_path + 'OUTPUTEVENTS_{}.csv'.format(admission['HADM_ID']))
+    except:
+        pass
+    if admit_outputevents is not None:
+        admit_urineoutput = get_urineoutput_events(admit_outputevents, admittime_datetime, dischtime_datetime)
+        print(admit_urineoutput)
+    # exit()
 
 
     # Get the weight from echo data if the patient is missing the weight event
@@ -367,80 +389,80 @@ for index, admission in admissions.iterrows():
     # admit_meanbp = admit_meanbp.set_index('charttime').sort_index()
 
     # Loop from the intime of the icustay to the outtime, adding 1 hour each step
-    timestep = datetime.strptime(admission['ADMITTIME'], datetime_pattern)
-    admit_sofa_scores = pd.DataFrame([])
-    print("=== Calculating Sofa ===")
-    while timestep <= dischtime_datetime:
-        timestep_sofa_scores = dict()
-        # Get values from variable based on the timestep
-        platelet = get_closest_value(admit_platelet_min, timestep)
-        platelet = platelet['platelet_min'] if platelet is not None else None
-        # print("Platelet", platelet)
-
-        pao2fio2 = get_closest_value(admit_pao2fio2, timestep)
-        pao2fio2 = pao2fio2['pao2fio2'] if pao2fio2 is not None else None
-        # print("PaO2FiO2", pao2fio2)
-        # print("Is ventilated", is_ventilated)
-
-        bilirubin = get_closest_value(admit_bilirubin_max, timestep)
-        bilirubin = bilirubin['bilirubin_max'] if bilirubin is not None else None
-        # print("Bilirubin", bilirubin)
-
-        creatinine = get_closest_value(admit_creatinine_max, timestep)
-        creatinine = creatinine['creatinine_max'] if creatinine is not None else None
-        # print("Creatinine", creatinine)
-
-        mingcs = get_closest_value(admit_mingcs, timestep)
-        mingcs = mingcs['mingcs'] if mingcs is not None else None
-        # print("MinGCS", mingcs)
-
-        urineoutput = get_closest_value(admit_urine_output, timestep)
-        urineoutput = urineoutput['urineoutput'] if urineoutput is not None else None
-        # print("UrineOutput", urineoutput)
-
-        meanbp = get_closest_value(admit_meanbp, timestep)
-        meanbp = meanbp['meanbp_min'] if meanbp is not None else None
-        # print("MeanBP", meanbp)
-
-        norepinephrine_rate = get_closest_value(admit_norepinephrine_rate, timestep)
-        norepinephrine_rate = norepinephrine_rate['RATE'] if norepinephrine_rate is not None else None
-        # print("Norepinephrine_Rate", norepinephrine_rate)
-
-        epinephrine_rate = get_closest_value(admit_epinephrine_rate, timestep)
-        epinephrine_rate = epinephrine_rate['RATE'] if epinephrine_rate is not None else None
-        # print("Epinephrine_Rate", epinephrine_rate)
-
-        dopamine_rate = get_closest_value(admit_dopamine_rate, timestep)
-        dopamine_rate = dopamine_rate['RATE'] if dopamine_rate is not None else None
-        # print("Dopamine_Rate", dopamine_rate)
-
-        dobutamine_rate = get_closest_value(admit_dobutamine_rate, timestep)
-        dobutamine_rate = dobutamine_rate['RATE'] if dobutamine_rate is not None else None
-        # print("Dobutamine_Rate", dobutamine_rate)
-
-        # Get if is ventilated at this timestamp
-        is_ventilated = False
-        for index, ventduration in admit_ventdurations.iterrows():
-            if is_ventilated:
-                break
-            is_ventilated = (timestep >= ventduration['starttime']) and (timestep <= ventduration['endtime'])
-
-        timestep_sofa_scores['coagulation_score'] = get_coagulation_score(platelet)
-        timestep_sofa_scores['respiration_score'] = get_respiration_score(pao2fio2, is_ventilated)
-        timestep_sofa_scores['liver_score'] = get_liver_score(bilirubin)
-        timestep_sofa_scores['cardiovascular_score'] = get_cardiovascular_score(dopamine_rate,
-                                                                                epinephrine_rate,
-                                                                                norepinephrine_rate,
-                                                                                dobutamine_rate,
-                                                                                meanbp)
-        timestep_sofa_scores['neurological_score'] = get_neurological_score(mingcs)
-        timestep_sofa_scores['renal_score'] = get_renal_score(urineoutput, creatinine)
-        timestep_sofa_scores['sofa_score'] = sum([timestep_sofa_scores[key] for key in timestep_sofa_scores.keys()])
-        timestep_sofa_scores['timestep'] = timestep
-        timestep_sofa_scores = pd.DataFrame(timestep_sofa_scores, index=[0])
-        # print(timestep_sofa_scores)
-        admit_sofa_scores = pd.concat([admit_sofa_scores, timestep_sofa_scores], ignore_index=True)
-        timestep += timedelta(hours=1)
-    # print(icu_sofa_scores[['timestep', 'sofa_score']])
-    admit_sofa_scores.to_csv(sofa_scores_files_path + '{}.csv'.format(admission['HADM_ID']))
+    # timestep = datetime.strptime(admission['ADMITTIME'], datetime_pattern)
+    # admit_sofa_scores = pd.DataFrame([])
+    # print("=== Calculating Sofa ===")
+    # while timestep <= dischtime_datetime:
+    #     timestep_sofa_scores = dict()
+    #     # Get values from variable based on the timestep
+    #     platelet = get_closest_value(admit_platelet_min, timestep)
+    #     platelet = platelet['platelet_min'] if platelet is not None else None
+    #     # print("Platelet", platelet)
+    #
+    #     pao2fio2 = get_closest_value(admit_pao2fio2, timestep)
+    #     pao2fio2 = pao2fio2['pao2fio2'] if pao2fio2 is not None else None
+    #     # print("PaO2FiO2", pao2fio2)
+    #     # print("Is ventilated", is_ventilated)
+    #
+    #     bilirubin = get_closest_value(admit_bilirubin_max, timestep)
+    #     bilirubin = bilirubin['bilirubin_max'] if bilirubin is not None else None
+    #     # print("Bilirubin", bilirubin)
+    #
+    #     creatinine = get_closest_value(admit_creatinine_max, timestep)
+    #     creatinine = creatinine['creatinine_max'] if creatinine is not None else None
+    #     # print("Creatinine", creatinine)
+    #
+    #     mingcs = get_closest_value(admit_mingcs, timestep)
+    #     mingcs = mingcs['mingcs'] if mingcs is not None else None
+    #     # print("MinGCS", mingcs)
+    #
+    #     urineoutput = get_closest_value(admit_urine_output, timestep)
+    #     urineoutput = urineoutput['urineoutput'] if urineoutput is not None else None
+    #     # print("UrineOutput", urineoutput)
+    #
+    #     meanbp = get_closest_value(admit_meanbp, timestep)
+    #     meanbp = meanbp['meanbp_min'] if meanbp is not None else None
+    #     # print("MeanBP", meanbp)
+    #
+    #     norepinephrine_rate = get_closest_value(admit_norepinephrine_rate, timestep)
+    #     norepinephrine_rate = norepinephrine_rate['RATE'] if norepinephrine_rate is not None else None
+    #     # print("Norepinephrine_Rate", norepinephrine_rate)
+    #
+    #     epinephrine_rate = get_closest_value(admit_epinephrine_rate, timestep)
+    #     epinephrine_rate = epinephrine_rate['RATE'] if epinephrine_rate is not None else None
+    #     # print("Epinephrine_Rate", epinephrine_rate)
+    #
+    #     dopamine_rate = get_closest_value(admit_dopamine_rate, timestep)
+    #     dopamine_rate = dopamine_rate['RATE'] if dopamine_rate is not None else None
+    #     # print("Dopamine_Rate", dopamine_rate)
+    #
+    #     dobutamine_rate = get_closest_value(admit_dobutamine_rate, timestep)
+    #     dobutamine_rate = dobutamine_rate['RATE'] if dobutamine_rate is not None else None
+    #     # print("Dobutamine_Rate", dobutamine_rate)
+    #
+    #     # Get if is ventilated at this timestamp
+    #     is_ventilated = False
+    #     for index, ventduration in admit_ventdurations.iterrows():
+    #         if is_ventilated:
+    #             break
+    #         is_ventilated = (timestep >= ventduration['starttime']) and (timestep <= ventduration['endtime'])
+    #
+    #     timestep_sofa_scores['coagulation_score'] = get_coagulation_score(platelet)
+    #     timestep_sofa_scores['respiration_score'] = get_respiration_score(pao2fio2, is_ventilated)
+    #     timestep_sofa_scores['liver_score'] = get_liver_score(bilirubin)
+    #     timestep_sofa_scores['cardiovascular_score'] = get_cardiovascular_score(dopamine_rate,
+    #                                                                             epinephrine_rate,
+    #                                                                             norepinephrine_rate,
+    #                                                                             dobutamine_rate,
+    #                                                                             meanbp)
+    #     timestep_sofa_scores['neurological_score'] = get_neurological_score(mingcs)
+    #     timestep_sofa_scores['renal_score'] = get_renal_score(urineoutput, creatinine)
+    #     timestep_sofa_scores['sofa_score'] = sum([timestep_sofa_scores[key] for key in timestep_sofa_scores.keys()])
+    #     timestep_sofa_scores['timestep'] = timestep
+    #     timestep_sofa_scores = pd.DataFrame(timestep_sofa_scores, index=[0])
+    #     # print(timestep_sofa_scores)
+    #     admit_sofa_scores = pd.concat([admit_sofa_scores, timestep_sofa_scores], ignore_index=True)
+    #     timestep += timedelta(hours=1)
+    # # print(icu_sofa_scores[['timestep', 'sofa_score']])
+    # admit_sofa_scores.to_csv(sofa_scores_files_path + '{}.csv'.format(admission['HADM_ID']))
     # exit()
