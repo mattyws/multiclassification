@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
-from get_sofa_parameters import get_gcs_events, get_labs_events, get_urineoutput_events, get_vitals_events
+from get_sofa_parameters import get_gcs_events, get_labs_events, get_urineoutput_events, get_vitals_events, \
+    get_respiration_events
 
 """
 This script calculates the SOFA for each admission per hour for the whole period.
@@ -162,7 +163,7 @@ def get_closest_value(events, time):
 
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
 # Using variables for the paths to the files
-mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
+mimic_data_path = "/home/mattyws/Documents/mimic_data/"
 csv_file_path = mimic_data_path+"csv/"
 sofa_scores_files_path = mimic_data_path+"sofa_scores_admission/"
 chartevents_path = mimic_data_path+'CHARTEVENTS/'
@@ -253,8 +254,6 @@ for index, admission in admissions.iterrows():
         # Get GCS scores
         admit_gcs = get_gcs_events(admit_chartevents, admittime_datetime, dischtime_datetime)
         admit_vitals = get_vitals_events(admit_chartevents, admittime_datetime, dischtime_datetime)
-        print(admit_vitals)
-        exit()
 
     admit_labevents = None
     try:
@@ -263,6 +262,10 @@ for index, admission in admissions.iterrows():
         pass
     if admit_labevents is not None:
         admit_labs = get_labs_events(admit_labevents, admittime_datetime, dischtime_datetime)
+    if admit_labevents is not None and admit_chartevents is not None:
+        admit_bloodgas = get_respiration_events(admit_chartevents, admit_labevents, admittime_datetime, dischtime_datetime)
+        print(admit_bloodgas)
+        exit()
 
     admit_outputevents = None
     try:
@@ -271,7 +274,7 @@ for index, admission in admissions.iterrows():
         pass
     if admit_outputevents is not None:
         admit_urineoutput = get_urineoutput_events(admit_outputevents, admittime_datetime, dischtime_datetime)
-        print(admit_urineoutput)
+
     # exit()
 
 

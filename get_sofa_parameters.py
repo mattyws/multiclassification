@@ -155,3 +155,151 @@ def get_vitals_events(chartevents, admittime, dischtime):
         vitals_hourly_events = pd.concat([vitals_hourly_events, vitals_timestep], ignore_index=True)
         timestep += timedelta(hours=1)
     return vitals_hourly_events
+
+def get_respiration_events(chartevents, labevents, admittime, dischtime):
+    so2_ids = [50817]
+    fio2_labs_ids = [50816]
+    fio2_chart_ids = [3420, 190, 223835, 3422]
+    po2_ids = [50821]
+
+    so2_events = labevents[labevents['ITEMID'].isin(so2_ids) & labevents['VALUENUM'] <= 100]
+    so2_events.loc[:, 'CHARTTIME'] = pd.to_datetime(so2_events['CHARTTIME'], format=datetime_pattern)
+
+    po2_events = labevents[labevents['ITEMID'].isin(po2_ids) & labevents['VALUENUM'] <= 800]
+    po2_events.loc[:, 'CHARTTIME'] = pd.to_datetime(po2_events['CHARTTIME'], format=datetime_pattern)
+
+    fio2_lab_events = labevents[labevents['ITEMID'].isin(fio2_labs_ids)]
+    fio2_lab_events = fio2_lab_events[fio2_lab_events['VALUENUM'] >= 20]
+    fio2_lab_events = fio2_lab_events[fio2_lab_events['VALUENUM'] <= 100]
+    fio2_lab_events.loc[:, 'CHARTTIME'] = pd.to_datetime(fio2_lab_events['CHARTTIME'], format=datetime_pattern)
+
+    fio2_chart_events = chartevents[chartevents['ITEMID'].isin(fio2_chart_ids) & chartevents['ERROR'] != 1]
+    fio2_chart_events.loc[:, 'VALUENUM'] = np.where(np.logical_and(fio2_chart_events['ITEMID'] == 223835,
+                                                                   np.logical_and(fio2_chart_events['VALUENUM'] > 0,
+                                                                                  fio2_chart_events['VALUENUM'] <= 1)),
+                                                    fio2_chart_events['VALUENUM']*100, fio2_chart_events['VALUENUM'])
+    fio2_chart_events.loc[:, 'VALUENUM'] = np.where(np.logical_and(fio2_chart_events['ITEMID'] == 223835,
+                                                                   np.logical_and(fio2_chart_events['VALUENUM'] > 1,
+                                                                                  fio2_chart_events['VALUENUM'] < 21)),
+                                                    np.nan, fio2_chart_events['VALUENUM'])
+    fio2_chart_events.loc[:, 'VALUENUM'] = np.where(np.logical_and(fio2_chart_events['ITEMID'] == 190,
+                                                                   np.logical_and(fio2_chart_events['VALUENUM'] > 0.20,
+                                                                                  fio2_chart_events['VALUENUM'] < 1)),
+                                                    fio2_chart_events['VALUENUM'] * 100, fio2_chart_events['VALUENUM'])
+    fio2_chart_events = fio2_chart_events[fio2_chart_events['VALUENUM'].notna()]
+    fio2_chart_events.loc[:, 'CHARTTIME'] = pd.to_datetime(fio2_chart_events['CHARTTIME'], format=datetime_pattern)
+
+    timestep = admittime
+    bloodgas_hourly_events = pd.DataFrame([])
+    while timestep <= dischtime:
+        bloodgas_timestep = dict()
+        closest_fio2_lab_event = []
+        if len(fio2_lab_events) != 0:
+            closest_fio2_lab_event = fio2_lab_events[fio2_lab_events['CHARTTIME'] ==
+                                                           min(fio2_lab_events['CHARTTIME'],
+                                                               key=lambda x: abs(x - timestep))]
+
+        closest_fio2_chart_event = []
+        if len(fio2_chart_events) != 0:
+            closest_fio2_chart_event = fio2_chart_events[fio2_chart_events['CHARTTIME'] ==
+                                                           min(fio2_chart_events['CHARTTIME'],
+                                                               key=lambda x: abs(x - timestep))]
+        # Defining which event occurs near to this timestep, the labevents or the chartevents
+        closest_fio2_event = []
+        if len(closest_fio2_lab_event) != 0 and len(closest_fio2_chart_event) != 0:
+            if closest_fio2_lab_event.loc[0, 'CHARTTIME'] > closest_fio2_chart_event.loc[0, 'CHARTTIME']:
+                closest_fio2_event = closest_fio2_lab_event
+            else:
+                closest_fio2_event = closest_fio2_chart_event
+        elif len(closest_fio2_lab_event) != 0:
+            closest_fio2_event = closest_fio2_lab_event
+        elif len(closest_fio2_chart_event) != 0:
+            closest_fio2_event = closest_fio2_chart_event
+
+        closest_po2_event = []
+        if len(po2_events) != 0:
+            closest_po2_event = po2_events[po2_events['CHARTTIME'] == min(po2_events['CHARTTIME'],
+                                                                          key=lambda x: abs(x - timestep))]
+        closest_so2_event = []
+        if len(so2_events) != 0 :
+            closest_so2_event = so2_events[so2_events['CHARTTIME'] == min(so2_events['CHARTTIME'],
+                                                                          key=lambda x: abs(x - timestep))]
+
+        bloodgas_timestep['timestep'] = timestep
+        bloodgas_timestep['fio2'] = max(closest_fio2_event['VALUENUM']) if len(closest_fio2_event) != 0 else 0
+        bloodgas_timestep['po2'] = max(closest_po2_event['VALUENUM']) if len(closest_po2_event) != 0 else 0
+        bloodgas_timestep['so2'] = max(closest_so2_event['VALUENUM']) if len(closest_so2_event) != 0 else 0
+        if len(closest_fio2_event) == 0:
+            bloodgas_timestep['sao2fio2'] = None
+            bloodgas_timestep['pao2fio2'] = None
+        else:
+            bloodgas_timestep['sao2fio2'] = 100*bloodgas_timestep['so2']/bloodgas_timestep['fio2']
+            bloodgas_timestep['pao2fio2'] = 100*bloodgas_timestep['po2']/bloodgas_timestep['fio2']
+        bloodgas_timestep = pd.DataFrame(bloodgas_timestep, index=[0])
+        bloodgas_hourly_events = pd.concat([bloodgas_hourly_events, bloodgas_timestep], ignore_index=True)
+        timestep += timedelta(hours=1)
+    return bloodgas_hourly_events
+
+def get_vasopressor_events(inputevents, weights, echodata, admittime, dischtime):
+    vasopressor_ids = [30047, 30120, 30044, 30119, 30309, 30043, 30307, 30042, 30306, 221906, 221289, 221662, 221653]
+    norepinephrine_ids = [30047, 30120, 221906]
+    epinephrine_ids = [30044, 30119, 30309, 221289]
+    dopamine_ids = [30043, 30307, 221662]
+    dobutamine_ids = [30042, 30306, 221653]
+    divide_rate_weight_ids = [30047, 30044]
+    admit_norepinephrine_rate = None
+    admit_epinephrine_rate = None
+    admit_dopamine_rate = None
+    admit_dobutamine_rate = None
+    if inputevents is not None:
+        admit_vasopressor_events = inputevents[inputevents['ITEMID'].isin(vasopressor_ids)]
+        # Removing na rate
+        admit_vasopressor_events = admit_vasopressor_events[admit_vasopressor_events['RATE'].notna()]
+        # Transform datetime
+        admit_vasopressor_events['CHARTTIME'] = pd.to_datetime(admit_vasopressor_events['CHARTTIME'],
+                                                               format=datetime_pattern)
+        # Get patient weight for each vasopressor charttime
+        aux_weights = []
+        for index, vaso_event in admit_vasopressor_events.iterrows():
+            if len(weights['CHARTTIME']) != 0:
+                weight = min(weights['CHARTTIME'], key=lambda x: abs(x - vaso_event['CHARTTIME']))
+                weight = weights[weights['CHARTTIME'] == weight].iloc[0]['VALUENUM']
+            else:
+                if len(echodata) != 0:
+                    weight = min(echodata['charttime'], key=lambda x: abs(x - vaso_event['CHARTTIME']))
+                    weight = echodata[echodata['charttime'] == weight].iloc[0]['weight']
+                else:
+                    weight = np.nan
+            aux_weights.append(weight)
+        # Transform for the ids that are not measured by the patient weight
+        admit_vasopressor_events['weight'] = aux_weights
+        # Removing events that need to be divided by weight but weight is equal no nan
+        admit_vasopressor_events = admit_vasopressor_events[
+            ~(admit_vasopressor_events['ITEMID'].isin(divide_rate_weight_ids))
+            | (admit_vasopressor_events['weight'].notna())]
+        admit_vasopressor_events['RATE'] = np.where(admit_vasopressor_events['ITEMID'].isin(divide_rate_weight_ids),
+                                                    admit_vasopressor_events['RATE'] / admit_vasopressor_events[
+                                                        'weight'],
+                                                    admit_vasopressor_events['RATE'])
+        admit_norepinephrine_rate = \
+        admit_vasopressor_events[admit_vasopressor_events['ITEMID'].isin(norepinephrine_ids)][
+            ['CHARTTIME', 'RATE']]
+        admit_norepinephrine_rate['CHARTTIME'] = pd.to_datetime(admit_norepinephrine_rate['CHARTTIME'],
+                                                                format=datetime_pattern)
+        admit_norepinephrine_rate = admit_norepinephrine_rate.set_index('CHARTTIME').sort_index()
+
+        admit_epinephrine_rate = admit_vasopressor_events[admit_vasopressor_events['ITEMID'].isin(epinephrine_ids)][
+            ['CHARTTIME', 'RATE']]
+        admit_epinephrine_rate['CHARTTIME'] = pd.to_datetime(admit_epinephrine_rate['CHARTTIME'],
+                                                             format=datetime_pattern)
+        admit_epinephrine_rate = admit_epinephrine_rate.set_index('CHARTTIME').sort_index()
+
+        admit_dopamine_rate = admit_vasopressor_events[admit_vasopressor_events['ITEMID'].isin(dopamine_ids)][
+            ['CHARTTIME', 'RATE']]
+        admit_dopamine_rate['CHARTTIME'] = pd.to_datetime(admit_dopamine_rate['CHARTTIME'], format=datetime_pattern)
+        admit_dopamine_rate = admit_dopamine_rate.set_index('CHARTTIME').sort_index()
+
+        admit_dobutamine_rate = admit_vasopressor_events[admit_vasopressor_events['ITEMID'].isin(dobutamine_ids)][
+            ['CHARTTIME', 'RATE']]
+        admit_dobutamine_rate['CHARTTIME'] = pd.to_datetime(admit_dobutamine_rate['CHARTTIME'], format=datetime_pattern)
+        admit_dobutamine_rate = admit_dobutamine_rate.set_index('CHARTTIME').sort_index()
