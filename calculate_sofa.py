@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 
 from get_sofa_parameters import get_gcs_events, get_labs_events, get_urineoutput_events, get_vitals_events, \
-    get_respiration_events
+    get_respiration_events, get_vasopressor_events
 
 """
 This script calculates the SOFA for each admission per hour for the whole period.
@@ -161,9 +161,10 @@ def get_closest_value(events, time):
         return None
     return event.iloc[-1]
 
+DEBUG = True
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
 # Using variables for the paths to the files
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 csv_file_path = mimic_data_path+"csv/"
 sofa_scores_files_path = mimic_data_path+"sofa_scores_admission/"
 chartevents_path = mimic_data_path+'CHARTEVENTS/'
@@ -200,18 +201,16 @@ dobutamine_mv_ids = [221653]
 # Variables for the csv created by the sql dependencies
 print("=== Loading csv ===")
 patients = pd.read_csv(csv_file_path+'PATIENTS.csv')
-# bloodgasarterial = pd.read_csv(mimic_data_path+'bloodgasarterial.csv')
-# gcs = pd.read_csv(mimic_data_path+'gcs.csv')
-# labs = pd.read_csv(mimic_data_path+'labs.csv')
-# urine_output = pd.read_csv(mimic_data_path+'urineoutput.csv')
-# vitals = pd.read_csv(mimic_data_path+'vitals.csv')
 echodata = pd.read_csv(mimic_data_path+'echodata.csv')
-# ventdurations = pd.read_csv(mimic_data_path+'ventdurations.csv')
 
 # Reading the icustays.csv downloaded at the mimic repository
 admissions = pd.read_csv(csv_file_path + 'ADMISSIONS.csv')
 # Loop through each icu stay
+i = 0
 for index, admission in admissions.iterrows():
+    if i == 3:
+        exit()
+    i+= 1
     print(admission[['HADM_ID', 'ADMITTIME', 'DISCHTIME']])
     patient = patients[patients['SUBJECT_ID'] == admission['SUBJECT_ID']].iloc[0]
     dob_datetime = datetime.strptime(patient['DOB'], datetime_pattern)
@@ -232,6 +231,8 @@ for index, admission in admissions.iterrows():
         admit_chartevents = pd.read_csv(chartevents_path + 'CHARTEVENTS_{}.csv'.format(admission['HADM_ID']))
     except:
         pass
+    admit_gcs = None
+    admit_vitals = None
     if admit_chartevents is not None:
         # admit_chartevents = admit_chartevents[admit_chartevents['HADM_ID'] == admission['HADM_ID']]
         # Calculate the weight for each time that appears. Convert all weight that are not in KG to KG
@@ -252,28 +253,31 @@ for index, admission in admissions.iterrows():
         weights['CHARTTIME'] = pd.to_datetime(weights['CHARTTIME'], format=datetime_pattern)
 
         # Get GCS scores
-        admit_gcs = get_gcs_events(admit_chartevents, admittime_datetime, dischtime_datetime)
-        admit_vitals = get_vitals_events(admit_chartevents, admittime_datetime, dischtime_datetime)
+        admit_gcs = get_gcs_events(admit_chartevents, admittime_datetime, dischtime_datetime, debug=DEBUG, hadm_id=admission['HADM_ID'])
+        admit_vitals = get_vitals_events(admit_chartevents, admittime_datetime, dischtime_datetime, debug=DEBUG, hadm_id=admission['HADM_ID'])
 
     admit_labevents = None
     try:
         admit_labevents = pd.read_csv(labevents_path + 'LABEVENTS_{}.csv'.format(admission['HADM_ID']))
     except:
         pass
+
+    admit_labs = None
     if admit_labevents is not None:
-        admit_labs = get_labs_events(admit_labevents, admittime_datetime, dischtime_datetime)
+        admit_labs = get_labs_events(admit_labevents, admittime_datetime, dischtime_datetime, debug=DEBUG, hadm_id=admission['HADM_ID'])
+    admit_bloodgas = None
     if admit_labevents is not None and admit_chartevents is not None:
-        admit_bloodgas = get_respiration_events(admit_chartevents, admit_labevents, admittime_datetime, dischtime_datetime)
-        print(admit_bloodgas)
-        exit()
+        admit_bloodgas = get_respiration_events(admit_chartevents, admit_labevents, admittime_datetime, dischtime_datetime, debug=DEBUG, hadm_id=admission['HADM_ID'])
 
     admit_outputevents = None
     try:
         admit_outputevents = pd.read_csv(outputevents_path + 'OUTPUTEVENTS_{}.csv'.format(admission['HADM_ID']))
     except:
         pass
+
+    admit_urineoutput = None
     if admit_outputevents is not None:
-        admit_urineoutput = get_urineoutput_events(admit_outputevents, admittime_datetime, dischtime_datetime)
+        admit_urineoutput = get_urineoutput_events(admit_outputevents, admittime_datetime, dischtime_datetime, debug=DEBUG, hadm_id=admission['HADM_ID'])
 
     # exit()
 
@@ -299,59 +303,10 @@ for index, admission in admissions.iterrows():
             admit_vasopressor_events = admit_vasopressor_events.drop(columns=['STORETIME'])
         except:
             pass
-    admit_norepinephrine_rate = None
-    admit_epinephrine_rate = None
-    admit_dopamine_rate = None
-    admit_dobutamine_rate = None
+
     if admit_vasopressor_events is not None:
-        admit_vasopressor_events = admit_vasopressor_events[admit_vasopressor_events['HADM_ID'] == admission['HADM_ID']]
-        admit_vasopressor_events = admit_vasopressor_events[admit_vasopressor_events['ITEMID'].isin(vasopressor_ids)]
-        # Removing na rate
-        admit_vasopressor_events = admit_vasopressor_events[admit_vasopressor_events['RATE'].notna()]
-        # Transform datetime
-        admit_vasopressor_events['CHARTTIME'] = pd.to_datetime(admit_vasopressor_events['CHARTTIME'], format=datetime_pattern)
-        # Get patient weight for each vasopressor charttime
-        aux_weights = []
-        for index, vaso_event in admit_vasopressor_events.iterrows():
-            if len(weights['CHARTTIME']) != 0:
-                weight = min(weights['CHARTTIME'], key=lambda x: abs(x - vaso_event['CHARTTIME']))
-                weight = weights[weights['CHARTTIME'] == weight].iloc[0]['VALUENUM']
-            else:
-                if len(admit_echodata) != 0:
-                    weight = min(admit_echodata['charttime'], key=lambda x: abs(x - vaso_event['CHARTTIME']))
-                    weight = admit_echodata[admit_echodata['charttime'] == weight].iloc[0]['weight']
-                else:
-                    weight = np.nan
-            aux_weights.append(weight)
-        # Transform for the ids that are not measured by the patient weight
-        admit_vasopressor_events['weight'] = aux_weights
-        # Removing events that need to be divided by weight but weight is equal no nan
-        admit_vasopressor_events = admit_vasopressor_events[~(admit_vasopressor_events['ITEMID'].isin(divide_rate_weight_ids))
-                                                            | (admit_vasopressor_events['weight'].notna())]
-        admit_vasopressor_events['RATE'] = np.where(admit_vasopressor_events['ITEMID'].isin(divide_rate_weight_ids),
-                                                    admit_vasopressor_events['RATE'] / admit_vasopressor_events['weight'],
-                                                    admit_vasopressor_events['RATE'])
-        admit_norepinephrine_rate = admit_vasopressor_events[admit_vasopressor_events['ITEMID'].isin(norepinephrine_ids)][
-            ['CHARTTIME', 'RATE']]
-        admit_norepinephrine_rate['CHARTTIME'] = pd.to_datetime(admit_norepinephrine_rate['CHARTTIME'],
-                                                                format=datetime_pattern)
-        admit_norepinephrine_rate = admit_norepinephrine_rate.set_index('CHARTTIME').sort_index()
-
-        admit_epinephrine_rate = admit_vasopressor_events[admit_vasopressor_events['ITEMID'].isin(epinephrine_ids)][
-            ['CHARTTIME', 'RATE']]
-        admit_epinephrine_rate['CHARTTIME'] = pd.to_datetime(admit_epinephrine_rate['CHARTTIME'], format=datetime_pattern)
-        admit_epinephrine_rate = admit_epinephrine_rate.set_index('CHARTTIME').sort_index()
-
-        admit_dopamine_rate = admit_vasopressor_events[admit_vasopressor_events['ITEMID'].isin(dopamine_ids)][
-            ['CHARTTIME', 'RATE']]
-        admit_dopamine_rate['CHARTTIME'] = pd.to_datetime(admit_dopamine_rate['CHARTTIME'], format=datetime_pattern)
-        admit_dopamine_rate = admit_dopamine_rate.set_index('CHARTTIME').sort_index()
-
-        admit_dobutamine_rate = admit_vasopressor_events[admit_vasopressor_events['ITEMID'].isin(dobutamine_ids)][
-            ['CHARTTIME', 'RATE']]
-        admit_dobutamine_rate['CHARTTIME'] = pd.to_datetime(admit_dobutamine_rate['CHARTTIME'], format=datetime_pattern)
-        admit_dobutamine_rate = admit_dobutamine_rate.set_index('CHARTTIME').sort_index()
-
+        admit_vasopressor_events = get_vasopressor_events(admit_vasopressor_events, weights, echodata, admittime_datetime,
+                                                          dischtime_datetime, debug=DEBUG, hadm_id=admission['HADM_ID'])
 
     # admit_ventdurations = ventdurations[ventdurations['hadm_id'] == admission['HADM_ID']]
     # admit_ventdurations['starttime'] = pd.to_datetime(admit_ventdurations['starttime'], format=datetime_pattern)
