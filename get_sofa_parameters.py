@@ -16,17 +16,20 @@ def get_gcs_events(chartevents, admittime, dischtime, debug=False, hadm_id=0):
 
     gcsverbal_events = chartevents[(chartevents['ITEMID'].isin(GCSVerbal_ids)) & (chartevents['ERROR'] != 1)]
     # These values indicates that the patient is in endotrach/vent
-    gcsverbal_events.loc[:, 'VALUENUM'] = np.where(gcsverbal_events['VALUE'] == '1.0 ET/Trach', 0,
-                                               gcsverbal_events['VALUENUM'])
-    gcsverbal_events.loc[:, 'VALUENUM'] = np.where(gcsverbal_events['VALUE'] == 'No Response-ETT', 0,
-                                               gcsverbal_events['VALUENUM'])
-    gcsverbal_events.loc[:, 'CHARTTIME'] = pd.to_datetime(gcsverbal_events['CHARTTIME'], format=datetime_pattern)
+    if len(gcsverbal_events) != 0:
+        gcsverbal_events.loc[:, 'VALUENUM'] = np.where(gcsverbal_events['VALUE'] == '1.0 ET/Trach', 0,
+                                                   gcsverbal_events['VALUENUM'])
+        gcsverbal_events.loc[:, 'VALUENUM'] = np.where(gcsverbal_events['VALUE'] == 'No Response-ETT', 0,
+                                                   gcsverbal_events['VALUENUM'])
+        gcsverbal_events.loc[:, 'CHARTTIME'] = pd.to_datetime(gcsverbal_events['CHARTTIME'], format=datetime_pattern)
 
     gcsmotor_events = chartevents[(chartevents['ITEMID'].isin(GCSMotor_ids)) & (chartevents['ERROR'] != 1)]
-    gcsmotor_events.loc[:, 'CHARTTIME'] = pd.to_datetime(gcsmotor_events['CHARTTIME'], format=datetime_pattern)
+    if len(gcsmotor_events) != 0:
+        gcsmotor_events.loc[:, 'CHARTTIME'] = pd.to_datetime(gcsmotor_events['CHARTTIME'], format=datetime_pattern)
 
     gcseyes_events = chartevents[(chartevents['ITEMID'].isin(GCSEyes_ids)) & (chartevents['ERROR'] != 1)]
-    gcseyes_events.loc[:, 'CHARTTIME'] = pd.to_datetime(gcseyes_events['CHARTTIME'], format=datetime_pattern)
+    if len(gcseyes_events) != 0:
+        gcseyes_events.loc[:, 'CHARTTIME'] = pd.to_datetime(gcseyes_events['CHARTTIME'], format=datetime_pattern)
 
     timestep = admittime
     gcs_values_hourly = pd.DataFrame([])
@@ -34,12 +37,20 @@ def get_gcs_events(chartevents, admittime, dischtime, debug=False, hadm_id=0):
         timestep_gcs = dict()
         timestep_gcs['timestep'] = timestep
 
-        closest_verbal_event = gcsverbal_events[gcsverbal_events['CHARTTIME'] ==
-                                                min(gcsverbal_events['CHARTTIME'], key=lambda x: abs(x - timestep))]
-        closest_motor_event = gcsmotor_events[gcsmotor_events['CHARTTIME'] ==
-                                             min(gcsmotor_events['CHARTTIME'], key=lambda x: abs(x - timestep))]
-        closest_eyes_event = gcseyes_events[gcseyes_events['CHARTTIME'] ==
-                                            min(gcseyes_events['CHARTTIME'], key=lambda x: abs(x - timestep))]
+        closest_verbal_event = []
+        if len(gcsverbal_events) != 0:
+            closest_verbal_event = gcsverbal_events[gcsverbal_events['CHARTTIME'] ==
+                                                    min(gcsverbal_events['CHARTTIME'], key=lambda x: abs(x - timestep))]
+
+        closest_motor_event = []
+        if len(gcsmotor_events) != 0:
+            closest_motor_event = gcsmotor_events[gcsmotor_events['CHARTTIME'] ==
+                                                 min(gcsmotor_events['CHARTTIME'], key=lambda x: abs(x - timestep))]
+
+        closest_eyes_event = []
+        if len(gcseyes_events) != 0:
+            closest_eyes_event = gcseyes_events[gcseyes_events['CHARTTIME'] ==
+                                                min(gcseyes_events['CHARTTIME'], key=lambda x: abs(x - timestep))]
 
         timestep_gcs['motor'] = max(closest_motor_event['VALUENUM']) if len(closest_motor_event) != 0 else 6
         timestep_gcs['verbal'] = max(closest_verbal_event['VALUENUM']) if len(closest_verbal_event) != 0 else 5
@@ -121,7 +132,7 @@ def get_labs_events(labevents, admittime, dischtime, debug=False, hadm_id=0):
 def get_urineoutput_events(outputevents, admittime, dischtime, debug=False, hadm_id=0):
     urine_ids = [40055, 43175, 40069, 40094, 40715, 40473, 40085, 40057, 40056, 40405, 40428, 40086, 40096, 40651,
                     226559, 226560, 226561, 226584, 226563, 226564, 226565, 226567, 226557, 226558, 227488, 227489]
-    urine_events = outputevents[outputevents['ITEMID'].isin(urine_ids)]
+    urine_events = outputevents[(outputevents['ITEMID'].isin(urine_ids)) & (outputevents['VALUE'].notna())]
     urine_events.loc[:, 'VALUE'] = np.where( np.logical_and(urine_events['ITEMID'] == 227488, urine_events['VALUE'] > 0),
                                              -1*urine_events['VALUE'],
                                              urine_events['VALUE'])
@@ -203,7 +214,7 @@ def get_respiration_events(chartevents, labevents, admittime, dischtime, debug=F
                                                     np.nan, fio2_chart_events['VALUENUM'])
     fio2_chart_events.loc[:, 'VALUENUM'] = np.where(np.logical_and(fio2_chart_events['ITEMID'] == 190,
                                                                    np.logical_and(fio2_chart_events['VALUENUM'] > 0.20,
-                                                                                  fio2_chart_events['VALUENUM'] < 1)),
+                                                                                  fio2_chart_events['VALUENUM'] <= 1)),
                                                     fio2_chart_events['VALUENUM'] * 100, fio2_chart_events['VALUENUM'])
     fio2_chart_events = fio2_chart_events[fio2_chart_events['VALUENUM'].notna()]
     fio2_chart_events.loc[:, 'CHARTTIME'] = pd.to_datetime(fio2_chart_events['CHARTTIME'], format=datetime_pattern)
@@ -225,15 +236,22 @@ def get_respiration_events(chartevents, labevents, admittime, dischtime, debug=F
                                                                key=lambda x: abs(x - timestep))]
         # Defining which event occurs near to this timestep, the labevents or the chartevents
         closest_fio2_event = []
-        if len(closest_fio2_lab_event) != 0 and len(closest_fio2_chart_event) != 0:
-            if closest_fio2_lab_event.loc[0, 'CHARTTIME'] > closest_fio2_chart_event.loc[0, 'CHARTTIME']:
+        try:
+            if len(closest_fio2_lab_event) != 0 and len(closest_fio2_chart_event) != 0:
+                if closest_fio2_lab_event.loc[closest_fio2_lab_event.index[0], 'CHARTTIME'] \
+                        > closest_fio2_chart_event.loc[closest_fio2_chart_event.index[0], 'CHARTTIME']:
+                    closest_fio2_event = closest_fio2_lab_event
+                else:
+                    closest_fio2_event = closest_fio2_chart_event
+            elif len(closest_fio2_lab_event) != 0:
                 closest_fio2_event = closest_fio2_lab_event
-            else:
+            elif len(closest_fio2_chart_event) != 0:
                 closest_fio2_event = closest_fio2_chart_event
-        elif len(closest_fio2_lab_event) != 0:
-            closest_fio2_event = closest_fio2_lab_event
-        elif len(closest_fio2_chart_event) != 0:
-            closest_fio2_event = closest_fio2_chart_event
+        except Exception as e:
+            print(e)
+            print(closest_fio2_chart_event.index)
+            print(closest_fio2_lab_event.index)
+            exit()
 
         closest_po2_event = []
         if len(po2_events) != 0:
@@ -248,7 +266,7 @@ def get_respiration_events(chartevents, labevents, admittime, dischtime, debug=F
         bloodgas_timestep['fio2'] = max(closest_fio2_event['VALUENUM']) if len(closest_fio2_event) != 0 else 0
         bloodgas_timestep['po2'] = max(closest_po2_event['VALUENUM']) if len(closest_po2_event) != 0 else 0
         bloodgas_timestep['so2'] = max(closest_so2_event['VALUENUM']) if len(closest_so2_event) != 0 else 0
-        if len(closest_fio2_event) == 0:
+        if bloodgas_timestep['fio2'] == 0:
             bloodgas_timestep['sao2fio2'] = None
             bloodgas_timestep['pao2fio2'] = None
         else:
@@ -274,25 +292,31 @@ def get_vasopressor_events(inputevents, weights, echodata, admittime, dischtime,
     divide_rate_weight_ids = [30047, 30044]
     admit_vasopressor_events = inputevents[(inputevents['ITEMID'].isin(vasopressor_ids)) & (inputevents['RATE'].notna())]
     # Transform datetime
-    admit_vasopressor_events['CHARTTIME'] = pd.to_datetime(admit_vasopressor_events['CHARTTIME'],
+    admit_vasopressor_events.loc[:, 'CHARTTIME'] = pd.to_datetime(admit_vasopressor_events['CHARTTIME'],
                                                            format=datetime_pattern)
+    echodata.loc[:, 'charttime'] = pd.to_datetime(echodata['charttime'], format=datetime_pattern)
     # Get patient weight for each vasopressor charttime
     aux_weights = []
     for index, vaso_event in admit_vasopressor_events.iterrows():
-        if len(weights['CHARTTIME']) != 0:
+
+        if weights is not None and len(weights['CHARTTIME']) != 0:
             weight = weights[weights['CHARTTIME'] == min(weights['CHARTTIME'],
                                                          key=lambda x: abs(x - vaso_event['CHARTTIME']))]
             weight = sum(weight['VALUENUM'])/len(weight)
         else:
             if len(echodata) != 0:
-                weight = echodata[echodata['chartime'] == min(echodata['charttime'],
-                                                             key=lambda x: abs(x - vaso_event['CHARTTIME']))]
-                weight = sum(weight['weight']) / len(weight)
+                try:
+                    weight = echodata[echodata['charttime'] == min(echodata['charttime'],
+                                                                 key=lambda x: abs(x - vaso_event['CHARTTIME']))]
+                    weight = sum(weight['weight']) / len(weight)
+                except:
+                    print(type(echodata.loc[0, 'charttime']))
+                    exit()
             else:
                 weight = np.nan
         aux_weights.append(weight)
     # Transform for the ids that are not measured by the patient weight
-    admit_vasopressor_events['weight'] = aux_weights
+    admit_vasopressor_events.loc[:, 'weight'] = aux_weights
     # Removing events that need to be divided by weight but weight is equal no nan
     admit_vasopressor_events = admit_vasopressor_events[
         ~(admit_vasopressor_events['ITEMID'].isin(divide_rate_weight_ids))
