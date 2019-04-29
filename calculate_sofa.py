@@ -164,7 +164,7 @@ def get_closest_value(events, time):
 DEBUG = False
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
 # Using variables for the paths to the files
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 csv_file_path = mimic_data_path+"csv/"
 sofa_scores_files_path = mimic_data_path+"sofa_scores_admission/"
 chartevents_path = mimic_data_path+'CHARTEVENTS/'
