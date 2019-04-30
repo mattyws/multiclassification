@@ -5,13 +5,14 @@ import pandas as pd
 
 
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 sofa_scores_files_path = mimic_data_path+"sofa_scores_admission/"
 
 infected_icu = pd.read_csv('sepsis3-df-no-exclusions.csv')
 # infected_icu = infected_icu[infected_icu['suspected_infection_time_poe'].notna()]
 infected_icu['intime'] = pd.to_datetime(infected_icu['intime'], format=datetime_pattern)
 infected_icu['outtime'] = pd.to_datetime(infected_icu['outtime'], format=datetime_pattern)
+total_aleatory_patients = 20000
 
 admissions = pd.read_csv('./ADMISSIONS.csv')
 
@@ -23,6 +24,7 @@ errors_metavision = 0
 infected_patients = 0
 healthy_patients = 0
 not_infected_patients = 0
+aleatory_patients = 0
 for index, infected_patient in infected_icu.iterrows():
     admission = admissions[admissions['HADM_ID'] == infected_patient['hadm_id']].iloc[0]
     aux_patient = None
@@ -75,15 +77,16 @@ for index, infected_patient in infected_icu.iterrows():
             aux_patient['age'] = infected_patient['age']
             aux_patient['sex'] = infected_patient['gender']
             aux_patient['ethnicity'] = infected_patient['ethnicity']
+            aux_patient['class'] = "sepsis" if infected_patient['suspicion_poe'] else "no_infection"
             break
 
     if aux_patient is not None and (aux_patient['sofa_increasing_time_poe'] - intime).seconds/3600 >= 7:
         if aux_patient['is_infected']:
             infected_patients += 1
+            metavision += 1 if infected_patient['dbsource'] == 'metavision' else 0
         else:
             not_infected_patients += 1
         print(aux_patient['icustay_id'])
-        metavision += 1 if infected_patient['dbsource'] == 'metavision' else 0
         aux_patient = pd.DataFrame(aux_patient, index=[0])
         sepsis3_patients = pd.concat([sepsis3_patients, aux_patient], ignore_index=True)
     elif aux_patient is not None and (aux_patient['sofa_increasing_time_poe'] - intime).seconds/3600 < 7:
@@ -101,9 +104,28 @@ for index, infected_patient in infected_icu.iterrows():
         aux_patient['age'] = infected_patient['age']
         aux_patient['sex'] = infected_patient['gender']
         aux_patient['ethnicity'] = infected_patient['ethnicity']
+        aux_patient['class'] = "healthy"
         aux_patient = pd.DataFrame(aux_patient, index=[0])
         sepsis3_patients = pd.concat([sepsis3_patients, aux_patient], ignore_index=True)
         healthy_patients += 1
+    else :
+        if aleatory_patients <= total_aleatory_patients:
+            aux_patient = dict()
+            aux_patient['is_healthy'] = is_healthy
+            aux_patient['is_infected'] = infected_patient['suspicion_poe']
+            aux_patient['hadm_id'] = infected_patient['hadm_id']
+            aux_patient['icustay_id'] = infected_patient['icustay_id']
+            aux_patient['intime'] = infected_patient['intime']
+            aux_patient['outtime'] = infected_patient['outtime']
+            aux_patient['dbsource'] = infected_patient['dbsource']
+            aux_patient['suspected_infection_time_poe'] = infected_patient['suspected_infection_time_poe']
+            aux_patient['age'] = infected_patient['age']
+            aux_patient['sex'] = infected_patient['gender']
+            aux_patient['ethnicity'] = infected_patient['ethnicity']
+            aux_patient['class'] = "None"
+            aux_patient = pd.DataFrame(aux_patient, index=[0])
+            aleatory_patients += 1
+
 
 
 print(len(sepsis3_patients))

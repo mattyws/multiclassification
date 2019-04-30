@@ -12,7 +12,7 @@ import functions
 datetime_pattern = "%Y-%m-%d %H:%M:%S"
 features_event_label = 'chartevents'
 event_label = 'CHARTEVENTS'
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
+mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 events_csv_path = mimic_data_path + event_label + '/'
 events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
 no_sepsis_events_files_path = mimic_data_path + 'no_sepsis_{}/'.format(features_event_label)
