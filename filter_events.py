@@ -15,10 +15,6 @@ event_label = 'CHARTEVENTS'
 mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
 events_csv_path = mimic_data_path + event_label + '/'
 events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
-no_sepsis_events_files_path = mimic_data_path + 'no_sepsis_{}/'.format(features_event_label)
-if not os.path.exists(no_sepsis_events_files_path):
-    os.mkdir(no_sepsis_events_files_path)
-
 if not os.path.exists(events_files_path):
     os.mkdir(events_files_path)
 
@@ -47,7 +43,7 @@ for index, row in sepsis3_df.iterrows():
     events_in_patient = dict()
     # If patient is not healthy either: it fits the sepsis 3 criteria or is getting worse at ICU
     # Either way the events are handled at same manner
-    if not row['is_healthy']:
+    if row['class'] == "sepsis":
         cut_poe = datetime.strptime(row['sofa_increasing_time_poe'], datetime_pattern)
         # Adding marker to infection time
         events_in_patient['-1'] = dict()
@@ -89,11 +85,7 @@ for index, row in sepsis3_df.iterrows():
         patient_data = pd.concat([patient_data, events], ignore_index=True)
     if len(patient_data) != 0:
         print("==== Creating csv ====")
-        if row['is_infected']:
-            patient_data.to_csv(events_files_path + '{}.csv'.format(row['hadm_id']), quoting=csv.QUOTE_NONNUMERIC,
-                                index=False)
-        else:
-            patient_data.to_csv(no_sepsis_events_files_path + '{}.csv'.format(row['hadm_id']), quoting=csv.QUOTE_NONNUMERIC,
-                                index=False)
+        patient_data.to_csv(events_files_path + '{}.csv'.format(row['icustay_id']), quoting=csv.QUOTE_NONNUMERIC,
+                            index=False)
     else:
-        print("Error in file {}, events is empty".format(row['hadm_id']))
+        print("Error in file {}, events is empty".format(row['icustay_id']))

@@ -124,6 +124,7 @@ for index, infected_patient in infected_icu.iterrows():
             aux_patient['ethnicity'] = infected_patient['ethnicity']
             aux_patient['class'] = "None"
             aux_patient = pd.DataFrame(aux_patient, index=[0])
+            sepsis3_patients = pd.concat([sepsis3_patients, aux_patient], ignore_index=True)
             aleatory_patients += 1
 
 
