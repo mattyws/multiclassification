@@ -80,7 +80,7 @@ for index, infected_patient in infected_icu.iterrows():
             aux_patient['class'] = "sepsis" if infected_patient['suspicion_poe'] else "no_infection"
             break
 
-    if aux_patient is not None and (aux_patient['sofa_increasing_time_poe'] - intime).seconds/3600 >= 7:
+    if aux_patient is not None and (aux_patient['sofa_increasing_time_poe'] - intime).seconds/3600 >= 24:
         if aux_patient['is_infected']:
             infected_patients += 1
             metavision += 1 if infected_patient['dbsource'] == 'metavision' else 0
@@ -89,7 +89,7 @@ for index, infected_patient in infected_icu.iterrows():
         print(aux_patient['icustay_id'])
         aux_patient = pd.DataFrame(aux_patient, index=[0])
         sepsis3_patients = pd.concat([sepsis3_patients, aux_patient], ignore_index=True)
-    elif aux_patient is not None and (aux_patient['sofa_increasing_time_poe'] - intime).seconds/3600 < 7:
+    elif aux_patient is not None and (aux_patient['sofa_increasing_time_poe'] - intime).seconds/3600 < 24:
         less_7 += 1
 
     if is_healthy:
@@ -109,7 +109,7 @@ for index, infected_patient in infected_icu.iterrows():
         sepsis3_patients = pd.concat([sepsis3_patients, aux_patient], ignore_index=True)
         healthy_patients += 1
     else :
-        if aleatory_patients <= total_aleatory_patients:
+        if aux_patient is None and aleatory_patients <= total_aleatory_patients:
             aux_patient = dict()
             aux_patient['is_healthy'] = is_healthy
             aux_patient['is_infected'] = infected_patient['suspicion_poe']

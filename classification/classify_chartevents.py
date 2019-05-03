@@ -2,25 +2,15 @@ import csv
 import json
 import os
 import pickle
-from datetime import datetime, timedelta
 
-import pandas as pd
-import chartevents_features
+from classification import chartevents_features
 
 import keras
 
-import gensim
-import math
-
-import numpy
 from keras.callbacks import ModelCheckpoint
-from nltk import regexp_tokenize
-from sklearn.metrics.classification import f1_score
-from sklearn.model_selection import train_test_split, KFold
 from sklearn.model_selection._split import StratifiedKFold
 
-from data_generators import Word2VecTextEmbeddingGenerator, EmbeddingObjectSaver, LongitudinalDataGenerator
-from data_representation import Word2VecEmbeddingCreator
+from data_generators import LongitudinalDataGenerator
 from keras_callbacks import SaveModelEpoch
 from model_creators import MultilayerKerasRecurrentNNCreator
 from metrics import f1, precision, recall

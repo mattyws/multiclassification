@@ -1,4 +1,4 @@
-FEATURES_ITEMS_LABELS = {
+FEATURES = {
     '220052' : 'Arterial Blood Pressure mean',
     '52' : 'Arterial Blood Pressure mean',
     '3312' : 'Arterial Blood Pressure mean',
@@ -17,10 +17,6 @@ FEATURES_ITEMS_LABELS = {
     '7622' : 'Arterial Blood Pressure mean',
     '53' : 'Arterial Blood Pressure mean',
     '443' : 'Arterial Blood Pressure mean',
-    '224167' : 'BPs L',
-    '224643' : 'BPd L',
-    '227243' : 'BPs R',
-    '227242' : 'BPd R',
     '228332' : 'Delirium assessment',
     '220739' : 'GCS - Eye Opening',
     '184' : 'GCS - Eye Opening',

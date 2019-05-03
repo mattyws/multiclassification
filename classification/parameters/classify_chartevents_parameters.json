@@ -1,9 +1,9 @@
 {
-    "noSepsisFilesPath": "/home/mattyws/Documentos/mimic/data/no_sepsis_chartevents",
-    "sepsisFilesPath": "/home/mattyws/Documentos/mimic/data/sepsis_chartevents",
+    "datasetFilesPath": "/home/mattyws/Documentos/mimic/data/development/",
+    "datasetCsvFilePath": "../dataset_patients.csv",
     "modelCheckpointPath": "chartevents_checkpoint/",
     "modelConfigPath": "chartevents_checkpoint/config.json",
-    "allDataPath" : "./data/",
+    "dataPath" : "./data/",
     "trainingDataPath" :  "./dataTrainigChartevents/",
     "testingDataPath" : "./dataTestChartevents/",
     "datasetFilesFileName": "datasetFiles.pkl",
