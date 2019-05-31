@@ -1,16 +1,20 @@
 import csv
+import json
 import os
 import shutil
+import functions
 from time import time
 
-mimic_data_path = "/home/mattyws/Documents/mimic_data/"
-csv_file_path = mimic_data_path+"csv/"
+parameters = functions.load_parameters_file()
+
+
+mimic_data_path = parameters['mimic_data_path']
+csv_file_path = mimic_data_path + parameters['csv_files_directory']
 files = [
-    'OUTPUTEVENTS', 'CHARTEVENTS', 'PROCEDURES_ICD', 'MICROBIOLOGYEVENTS',
-    'LABEVENTS', 'DIAGNOSES_ICD', 'NOTEEVENTS', 'PRESCRIPTIONS', 'CPTEVENTS',
+    'OUTPUTEVENTS', 'CHARTEVENTS', 'MICROBIOLOGYEVENTS',
+    'LABEVENTS', 'NOTEEVENTS', 'PRESCRIPTIONS', 'CPTEVENTS',
     'INPUTEVENTS_CV', 'INPUTEVENTS_MV'
 ]
-
 
 def writeBuffer(writer, buffer):
     for data in buffer:
@@ -54,15 +58,6 @@ for file in files:
                 files_dict[row["HADM_ID"]]['csv'] = csv.DictWriter(open(file_path, 'w'), row.keys())
                 files_dict[row["HADM_ID"]]['csv'].writeheader()
             files_dict[row["HADM_ID"]]['csv'].writerow(row)
-            # if not os.path.exists(file):
-            #     with open(file_path, 'w+') as csv_new_file:
-            #         writer = csv.DictWriter(csv_new_file, row.keys())
-            #         writer.writeheader()
-            #         writer.writerow(row)
-            # else:
-            #     with open(file_path, "a+") as csv_existed_file:
-            #         writer = csv.DictWriter(csv_existed_file, row.keys())
-            #         writer.writerow(row)
         end = time()
         print("Took {} seconds to process file. Total rows processed {}, and {} rows with empty admission id.".
               format(end-start, total_rows, empty_admission))

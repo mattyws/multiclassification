@@ -9,20 +9,18 @@ from datetime import datetime, timedelta
 
 import functions
 
-datetime_pattern = "%Y-%m-%d %H:%M:%S"
+parameters = functions.load_parameters_file()
+
+datetime_pattern = parameters['datetime_pattern']
 features_event_label = 'chartevents'
 event_label = 'CHARTEVENTS'
-mimic_data_path = "/home/mattyws/Documentos/mimic/data/"
+mimic_data_path = parameters['mimic_data_path']
 events_csv_path = mimic_data_path + event_label + '/'
 events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
 if not os.path.exists(events_files_path):
     os.mkdir(events_files_path)
 
-
-json_files_path = mimic_data_path+"json/"
-json_files_path = [json_files_path+x+'/' for x in os.listdir(json_files_path)]
-
-sepsis3_df = pd.read_csv('dataset_patients.csv')
+sepsis3_df = pd.read_csv(parameters["dataset_file_name"])
 # sepsis3_df = sepsis3_df[sepsis3_df["sepsis-3"] == 1]
 sepsis3_df['intime'] = pd.to_datetime(sepsis3_df['intime'], format=datetime_pattern)
 sepsis3_df['outtime'] = pd.to_datetime(sepsis3_df['outtime'], format=datetime_pattern)

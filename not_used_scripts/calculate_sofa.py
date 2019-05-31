@@ -2,9 +2,8 @@ import os
 from datetime import datetime, timedelta
 
 import pandas as pd
-import numpy as np
 
-from get_sofa_parameters import get_gcs_events, get_labs_events, get_urineoutput_events, get_vitals_events, \
+from not_used_scripts.get_sofa_parameters import get_gcs_events, get_labs_events, get_urineoutput_events, get_vitals_events, \
     get_respiration_events, get_vasopressor_events
 
 """

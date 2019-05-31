@@ -1,0 +1,11 @@
+{
+  "mimic_data_path" : "/home/mattyws/Documentos/mimic/",
+  "csv_files_directory" : "csv/",
+  "json_files_directory" : "json/",
+  "sepsis3_df_no_exclusions" :  "sepsis3-df-no-exclusions.csv",
+  "pivoted_sofa" :  "pivoted_sofa.csv",
+  "dataset_file_name" : "dataset_patients.csv",
+
+  "date_patterns" : "%Y-%m-%d",
+  "datetime_pattern" : "%Y-%m-%d %H:%M:%S"
+}

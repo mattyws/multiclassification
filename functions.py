@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from datetime import datetime, timedelta
@@ -10,6 +11,12 @@ from os import pathsep
 
 DATE_PATTERN = "%Y-%m-%d"
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
+
+def load_parameters_file():
+    if not os.path.exists('parameters.json'):
+        raise FileNotFoundError("Parameter file doesn't exists!")
+    parameters = json.load(open('parameters.json'))
+    return parameters
 
 
 def filter_events_before_infection(events, admittime, infection_time, preceding_time,
