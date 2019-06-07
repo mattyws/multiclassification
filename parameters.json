@@ -5,6 +5,7 @@
   "sepsis3_df_no_exclusions" :  "sepsis3-df-no-exclusions.csv",
   "pivoted_sofa" :  "pivoted_sofa.csv",
   "dataset_file_name" : "dataset_patients.csv",
+  "chartevents_path" : "sepsis_chartevents/",
 
   "date_patterns" : "%Y-%m-%d",
   "datetime_pattern" : "%Y-%m-%d %H:%M:%S"
