@@ -24,7 +24,7 @@ if parameters is None:
 
 mimic_data_path = parameters['mimic_data_path']
 features_event_label = 'chartevents'
-events_files_path = mimic_data_path + 'sepsis_{}2/'.format(features_event_label)
+events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
 new_events_files_path = mimic_data_path + 'sepsis_binary_{}/'.format(features_event_label)
 if not os.path.exists(new_events_files_path):
     os.mkdir(new_events_files_path)
@@ -95,7 +95,7 @@ else:
     # The results of the processes
     results = []
     # Creating the pool
-    with mp.Pool(processes=4) as pool:
+    with mp.Pool(processes=6) as pool:
         results = pool.map(partial_binarize_nominal_events, args)
     print("========== Get new features after the dummies ==========")
     features_after_binarized = set()
@@ -107,5 +107,5 @@ else:
 print("========== Filling events ==========")
 partial_fill_missing_events = partial(fill_missing_events, all_features=features_after_binarized,
                                       new_events_files_path=new_events_files_path)
-with mp.Pool(processes=4) as pool:
+with mp.Pool(processes=6) as pool:
     pool.map(partial_fill_missing_events, args)
