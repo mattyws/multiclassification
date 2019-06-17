@@ -4,6 +4,7 @@ import sys
 from datetime import datetime, timedelta
 import time
 import re
+import pandas as pd
 
 from os.path import exists, join, abspath
 from os import pathsep
@@ -101,3 +102,53 @@ def get_files_by_ids(ids, search_paths):
         path = get_file_path_from_id(id, search_paths)
         files_paths[id] = path
     return files_paths
+
+
+def chartevents_is_error(event):
+    return (pd.notnull(event['ERROR']) and event['ERROR'] != 0) \
+           or (pd.notnull(event['STOPPED']) and event['STOPPED'] != 'NotStopd')
+           # or (pd.isnull(event['ERROR']) and pd.isnull(event['STOPPED']))
+
+def noteevents_is_error(event):
+    return event['ISERROR'] == 1
+
+
+def event_is_error(event_label, event):
+    """
+    Check if the event passed as parameter is an error
+    :param event_label: the table from where this event is
+    :param event: a pandas.Series or similar representing the event
+    :return: True if is a error, false otherwise
+    """
+    if event_label == 'CHARTEVENTS':
+        return chartevents_is_error(event)
+    elif event_label == 'LABEVENTS':
+        # Labevents has no error label
+        return False
+    elif event_label == 'NOTEEVENTS':
+        return noteevents_is_error(event)
+    else:
+        raise NotImplemented("Handling error for this table is not implemented yet, exiting.")
+
+
+def get_event_itemid_and_value(event_label, event):
+    """
+    Get the value and its id based from which table the event is.
+    :param event_label: the table from where this event is
+    :param event: a pandas.Series or similar representing the event
+    :return:
+    """
+    if event_label == 'NOTEEVENTS':
+        itemid = "Note"
+        event_value = event['TEXT']
+    elif event_label == 'CHARTEVENTS' or event_label == 'LABEVENTS':
+        # Get values and store into a variable, just to read easy and if the labels change
+        itemid = event['ITEMID']
+        # print(event['VALUE'], event['VALUENUM'])
+        if pd.isnull(event['VALUENUM']):
+            event_value = str(event['VALUE'])
+        else:
+            event_value = float(event['VALUENUM'])
+    else:
+        raise NotImplemented("Event label don't have a filter for its value and itemid!")
+    return itemid, event_value

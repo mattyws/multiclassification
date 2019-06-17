@@ -12,7 +12,7 @@ from pandas._libs import json
 
 import helper
 
-parametersFilePath = "parameters/data_parameters.json"
+parametersFilePath = "parameters.json"
 
 #Loading parameters file
 print("========= Loading Parameters")
@@ -22,19 +22,16 @@ with open(parametersFilePath, 'r') as parametersFileHandler:
 if parameters is None:
     exit(1)
 
-mimic_data_path = parameters['mimicDataPath']
-events_files_path = parameters['dataPath']
-new_events_files_path = parameters['dataPathBinary']
+mimic_data_path = parameters['mimic_data_path']
+features_event_label = 'chartevents'
+events_files_path = mimic_data_path + 'sepsis_{}2/'.format(features_event_label)
+new_events_files_path = mimic_data_path + 'sepsis_binary_{}/'.format(features_event_label)
 if not os.path.exists(new_events_files_path):
     os.mkdir(new_events_files_path)
 
-all_features, features_types  = helper\
-    .get_attributes_from_arff(parameters['parametersArffFile'])
-categorical_features_chartevents = set([itemid for itemid in features_types.keys()
-                                    if features_types[itemid] == helper.CATEGORICAL_LABEL])
-dataset_csv = pd.read_csv('dataset.csv')
+dataset_csv = pd.read_csv(parameters['dataset_file_name'])
 
-def binarize_nominal_events(icustay_id, categorical_events, events_files_path, new_events_files_path):
+def binarize_nominal_events(icustay_id, events_files_path, new_events_files_path):
     nominal_events = []
     print("#### {} ####".format(icustay_id))
     if os.path.exists(events_files_path + '{}.csv'.format(icustay_id)) and \
@@ -42,11 +39,12 @@ def binarize_nominal_events(icustay_id, categorical_events, events_files_path, n
         # Get events and change nominal to binary
         events = pd.read_csv(events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
-            events = events.drop(columns=['Unnamed: 0'])
-        nominal_in_events = categorical_events & set(events.columns)#[itemid for itemid in categorical_events if itemid in events.columns]
-        events = pd.get_dummies(events, columns=nominal_in_events, dummy_na=False)
+            events.loc[:, 'Unnamed: 0'] = pd.to_datetime(events['Unnamed: 0'], format=parameters['datetime_pattern'])
+            events = events.set_index(['Unnamed: 0'])
+            events = events.sort_index()
+        events = pd.get_dummies(events, dummy_na=False)
         nominal_events = events.columns
-        events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), index=False)
+        events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id))
     elif os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
@@ -60,7 +58,7 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
     if os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
-            events = events.drop(columns=['Unnamed: 0'])
+            events = events.set_index(['Unnamed: 0'])
         events = events.fillna(0)
         if len(events.columns) != len(all_features):
             zeros = np.zeros(len(events))
@@ -92,7 +90,6 @@ else:
     # If doesn't exist, go binarize the values
     # Creating a partial maintaining some arguments with fixed values
     partial_binarize_nominal_events = partial(binarize_nominal_events,
-                                              categorical_events=categorical_features_chartevents,
                                               events_files_path=events_files_path,
                                               new_events_files_path=new_events_files_path)
     # The results of the processes
