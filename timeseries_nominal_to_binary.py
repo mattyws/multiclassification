@@ -44,7 +44,7 @@ def binarize_nominal_events(icustay_id, events_files_path, new_events_files_path
             events = events.sort_index()
         events = pd.get_dummies(events, dummy_na=False)
         nominal_events = events.columns
-        events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id))
+        events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
     elif os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
@@ -66,7 +66,7 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
             for itemid in features_not_in:
                 events.loc[:, itemid] = pd.Series(zeros, index=events.index)
         events = events.sort_index(axis=1)
-        events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), index=False)
+        events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
         print("---- End {} ----".format(icustay_id))
 
 
