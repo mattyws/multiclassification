@@ -33,9 +33,9 @@ dataset_csv = pd.read_csv(parameters['dataset_file_name'])
 
 def binarize_nominal_events(icustay_id, events_files_path, new_events_files_path):
     nominal_events = []
-    print("#### {} ####".format(icustay_id))
     if os.path.exists(events_files_path + '{}.csv'.format(icustay_id)) and \
             not os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
+        print("#### {} ####".format(icustay_id))
         # Get events and change nominal to binary
         events = pd.read_csv(events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
@@ -46,6 +46,7 @@ def binarize_nominal_events(icustay_id, events_files_path, new_events_files_path
         nominal_events = events.columns
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
     elif os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
+        print("#### {} #### - Already exists".format(icustay_id))
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
             events = events.drop(columns=['Unnamed: 0'])
@@ -102,7 +103,6 @@ else:
     for result in results:
         features_after_binarized |= set(result)
     # features_after_binarized = list(features_after_binarized)
-
 
 print("========== Filling events ==========")
 partial_fill_missing_events = partial(fill_missing_events, all_features=features_after_binarized,
