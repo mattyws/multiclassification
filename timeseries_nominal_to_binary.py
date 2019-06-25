@@ -23,7 +23,7 @@ if parameters is None:
     exit(1)
 
 mimic_data_path = parameters['mimic_data_path']
-features_event_label = 'chartevents'
+features_event_label = 'labevents'
 events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
 new_events_files_path = mimic_data_path + 'sepsis_binary_{}/'.format(features_event_label)
 if not os.path.exists(new_events_files_path):
