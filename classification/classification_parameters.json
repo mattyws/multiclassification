@@ -1,0 +1,31 @@
+{
+    "datasetFilesPath": "./mimic/sepsis_chartevents/",
+    "datasetFilesPathBinary": "./mimic/sepsis_chartevents/",
+    "datasetCsvFilePath": "dataset_patients.csv",
+    "modelCheckpointPath": "chartevents_checkpoint/",
+    "modelConfigPath": "chartevents_checkpoint/config.json",
+    "dataPath" : "../mimic/sepsis_chartevents_binary/",
+    "trainingDataPath" :  "./dataTrainigChartevents/",
+    "testingDataPath" : "./dataTestChartevents/",
+    "datasetFilesFileName": "datasetFiles.pkl",
+    "datasetLabelsFileName": "datasetLabels.pkl",
+    "trainingGeneratorPath": "chartevents_checkpoint/dataTrainGenerator.pkl",
+    "testingGeneratorPath": "chartevents_checkpoint/dataTestGenerator.pkl",
+    "resultFilePath": "chartevents_checkpoint/result.csv",
+    "dataLength" : 12,
+    "outputUnits": [
+        128,
+        64
+    ],
+    "numOutputNeurons": 1,
+    "loss": "binary_crossentropy",
+    "layersActivations": [
+        "relu",
+        "relu"
+    ],
+    "gru": true,
+    "useDropout": true,
+    "dropout": 0.4,
+    "trainingEpochs": 100,
+    "batchSize": 100
+}

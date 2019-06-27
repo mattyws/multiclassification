@@ -62,10 +62,10 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
             events = events.set_index(['Unnamed: 0'])
         events = events.fillna(0)
         if len(events.columns) != len(all_features):
-            zeros = np.zeros(len(events))
+            # zeros = np.zeros(len(events))
             features_not_in = all_features - set(events.columns)
             for itemid in features_not_in:
-                events.loc[:, itemid] = pd.Series(zeros, index=events.index)
+                events[itemid] = 0
         events = events.sort_index(axis=1)
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
         print("---- End {} ----".format(icustay_id))

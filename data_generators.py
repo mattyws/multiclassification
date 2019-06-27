@@ -2,6 +2,7 @@ import pickle
 import uuid
 import numpy as np
 import os
+import pandas as pd
 from keras.utils import Sequence
 
 from data_representation import Word2VecEmbeddingCreator
@@ -49,30 +50,37 @@ class EmbeddingObjectsDelete(object):
         for file in self.__filesList:
             os.remove(file)
 
-#  TODO : data generator só devem receber uma lista de arquivos, separar lógica de salvar os objetos da lógica do generator
 class LongitudinalDataGenerator(Sequence):
 
-    def __init__(self, dataPaths, batchSize, iterForever=False):
+    def __init__(self, dataPaths, labels, batchSize, iterForever=False):
         self.batchSize = batchSize
+        self.__labels = labels
         self.__filesList = dataPaths
         self.iterForever = iterForever
         self.__iterPos = 0
-        self.__objectLoader = EmbeddingObjectLoader()
-        self.__objectsDelete = EmbeddingObjectsDelete(self.__filesList)
 
     def __load(self, filesNames):
         x = []
         y = []
+        max_len = None
+        columns_len = None
         for fileName in filesNames:
-            data = None
-            with open(fileName, 'rb') as pklFileHandler:
-                data = pickle.load(pklFileHandler)
-            x.append(data[0])
-            y.append(data[1])
-        return x, y
-
-    def clean_files(self):
-        self.__objectsDelete.clean_files()
+            data = pd.read_csv(fileName)
+            if 'Unnamed: 0' in data.columns:
+                data = data.drop(columns=['Unnamed: 0'])
+            x.append(np.array(data.values))
+            if max_len is None or len(data) > max_len:
+                max_len = len(data)
+            if columns_len is None:
+                columns_len = len(data.columns)
+        # Zero padding the matrices
+        zero_padding_x = []
+        for value in x:
+            zeros = np.zeros((max_len, columns_len))
+            zeros[:value.shape[0], : value.shape[1]] = value
+            zero_padding_x.append(zeros)
+        x = np.array(zero_padding_x)
+        return x
 
     def __iter__(self):
         return self
@@ -83,9 +91,9 @@ class LongitudinalDataGenerator(Sequence):
         :return:
         """
         batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
-        batch_x, batch_y = self.__load(batch_x)
-
-        return np.array(batch_x), batch_y
+        batch_x = self.__load(batch_x)
+        batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
+        return batch_x, batch_y
 
     def __len__(self):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
