@@ -14,7 +14,6 @@ from sklearn.metrics.classification import precision_score, recall_score, accura
 from sklearn.metrics.ranking import roc_auc_score
 from sklearn.model_selection._split import StratifiedKFold
 from sklearn.utils.class_weight import compute_class_weight
-from tensorflow.contrib.metrics.python.ops.metric_ops import cohen_kappa
 
 from data_generators import LongitudinalDataGenerator
 from keras_callbacks import SaveModelEpoch
