@@ -4,7 +4,7 @@
     "datasetCsvFilePath": "dataset_patients.csv",
     "modelCheckpointPath": "chartevents_checkpoint/",
     "modelConfigPath": "chartevents_checkpoint/config.json",
-    "dataPath" : "../mimic/sepsis_binary_merged/",
+    "dataPath" : "mimic/sepsis_binary_merged/",
     "trainingDataPath" :  "./dataTrainigChartevents/",
     "testingDataPath" : "./dataTestChartevents/",
     "datasetFilesFileName": "datasetFiles.pkl",
