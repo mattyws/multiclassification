@@ -19,12 +19,12 @@ from data_generators import LongitudinalDataGenerator
 from keras_callbacks import SaveModelEpoch
 from model_creators import MultilayerKerasRecurrentNNCreator
 from metrics import f1, precision, recall
-from normalization import Normalization
+from normalization import Normalization, NormalizationValues
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
-parametersFilePath = "classification_parameters.json"
+parametersFilePath = "./classification_parameters.json"
 
 #Loading parameters file
 print("========= Loading Parameters")
@@ -45,13 +45,16 @@ data_csv = data_csv.sort_values(['icustay_id'])
 data = np.array([itemid for itemid in list(data_csv['icustay_id'])
                  if os.path.exists(parameters['dataPath'] + '{}.csv'.format(itemid))])
 data_csv = data_csv[data_csv['icustay_id'].isin(data)]
-data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
+data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data[:3]])
 print("========= Transforming classes")
-classes = np.array([1 if c == 'sepsis' else 1 for c in list(data_csv['class'])])
-# classes_for_stratified = np.array([1 if c == 'sepsis' else 1 for c in list(data_csv['class'])])
+classes = np.array([1 if c == 'sepsis' else 1 for c in list(data_csv['class'])[:3]])
+classes_for_stratified = np.array([1 if c == 'sepsis' else 1 for c in list(data_csv['class'])[:3]])
 # Using a seed always will get the same data split even if the training stops
-kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=15)
+kf = StratifiedKFold(n_splits=2, shuffle=True, random_state=15)
 
+print("========= Preparing normalization values")
+normalization_values = NormalizationValues(data)
+normalization_values.prepare()
 # Get input shape
 aux = pd.read_csv(data[0])
 inputShape = (None, len(aux.columns))
@@ -93,8 +96,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                          parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
         else:
             print("===== Getting values for normalization =====")
-            normalization_values = Normalization.get_normalization_values(data[trainIndex])
-            normalizer = Normalization(normalization_values)
+            # normalization_values = Normalization.get_normalization_values(data[trainIndex])
+            normalizer = Normalization(normalization_values.get_normalization_values(data[trainIndex]))
             print("===== Normalizing fold data =====")
             normalized_data = np.array(normalizer.normalize_files(data))
             dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex], classes[trainIndex], parameters['batchSize'])
