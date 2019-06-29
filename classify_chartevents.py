@@ -45,10 +45,10 @@ data_csv = data_csv.sort_values(['icustay_id'])
 data = np.array([itemid for itemid in list(data_csv['icustay_id'])
                  if os.path.exists(parameters['dataPath'] + '{}.csv'.format(itemid))])
 data_csv = data_csv[data_csv['icustay_id'].isin(data)]
-data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data[:3]])
+data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
 print("========= Transforming classes")
-classes = np.array([1 if c == 'sepsis' else 1 for c in list(data_csv['class'])[:3]])
-classes_for_stratified = np.array([1 if c == 'sepsis' else 1 for c in list(data_csv['class'])[:3]])
+classes = np.array([1 if c == 'sepsis' else 1 for c in list(data_csv['class'])])
+classes_for_stratified = np.array([1 if c == 'sepsis' else 1 for c in list(data_csv['class'])])
 # Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=2, shuffle=True, random_state=15)
 
