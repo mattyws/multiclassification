@@ -4,6 +4,8 @@ import pickle
 from datetime import datetime, timedelta
 
 import pandas as pd
+from sklearn import preprocessing
+
 from classification import chartevents_features
 import math
 
@@ -35,7 +37,11 @@ features.sort()
 if not os.path.exists(parameters['dataPath']):
     os.mkdir(parameters['dataPath'])
 
-classes = [1 if c == 'sepsis' else 0 for c in dataset['class'].tolist()]
+le = preprocessing.LabelEncoder()
+le.fit(dataset['class'].tolist())
+# print(le.classes_)
+classes = dataset['class'].tolist()
+exit()
 
 print(" ======= Selecting random sample ======= ")
 dataset, dataTest, classes, labelsTest = train_test_split(dataset['icustay_id'].tolist(), classes,
@@ -44,6 +50,8 @@ dataset, dataTest, classes, labelsTest = train_test_split(dataset['icustay_id'].
 for icustayid, icu_class in zip(dataset, classes):
     if not os.path.exists(parameters['datasetFilesPath']+'{}.csv'.format(icustayid)):
         continue
+    # Get patient row from dataset csv
+    patient = dataset[dataset['icustay_id'] == str(icustayid)]
     # Loading events
     events = pd.read_csv(parameters['datasetFilesPath']+'{}.csv'.format(icustayid))
     # Filtering
@@ -58,8 +66,10 @@ for icustayid, icu_class in zip(dataset, classes):
     # The data representation is the features ordered by id
     events = events.set_index(['itemid']).sort_index()
     # Have to filter data based on the class
-    if icu_class == 1:
-        # If patient has sepsis, get a window of 8h
+    if icu_class == 'sepsis' or icu_class == 'no_infection':
+        # If patient's sofa increses, get a window of 12h, respecting the antecipation defined time
+        end_time =
+        pass
     print(events)
     break
 

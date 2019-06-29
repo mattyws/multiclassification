@@ -1,4 +1,6 @@
 import csv
+import os
+import pickle
 from functools import partial
 
 import math
@@ -24,19 +26,27 @@ class NormalizationValues(object):
     def __init__(self, files_list):
         self.files_list = files_list
         self.get_file_value_counts = get_file_value_counts
+        self.counts = None
 
     def prepare(self, result_fname=None):
         """
         Prepare the data getting their value counts for each column
         :return:
         """
-        # TODO : pickle the count object and load it if alread exists
-        if result_fname is None:
+        if result_fname is None or (result_fname is not None and not os.path.exists(result_fname)):
             with mp.Pool(processes=6) as pool:
                 results = pool.map(self.get_file_value_counts, self.files_list)
                 self.counts = dict()
                 for result in results:
                     self.counts[result[0]] = result[1]
+            if result_fname is not None:
+                with open(result_fname, 'wb') as result_file:
+                    pickle.dump(self.counts, result_file)
+        elif result_fname is not None and os.path.exists(result_fname):
+            print("Loading counts file")
+            with open(result_fname, 'rb') as result_file:
+                self.counts = pickle.load(result_file)
+
 
     def get_normalization_values(self, training_files):
         """

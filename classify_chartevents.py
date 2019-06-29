@@ -54,7 +54,7 @@ kf = StratifiedKFold(n_splits=2, shuffle=True, random_state=15)
 
 print("========= Preparing normalization values")
 normalization_values = NormalizationValues(data)
-normalization_values.prepare()
+normalization_values.prepare(result_fname='normalization_values.pkl')
 # Get input shape
 aux = pd.read_csv(data[0])
 inputShape = (None, len(aux.columns))
