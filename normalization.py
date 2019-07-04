@@ -9,8 +9,22 @@ import pandas as pd
 import numpy as np
 import multiprocessing as mp
 
+import sys
 
-def get_file_value_counts(file):
+
+def get_file_value_counts(file, pickle_object_path):
+    """
+    Get the values count for a csv file, and save the result into a pickle file, based the path parameter
+    :param file: the file to get the counts
+    :param pickle_object_path: the path to store the value counts
+    :return:
+    """
+    pickle_fname = pickle_object_path + file.split('.')[0]
+    if os.path.exists(pickle_fname):
+        # File already exists, do not create it
+        return file, pickle_fname
+    if file == None or (file != None and len(file) == 0):
+        return None
     df = pd.read_csv(file)
     if 'Unnamed: 0' in df.columns:
         df = df.set_index(['Unnamed: 0'])
@@ -20,33 +34,37 @@ def get_file_value_counts(file):
     for column in df.columns:
         counts[column] = df[column].value_counts()
         counts[column].index = counts[column].index.map(float)
-    return file, counts
+    try:
+        with open(pickle_fname, 'wb') as result_file:
+            pickle.dump(counts, result_file)
+        return file, pickle_fname
+    except Exception as e:
+        print("Some error happen on {}. Exception {}".format(file, e))
 
 class NormalizationValues(object):
-    def __init__(self, files_list):
+    def __init__(self, files_list, pickle_object_path="normalization_values/"):
         self.files_list = files_list
-        self.get_file_value_counts = get_file_value_counts
+        if pickle_object_path[-1] != '/':
+            pickle_object_path += '/'
+        if not os.path.exists(pickle_object_path):
+            os.mkdir(pickle_object_path)
+        self.get_file_value_counts = partial(get_file_value_counts, pickle__object_path=pickle_object_path)
         self.counts = None
 
-    def prepare(self, result_fname=None):
+    def prepare(self):
         """
-        Prepare the data getting their value counts for each column
+        Prepare the data getting their value counts for each column, and saving the count object into a pickle file
         :return:
         """
-        if result_fname is None or (result_fname is not None and not os.path.exists(result_fname)):
-            with mp.Pool(processes=6) as pool:
-                results = pool.map(self.get_file_value_counts, self.files_list)
-                self.counts = dict()
-                for result in results:
+        self.counts = dict()
+        with mp.Pool(processes=6) as pool:
+            # results = pool.map(self.get_file_value_counts, self.files_list)
+            # for result in results:
+            #     self.counts[result[0]] = result[1]
+            for i, result in enumerate(pool.imap(self.get_file_value_counts, self.files_list), 1):
+                sys.stderr.write('\rdone {0:%}'.format(i / len(self.files_list)))
+                if result is not None:
                     self.counts[result[0]] = result[1]
-            if result_fname is not None:
-                with open(result_fname, 'wb') as result_file:
-                    pickle.dump(self.counts, result_file)
-        elif result_fname is not None and os.path.exists(result_fname):
-            print("Loading counts file")
-            with open(result_fname, 'rb') as result_file:
-                self.counts = pickle.load(result_file)
-
 
     def get_normalization_values(self, training_files):
         """
@@ -56,11 +74,12 @@ class NormalizationValues(object):
         values = None
         # Loop each file in dataset
         for file in training_files:
+            file_value_count = self.__get_saved_value_count(self.counts[file])
             if values is None:
-                values = self.counts[file]
+                values = file_value_count
             else:
                 for key in values.keys():
-                    values[key] = values[key].combine(self.counts[file][key], func = (lambda x1, x2: x1 + x2),
+                    values[key] = values[key].combine(file_value_count[key], func = (lambda x1, x2: x1 + x2),
                                                       fill_value=0.0)
         new_values = dict()
         for key in values.keys():
@@ -71,6 +90,11 @@ class NormalizationValues(object):
             new_values[key]['mean'] = mean_std[0]
             new_values[key]['std'] = mean_std[1]
         return new_values
+
+    def __get_saved_value_count(self, file):
+        with open(file, 'rb') as normalization_values_file:
+            values = pickle.load(normalization_values_file)
+            return values
 
     def __weighted_avg_and_std(self, values, weights):
         """
