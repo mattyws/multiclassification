@@ -19,7 +19,8 @@ def get_file_value_counts(file, pickle_object_path):
     :param pickle_object_path: the path to store the value counts
     :return:
     """
-    pickle_fname = pickle_object_path + file.split('.')[0]
+    pickle_fname = file.split('/')[-1]
+    pickle_fname = pickle_object_path + pickle_fname.split('.')[0] + '.pkl'
     if os.path.exists(pickle_fname):
         # File already exists, do not create it
         return file, pickle_fname
