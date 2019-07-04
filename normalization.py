@@ -48,7 +48,7 @@ class NormalizationValues(object):
             pickle_object_path += '/'
         if not os.path.exists(pickle_object_path):
             os.mkdir(pickle_object_path)
-        self.get_file_value_counts = partial(get_file_value_counts, pickle__object_path=pickle_object_path)
+        self.get_file_value_counts = partial(get_file_value_counts, pickle_object_path=pickle_object_path)
         self.counts = None
 
     def prepare(self):
