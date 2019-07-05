@@ -98,6 +98,52 @@ class LongitudinalDataGenerator(Sequence):
     def __len__(self):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
+# class AutoencoderDataGenerator(Sequence):
+#     # TODO: finish the generator
+#     def __init__(self, dataPaths, batchSize, iterForever=False):
+#         self.batchSize = batchSize
+#         self.__filesList = dataPaths
+#         self.iterForever = iterForever
+#         self.__iterPos = 0
+#
+#     def __load(self, filesNames):
+#         x = []
+#         y = []
+#         max_len = None
+#         columns_len = None
+#         for fileName in filesNames:
+#             data = pd.read_csv(fileName)
+#             if 'Unnamed: 0' in data.columns:
+#                 data = data.drop(columns=['Unnamed: 0'])
+#             x.append(np.array(data.values))
+#             if max_len is None or len(data) > max_len:
+#                 max_len = len(data)
+#             if columns_len is None:
+#                 columns_len = len(data.columns)
+#         # Zero padding the matrices
+#         zero_padding_x = []
+#         for value in x:
+#             zeros = np.zeros((max_len, columns_len))
+#             zeros[:value.shape[0], : value.shape[1]] = value
+#             zero_padding_x.append(zeros)
+#         x = np.array(zero_padding_x)
+#         return x
+#
+#     def __iter__(self):
+#         return self
+#
+#     def __getitem__(self, idx):
+#         """
+#         :param idx:
+#         :return:
+#         """
+#         batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
+#         batch_x = self.__load(batch_x)
+#         batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
+#         return batch_x, batch_y
+#
+#     def __len__(self):
+#         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
 class Word2VecTextEmbeddingGenerator(Sequence):
     def __init__(self, dataPath, word2vecModel, batchSize, embeddingSize=200, iterForever=False):

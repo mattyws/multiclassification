@@ -69,6 +69,31 @@ class KerasGeneratorAdapter(ModelAdapter):
     def load(self, filename):
         return KerasGeneratorAdapter(load_model(filename))
 
+class KerasGeneratorAutoencoderAdapter(ModelAdapter):
+
+    def __init__(self, encoder, decoder, vae):
+        self.encoder = encoder
+        self.decoder = decoder
+        self.vae = vae
+
+    def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator=None,
+            validationSteps=None, callbacks=None):
+        self.vae.fit_generator(dataGenerator, batch_size, epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
+                                 workers=workers, validation_data=validationDataGenerator,
+                                 validation_steps=validationSteps,
+                                 callbacks=callbacks)
+
+    def save(self, filename):
+        self.encoder.save('encoder_'+filename)
+        self.decoder.save('decoder_' + filename)
+        self.vae.save(filename)
+
+    def load(self, filename):
+        encoder = load_model('encoder_'+filename)
+        decoder = load_model('decoder_' + filename)
+        vae = load_model(filename)
+        return KerasGeneratorAutoencoderAdapter(encoder, decoder, vae)
+
 class SklearnAdapter(ModelAdapter):
 
     def __init__(self, model):

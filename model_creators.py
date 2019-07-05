@@ -4,6 +4,12 @@ from keras.models import load_model
 from keras.layers.core import Dense, Dropout
 from keras.layers.recurrent import LSTM, GRU
 from keras.models import Sequential
+from keras.layers import Lambda, Input, Dense
+from keras.models import Model
+from keras.datasets import mnist
+from keras.losses import mse, binary_crossentropy
+from keras.utils import plot_model
+from keras import backend as K
 from sklearn.neural_network.multilayer_perceptron import MLPClassifier
 
 import adapter
@@ -99,6 +105,81 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
     def create_from_path(filepath, custom_objects=None):
         model = load_model(filepath, custom_objects=custom_objects)
         return adapter.KerasGeneratorAdapter(model)
+
+def sampling(args):
+    """Reparameterization trick by sampling from an isotropic unit Gaussian.
+
+    # Arguments
+        args (tensor): mean and log of variance of Q(z|X)
+
+    # Returns
+        z (tensor): sampled latent vector
+    """
+
+    z_mean, z_log_var = args
+    batch = K.shape(z_mean)[0]
+    dim = K.int_shape(z_mean)[1]
+    # by default, random_normal has mean = 0 and std = 1.0
+    epsilon = K.random_normal(shape=(batch, dim))
+    return z_mean + K.exp(0.5 * z_log_var) * epsilon
+
+class KerasVariationalAutoencoder(ModelCreator):
+    """
+    A class that create a Variational Autoenconder.
+    This script was writen based on https://github.com/keras-team/keras/blob/master/examples/variational_autoencoder.py
+    See the linked script for more details on a tutorial of how to build it.
+    """
+    def __init__(self, loss='mse', recurrent_autoencoder=False):
+        self.input_shape = None
+        self.intermediate_dim = None
+        self.latent_dim = None
+        self.sampling = sampling
+        self.loss = loss
+        self.optmizer = None
+        self.recurrent_autoencoder = recurrent_autoencoder
+        pass
+
+    def create(self):
+        if self.recurrent_autoencoder:
+            return adapter.KerasGeneratorAdapter(self.__build_recurrent_model())
+        else:
+            return adapter.KerasGeneratorAdapter(self.__build_model())
+
+    def __build_model(self):
+        # Encoder model
+        inputs = Input(shape=self.input_shape, name='encoder_input')
+        x = Dense(self.intermediate_dim, activation='relu')(inputs)
+        z_mean = Dense(self.latent_dim, name='z_mean')(x)
+        z_log_var = Dense(self.latent_dim, name='z_log_var')(x)
+        z = Lambda(self.sampling, name='z')([z_mean, z_log_var])
+        encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
+        # Decoder model
+        latent_inputs = Input(shape=(self.latent_dim,), name='z_sampling')
+        x = Dense(self.intermediate_dim, activation='relu')(latent_inputs)
+        outputs = Dense(self.input_shape[0], activation='sigmoid')(x)
+        decoder = Model(latent_inputs, outputs, name='decoder')
+        # VAE
+        outputs = decoder(encoder(inputs)[2])
+        vae = Model(inputs, outputs, name='vae_mlp')
+        vae.add_loss(self.__get_loss(inputs, outputs, z_mean, z_log_var))
+        vae.compile(optimizer=self.optmizer)
+        return encoder, decoder, vae
+
+    def __get_loss(self, inputs, outputs, z_mean, z_log):
+        if self.loss == 'mse':
+            reconstruction_loss = mse(inputs, outputs)
+        else:
+            reconstruction_loss = binary_crossentropy(inputs, outputs)
+        reconstruction_loss *= self.input_shape[0]
+        kl_loss = 1 + z_log - K.square(z_mean) - K.exp(z_log)
+        kl_loss = K.sum(kl_loss, axis=-1)
+        kl_loss *= -0.5
+        vae_loss = K.mean(reconstruction_loss + kl_loss)
+        return vae_loss
+
+    def __build_recurrent_model(self):
+        pass
+
 
 class SklearnNeuralNetwork(ModelCreator):
 
