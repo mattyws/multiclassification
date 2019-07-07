@@ -1,7 +1,8 @@
 import abc
 
+from keras.layers.wrappers import TimeDistributed
 from keras.models import load_model
-from keras.layers.core import Dense, Dropout
+from keras.layers.core import Dense, Dropout, RepeatVector
 from keras.layers.recurrent import LSTM, GRU
 from keras.models import Sequential
 from keras.layers import Lambda, Input, Dense
@@ -129,21 +130,30 @@ class KerasVariationalAutoencoder(ModelCreator):
     This script was writen based on https://github.com/keras-team/keras/blob/master/examples/variational_autoencoder.py
     See the linked script for more details on a tutorial of how to build it.
     """
-    def __init__(self, loss='mse', recurrent_autoencoder=False):
-        self.input_shape = None
-        self.intermediate_dim = None
-        self.latent_dim = None
+    def __init__(self, input_shape, intermediate_dim, latent_dim, optmizer='adam', loss='mse', recurrent_autoencoder=False):
+        self.input_shape = input_shape
+        self.intermediate_dim = intermediate_dim
+        self.latent_dim = latent_dim
         self.sampling = sampling
         self.loss = loss
-        self.optmizer = None
+        self.optmizer = optmizer
         self.recurrent_autoencoder = recurrent_autoencoder
-        pass
 
     def create(self):
         if self.recurrent_autoencoder:
             return adapter.KerasGeneratorAdapter(self.__build_recurrent_model())
         else:
             return adapter.KerasGeneratorAdapter(self.__build_model())
+
+    def timedistribute_vae(self, input_shape, vae, encoder=None):
+        timeseries_input = Input(shape=input_shape)
+        vae = TimeDistributed(vae)(timeseries_input)
+        vae = Model(timeseries_input, vae)
+        if encoder is not None:
+            encoder = TimeDistributed(encoder)(timeseries_input)
+            encoder = Model(timeseries_input, encoder)
+            return vae, encoder
+        return vae
 
     def __build_model(self):
         # Encoder model
@@ -165,6 +175,26 @@ class KerasVariationalAutoencoder(ModelCreator):
         vae.compile(optimizer=self.optmizer)
         return encoder, decoder, vae
 
+    def __build_recurrent_model(self):
+        # Encoder
+        inputs = Input(shape=self.input_shape, name='encoder_input')
+        x = LSTM(self.intermediate_dim)(inputs)
+        z_mean = Dense(self.latent_dim)(x)
+        z_log_var = Dense(self.latent_dim)(x)
+        # Z layer
+        z = Lambda(self.sampling, name='z')([z_mean, z_log_var])
+        # Decoder
+        latent_inputs = RepeatVector(self.input_shape[0])(z)
+        decoder_x = LSTM(self.intermediate_dim, return_sequences=True)(latent_inputs)
+        outputs = LSTM(self.input_shape[1], return_sequences=True)(decoder_x)
+        encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
+        decoder = Model(latent_inputs, outputs, name='decoder')
+        # VAE
+        vae = Model(inputs, outputs, name='var')
+        vae.add_loss(self.__get_loss(inputs, outputs, z_mean, z_log_var))
+        vae.compile(optimizer=self.optmizer)
+        return encoder, decoder, vae
+
     def __get_loss(self, inputs, outputs, z_mean, z_log):
         if self.loss == 'mse':
             reconstruction_loss = mse(inputs, outputs)
@@ -176,9 +206,6 @@ class KerasVariationalAutoencoder(ModelCreator):
         kl_loss *= -0.5
         vae_loss = K.mean(reconstruction_loss + kl_loss)
         return vae_loss
-
-    def __build_recurrent_model(self):
-        pass
 
 
 class SklearnNeuralNetwork(ModelCreator):

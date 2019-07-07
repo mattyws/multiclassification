@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 from keras.layers import Lambda, Input, Dense
+from keras.layers.wrappers import TimeDistributed
 from keras.models import Model
 from keras.datasets import mnist
 from keras.losses import mse, binary_crossentropy
@@ -113,26 +114,36 @@ def plot_results(models,
     plt.show()
 
 
-# MNIST dataset
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+# # MNIST dataset
+# (x_train, y_train), (x_test, y_test) = mnist.load_data()
+#
+# image_size = x_train.shape[1]
+# original_dim = image_size * image_size
+# x_train = np.reshape(x_train, [-1, original_dim])
+# x_test = np.reshape(x_test, [-1, original_dim])
+# x_train = x_train.astype('float32') / 255
+# x_test = x_test.astype('float32') / 255
+length = 400
+timesteps = 10
+examples = 100
 
-image_size = x_train.shape[1]
-original_dim = image_size * image_size
-x_train = np.reshape(x_train, [-1, original_dim])
-x_test = np.reshape(x_test, [-1, original_dim])
-x_train = x_train.astype('float32') / 255
-x_test = x_test.astype('float32') / 255
+x_train = np.random.rand(examples, timesteps, length)
+x_new = x_train.reshape((timesteps*examples, length))
 
+# print(x_train)
+# exit()
 # network parameters
-input_shape = (original_dim, )
-intermediate_dim = 512
-batch_size = 128
-latent_dim = 2
-epochs = 50
+original_dim = 400
+input_shape = (timesteps, length)
+intermediate_dim = 200
+batch_size = 5
+latent_dim = 100
+epochs = 20
 
 # VAE model = encoder + decoder
 # build encoder model
-inputs = Input(shape=input_shape, name='encoder_input')
+timeseries_input = Input(shape=input_shape, name="timeseries_input")
+inputs = Input(shape=(original_dim, ), name='encoder_input')
 x = Dense(intermediate_dim, activation='relu')(inputs)
 z_mean = Dense(latent_dim, name='z_mean')(x)
 z_log_var = Dense(latent_dim, name='z_log_var')(x)
@@ -140,16 +151,19 @@ z_log_var = Dense(latent_dim, name='z_log_var')(x)
 # use reparameterization trick to push the sampling out as input
 # note that "output_shape" isn't necessary with the TensorFlow backend
 z = Lambda(sampling, output_shape=(latent_dim,), name='z')([z_mean, z_log_var])
-
+# timeseries_z = TimeDistributed(z_mean)(timeseries_input)
 # instantiate encoder model
 encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
 encoder.summary()
+# timeseries_encoder = TimeDistributed(encoder)(timeseries_input)
 plot_model(encoder, to_file='vae_mlp_encoder.png', show_shapes=True)
 
 # build decoder model
+latent_timeseries_input = Input(shape=(5, latent_dim), name="latent_timeseries_input")
 latent_inputs = Input(shape=(latent_dim,), name='z_sampling')
 x = Dense(intermediate_dim, activation='relu')(latent_inputs)
 outputs = Dense(original_dim, activation='sigmoid')(x)
+# timeseries_output = TimeDistributed(outputs)(latent_timeseries_input)
 
 # instantiate decoder model
 decoder = Model(latent_inputs, outputs, name='decoder')
@@ -159,6 +173,8 @@ plot_model(decoder, to_file='vae_mlp_decoder.png', show_shapes=True)
 # instantiate VAE model
 outputs = decoder(encoder(inputs)[2])
 vae = Model(inputs, outputs, name='vae_mlp')
+timeseries_vae = TimeDistributed(vae)(timeseries_input)
+timeseries_vae = Model(timeseries_input, timeseries_vae)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -169,8 +185,8 @@ if __name__ == '__main__':
                         "--mse",
                         help=help_, action='store_true')
     args = parser.parse_args()
-    models = (encoder, decoder)
-    data = (x_test, y_test)
+    # models = (encoder, decoder)
+    # data = (x_test, y_test)
 
     # VAE loss = mse_loss or xent_loss + kl_loss
     if args.mse:
@@ -187,7 +203,7 @@ if __name__ == '__main__':
     vae.add_loss(vae_loss)
     vae.compile(optimizer='adam')
     vae.summary()
-    plot_model(vae,
+    plot_model(timeseries_vae,
                to_file='vae_mlp.png',
                show_shapes=True)
 
@@ -195,13 +211,15 @@ if __name__ == '__main__':
         vae.load_weights(args.weights)
     else:
         # train the autoencoder
-        vae.fit(x_train,
+        vae.fit(x_new,
                 epochs=epochs,
-                batch_size=batch_size,
-                validation_data=(x_test, None))
-        vae.save_weights('vae_mlp_mnist.h5')
+                batch_size=batch_size)
+        timeseries_vae.save_weights('vae_mlp_mnist.h5')
+        results = timeseries_vae.predict(x_train)
+        print("real", x_train[0])
+        print("predicted", results[0])
 
-    plot_results(models,
-                 data,
-                 batch_size=batch_size,
-                 model_name="vae_mlp")
+    # plot_results(models,
+    #              data,
+    #              batch_size=batch_size,
+    #              model_name="vae_mlp")
