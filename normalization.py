@@ -82,20 +82,9 @@ class NormalizationValues(object):
             if values is None:
                 values = file_value_count
             else:
-                new_values = dict()
-                partial_sum_values_columns = partial(sum_values_columns, df1=values, df2=file_value_count, new_values=new_values)
-                print(values)
-                with mp.Pool(processes=6) as pool:
-                    pool.map(partial_sum_values_columns, file_value_count.keys())
-                    print(new_values)
-                    values = new_values
-                # print(values)
-                # for key in values.keys():
-                #     values[key] = values[key].combine(file_value_count[key], func = (lambda x1, x2: x1 + x2),
-                #                                       fill_value=0.0)
-                # print(values)
-
-        print()
+                for key in values.keys():
+                    values[key] = values[key].combine(file_value_count[key], func = (lambda x1, x2: x1 + x2),
+                                                      fill_value=0.0)
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()
