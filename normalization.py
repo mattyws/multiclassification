@@ -42,6 +42,11 @@ def get_file_value_counts(file, pickle_object_path):
     except Exception as e:
         print("Some error happen on {}. Exception {}".format(file, e))
 
+def sum_values_columns(column, df1, df2):
+    result = df1[column].combine(df2[column], func = (lambda x1, x2: x1 + x2),
+                                                      fill_value=0.0)
+    return column, result
+
 class NormalizationValues(object):
     def __init__(self, files_list, pickle_object_path="normalization_values/"):
         self.files_list = files_list
@@ -81,9 +86,14 @@ class NormalizationValues(object):
             if values is None:
                 values = file_value_count
             else:
-                for key in values.keys():
-                    values[key] = values[key].combine(file_value_count[key], func = (lambda x1, x2: x1 + x2),
-                                                      fill_value=0.0)
+                partial_sum_values_columns = partial(sum_values_columns, df1=values, df2=file_value_count)
+                with mp.Pool(processes=6) as pool:
+                    results = pool.map(partial_sum_values_columns, file_value_count.keys())
+                    values = pd.concat(results)
+                print(values)
+                # for key in values.keys():
+                #     values[key] = values[key].combine(file_value_count[key], func = (lambda x1, x2: x1 + x2),
+                #                                       fill_value=0.0)
         print()
         new_values = dict()
         for key in values.keys():
