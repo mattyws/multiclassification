@@ -66,6 +66,7 @@ class NormalizationValues(object):
                 sys.stderr.write('\rdone {0:%}'.format(i / len(self.files_list)))
                 if result is not None:
                     self.counts[result[0]] = result[1]
+            print()
 
     def get_normalization_values(self, training_files):
         """
@@ -74,7 +75,8 @@ class NormalizationValues(object):
         """
         values = None
         # Loop each file in dataset
-        for file in training_files:
+        for i, file in enumerate(training_files, 1):
+            sys.stderr.write('\rdone {0:%}'.format(i / len(training_files)))
             file_value_count = self.__get_saved_value_count(self.counts[file])
             if values is None:
                 values = file_value_count
@@ -82,6 +84,7 @@ class NormalizationValues(object):
                 for key in values.keys():
                     values[key] = values[key].combine(file_value_count[key], func = (lambda x1, x2: x1 + x2),
                                                       fill_value=0.0)
+        print()
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()
@@ -166,18 +169,6 @@ class Normalization(object):
         self.new_paths = dict()
         for pair in result_pairs:
             self.new_paths[pair[0]] = pair[1]
-        # newList = []
-        # for file in filesList:
-        #     fileName = file.split('/')[-1]
-        #     data = pd.read_csv(file)
-        #     if 'Unnamed: 0' in data.columns:
-        #         data = data.drop(columns=['Unnamed: 0'])
-        #     data = self.__normalize(data)
-        #     # Sort columns
-        #     columns = list(data.columns)
-        #     data.to_csv(self.temporary_path+fileName, index=False)
-        #     newList.append(self.temporary_path+fileName)
-        # return newList
 
     def get_new_paths(self, files_list):
         if self.new_paths is not None:
@@ -187,54 +178,3 @@ class Normalization(object):
             return new_list
         else:
             raise Exception("Data not normalized!")
-
-    def __normalize(self, data):
-        """
-        Normalize data using the normalization_values (max and min for the column)
-        :param data: the data to be normalized
-        :return: the data normalized
-        """
-        for column in data.columns:
-            data.loc[:, column] = self.__z_score_normalization(column, data[column])
-        return data
-
-    def __min_max_normalization(self, column, series):
-        max = self.normalization_values[column]['max']
-        min = self.normalization_values[column]['min']
-        return series.apply(lambda x: (x - min) / (max - min))
-
-    def __z_score_normalization(self, column, series):
-        # If std is equal to 0, all columns have the same value
-        if self.normalization_values[column]['std'] != 0:
-            mean = self.normalization_values[column]['mean']
-            std = self.normalization_values[column]['std']
-            return series.apply(lambda x: (x - mean) / std)
-        return series
-
-    @staticmethod
-    def get_normalization_values(filesList):
-        """
-        Get the max and min value for each column from a set of csv files
-        :param filesList: the list of files to get the value
-        :return: a dict with the max and min value for each column
-        """
-        values = dict()
-        # Loop each file in dataset
-        for file in filesList:
-            df = pd.read_csv(file)
-            if 'Unnamed: 0' in df.columns:
-                df = df.drop(columns=['Unnamed: 0'])
-            # Loop each column in file
-            for column in df.columns:
-                # Add if column don't exist at keys
-                if column not in values.keys():
-                    values[column] = dict()
-                    values[column]['values'] = pd.Series([])
-                values[column]['values'] = values[column]['values'].append(df[column])
-        for key in values.keys():
-            values[key]['max'] = values[key]['values'].max()
-            values[key]['min'] = values[key]['values'].min()
-            values[key]['mean'] = values[key]['values'].mean()
-            values[key]['std'] = values[key]['values'].std()
-            values[key]['values'] = None
-        return values
