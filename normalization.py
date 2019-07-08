@@ -64,9 +64,6 @@ class NormalizationValues(object):
         """
         self.counts = dict()
         with mp.Pool(processes=6) as pool:
-            # results = pool.map(self.get_file_value_counts, self.files_list)
-            # for result in results:
-            #     self.counts[result[0]] = result[1]
             for i, result in enumerate(pool.imap(self.get_file_value_counts, self.files_list), 1):
                 sys.stderr.write('\rdone {0:%}'.format(i / len(self.files_list)))
                 if result is not None:
@@ -86,17 +83,9 @@ class NormalizationValues(object):
             if values is None:
                 values = file_value_count
             else:
-                # partial_sum_values_columns = partial(sum_values_columns, df1=values, df2=file_value_count)
-                # with mp.Pool(processes=6) as pool:
-                #     results = pool.map(partial_sum_values_columns, file_value_count.keys())
-                #     values = pd.concat(results, keys=[s.name for s in results])
-                print(values)
                 for key in values.keys():
                     values[key] = values[key].combine(file_value_count[key], func = (lambda x1, x2: x1 + x2),
                                                       fill_value=0.0)
-                print(values)
-
-        print()
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()
