@@ -117,7 +117,7 @@ def normalize_file(file, temporary_path, normalization_values):
         data = data.drop(columns=['labevents_Unnamed: 0'])
     data = normalize_dataframe(data, normalization_values)
     data.to_csv(temporary_path + fileName, index=False)
-    return temporary_path + fileName
+    return file, temporary_path + fileName
 
 def normalize_dataframe(data, normalization_values):
     """
@@ -147,8 +147,13 @@ class Normalization(object):
     def __init__(self, normalization_values, temporary_path='./data_tmp/'):
         self.normalization_values = normalization_values
         self.temporary_path = temporary_path
+        if not os.path.exists(temporary_path):
+            os.mkdir(temporary_path)
+        if not temporary_path.endswith('/'):
+            temporary_path += '/'
         self.normalize_file = partial(normalize_file, normalization_values=normalization_values,
                                       temporary_path=temporary_path)
+        self.new_paths = None
 
     def normalize_files(self, filesList):
         """
@@ -157,8 +162,10 @@ class Normalization(object):
         :return: a new list for the paths of the normalized data
         """
         with mp.Pool(processes=6) as pool:
-            newList = pool.map(self.normalize_file, filesList)
-        return newList
+            result_pairs = pool.map(self.normalize_file, filesList)
+        self.new_paths = dict()
+        for pair in result_pairs:
+            self.new_paths[pair[0]] = pair[1]
         # newList = []
         # for file in filesList:
         #     fileName = file.split('/')[-1]
@@ -172,6 +179,14 @@ class Normalization(object):
         #     newList.append(self.temporary_path+fileName)
         # return newList
 
+    def get_new_paths(self, files_list):
+        if self.new_paths is not None:
+            new_list = []
+            for file in files_list:
+                new_list.append(self.new_paths[file])
+            return new_list
+        else:
+            raise Exception("Data not normalized!")
 
     def __normalize(self, data):
         """
