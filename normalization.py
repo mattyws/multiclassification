@@ -42,9 +42,6 @@ def get_file_value_counts(file, pickle_object_path):
     except Exception as e:
         print("Some error happen on {}. Exception {}".format(file, e))
 
-def sum_values_columns(column, df1, df2, new_values):
-    new_values[column] = df1[column].combine(df2[column], func = (lambda x1, x2: x1 + x2),
-                                                      fill_value=0.0)
 
 class NormalizationValues(object):
     def __init__(self, files_list, pickle_object_path="normalization_values/"):
