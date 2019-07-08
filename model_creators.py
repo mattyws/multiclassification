@@ -141,9 +141,9 @@ class KerasVariationalAutoencoder(ModelCreator):
 
     def create(self):
         if self.recurrent_autoencoder:
-            return adapter.KerasGeneratorAdapter(self.__build_recurrent_model())
+            return adapter.KerasGeneratorAutoencoderAdapter(self.__build_recurrent_model())
         else:
-            return adapter.KerasGeneratorAdapter(self.__build_model())
+            return adapter.KerasGeneratorAutoencoderAdapter(self.__build_model())
 
     def timedistribute_vae(self, input_shape, vae, encoder=None):
         timeseries_input = Input(shape=input_shape)

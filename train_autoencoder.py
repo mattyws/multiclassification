@@ -34,6 +34,9 @@ import os
 # reparameterization trick
 # instead of sampling from Q(z|X), sample epsilon = N(0,I)
 # z = z_mean + sqrt(var) * epsilon
+from model_creators import KerasVariationalAutoencoder
+
+
 def sampling(args):
     """Reparameterization trick by sampling from an isotropic unit Gaussian.
 
@@ -206,7 +209,10 @@ if __name__ == '__main__':
     plot_model(timeseries_vae,
                to_file='vae_mlp.png',
                show_shapes=True)
-
+    autoencoder_creator = KerasVariationalAutoencoder(input_shape,
+                                                        intermediate_dim, latent_dim)
+    autoencoder_adapter = autoencoder_creator.create()
+    vae = autoencoder_adapter.vae
     if args.weights:
         vae.load_weights(args.weights)
     else:
@@ -214,7 +220,8 @@ if __name__ == '__main__':
         vae.fit(x_new,
                 epochs=epochs,
                 batch_size=batch_size)
-        timeseries_vae.save_weights('vae_mlp_mnist.h5')
+        timeseries_vae = TimeDistributed(vae)(timeseries_input)
+        timeseries_vae = Model(timeseries_input, timeseries_vae)
         results = timeseries_vae.predict(x_train)
         print("real", x_train[0])
         print("predicted", results[0])
