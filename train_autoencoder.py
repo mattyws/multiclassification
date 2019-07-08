@@ -209,7 +209,7 @@ if __name__ == '__main__':
     plot_model(timeseries_vae,
                to_file='vae_mlp.png',
                show_shapes=True)
-    autoencoder_creator = KerasVariationalAutoencoder(input_shape,
+    autoencoder_creator = KerasVariationalAutoencoder((original_dim,),
                                                         intermediate_dim, latent_dim)
     autoencoder_adapter = autoencoder_creator.create()
     vae = autoencoder_adapter.vae
@@ -220,8 +220,7 @@ if __name__ == '__main__':
         vae.fit(x_new,
                 epochs=epochs,
                 batch_size=batch_size)
-        timeseries_vae = TimeDistributed(vae)(timeseries_input)
-        timeseries_vae = Model(timeseries_input, timeseries_vae)
+        timeseries_vae = autoencoder_creator.timedistribute_vae(input_shape, vae)
         results = timeseries_vae.predict(x_train)
         print("real", x_train[0])
         print("predicted", results[0])

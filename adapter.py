@@ -94,6 +94,15 @@ class KerasGeneratorAutoencoderAdapter(ModelAdapter):
         vae = load_model(filename)
         return KerasGeneratorAutoencoderAdapter(encoder, decoder, vae)
 
+    def predict(self, testDocs, batch_size=10):
+        pass
+
+    def predict_one(self, doc):
+        pass
+
+    def evaluate(self, testDocs, batch_size=10):
+        pass
+
 class SklearnAdapter(ModelAdapter):
 
     def __init__(self, model):

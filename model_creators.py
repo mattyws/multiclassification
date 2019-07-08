@@ -141,9 +141,10 @@ class KerasVariationalAutoencoder(ModelCreator):
 
     def create(self):
         if self.recurrent_autoencoder:
-            return adapter.KerasGeneratorAutoencoderAdapter(self.__build_recurrent_model())
+            encoder, decoder, vae = self.__build_recurrent_model()
         else:
-            return adapter.KerasGeneratorAutoencoderAdapter(self.__build_model())
+            encoder, decoder, vae = self.__build_model()
+        return adapter.KerasGeneratorAutoencoderAdapter(encoder, decoder, vae)
 
     def timedistribute_vae(self, input_shape, vae, encoder=None):
         timeseries_input = Input(shape=input_shape)
@@ -161,7 +162,7 @@ class KerasVariationalAutoencoder(ModelCreator):
         x = Dense(self.intermediate_dim, activation='relu')(inputs)
         z_mean = Dense(self.latent_dim, name='z_mean')(x)
         z_log_var = Dense(self.latent_dim, name='z_log_var')(x)
-        z = Lambda(self.sampling, name='z')([z_mean, z_log_var])
+        z = Lambda(self.sampling, output_shape=(self.latent_dim,), name='z')([z_mean, z_log_var])
         encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
         # Decoder model
         latent_inputs = Input(shape=(self.latent_dim,), name='z_sampling')
