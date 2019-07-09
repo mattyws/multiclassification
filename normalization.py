@@ -43,6 +43,27 @@ def get_file_value_counts(file, pickle_object_path):
         print("Some error happen on {}. Exception {}".format(file, e))
 
 
+def get_saved_value_count(file):
+    with open(file, 'rb') as normalization_values_file:
+        values = pickle.load(normalization_values_file)
+        return values
+
+## Sum a list of dicts
+# TODO : paralelization
+def cal_sum(lst):
+    final_dict = dict()
+    for l in lst:
+        sum(final_dict,l)
+    return final_dict
+
+def sum(final_dict,iter_dict):
+    for k, v in iter_dict.items():
+        if isinstance(v, dict):
+            sum(final_dict.setdefault(k, dict()), v)
+        elif isinstance(v, int):
+            final_dict[k] = final_dict.get(k, 0) + v
+
+
 class NormalizationValues(object):
     def __init__(self, files_list, pickle_object_path="normalization_values/"):
         self.files_list = files_list
@@ -51,6 +72,7 @@ class NormalizationValues(object):
         if not os.path.exists(pickle_object_path):
             os.mkdir(pickle_object_path)
         self.get_file_value_counts = partial(get_file_value_counts, pickle_object_path=pickle_object_path)
+        self.get_saved_value_count = get_saved_value_count
         self.counts = None
 
     def prepare(self):
@@ -71,10 +93,16 @@ class NormalizationValues(object):
         Get the max, min, mean and std value for each column from a set of csv files used for training the model
         :return: a dict with the values for each column
         """
-        values = None
+        values = []
         # Loop each file in dataset
+        with mp.Pool(processes=6) as pool:
+            for i, result in enumerate(pool.imap(self.get_saved_value_count, training_files), 1):
+                sys.stderr.write('\rLoading files: Done {0:%}'.format(i / len(self.files_list)))
+                if result is not None:
+                    values.append(result)
+            print()
         for i, file in enumerate(training_files, 1):
-            sys.stderr.write('\rdone {0:%}'.format(i / len(training_files)))
+            sys.stderr.write('\rLoading files: done {0:%}'.format(i / len(training_files)))
             file_value_count = self.__get_saved_value_count(self.counts[file])
             if values is None:
                 values = file_value_count
