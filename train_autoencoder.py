@@ -128,7 +128,7 @@ def plot_results(models,
 # x_test = x_test.astype('float32') / 255
 length = 400
 timesteps = 10
-examples = 100
+examples = 1000
 
 x_train = np.random.rand(examples, timesteps, length)
 x_new = x_train.reshape((timesteps*examples, length))
@@ -139,9 +139,9 @@ x_new = x_train.reshape((timesteps*examples, length))
 original_dim = 400
 input_shape = (timesteps, length)
 intermediate_dim = 200
-batch_size = 5
-latent_dim = 100
-epochs = 20
+batch_size = 100
+latent_dim = 20
+epochs = 10
 
 # VAE model = encoder + decoder
 # build encoder model
@@ -192,11 +192,11 @@ if __name__ == '__main__':
     # data = (x_test, y_test)
 
     # VAE loss = mse_loss or xent_loss + kl_loss
-    if args.mse:
-        reconstruction_loss = mse(inputs, outputs)
-    else:
-        reconstruction_loss = binary_crossentropy(inputs,
-                                                  outputs)
+    # if args.mse:
+    reconstruction_loss = mse(inputs, outputs)
+    # else:
+    #     reconstruction_loss = binary_crossentropy(inputs,
+    #                                               outputs)
 
     reconstruction_loss *= original_dim
     kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
@@ -213,6 +213,7 @@ if __name__ == '__main__':
                                                         intermediate_dim, latent_dim)
     autoencoder_adapter = autoencoder_creator.create()
     vae = autoencoder_adapter.vae
+    encoder = autoencoder_adapter.encoder
     if args.weights:
         vae.load_weights(args.weights)
     else:
@@ -220,10 +221,13 @@ if __name__ == '__main__':
         vae.fit(x_new,
                 epochs=epochs,
                 batch_size=batch_size)
-        timeseries_vae = autoencoder_creator.timedistribute_vae(input_shape, vae)
+        timeseries_vae, timeseries_encoder = autoencoder_creator.timedistribute_vae(input_shape, vae, encoder=encoder)
         results = timeseries_vae.predict(x_train)
         print("real", x_train[0])
         print("predicted", results[0])
+        print("Encoder")
+        results = timeseries_encoder.predict(x_train)
+        print(results)
 
     # plot_results(models,
     #              data,

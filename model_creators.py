@@ -188,6 +188,7 @@ class KerasVariationalAutoencoder(ModelCreator):
         latent_inputs = RepeatVector(self.input_shape[0])(z)
         decoder_x = LSTM(self.intermediate_dim, return_sequences=True)(latent_inputs)
         outputs = LSTM(self.input_shape[1], return_sequences=True)(decoder_x)
+        # TODO: não aceita retorno de um vetor [zmeean, ...], ver qual saída uso para o encoder
         encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
         decoder = Model(latent_inputs, outputs, name='decoder')
         # VAE
@@ -205,6 +206,7 @@ class KerasVariationalAutoencoder(ModelCreator):
         kl_loss = 1 + z_log - K.square(z_mean) - K.exp(z_log)
         kl_loss = K.sum(kl_loss, axis=-1)
         kl_loss *= -0.5
+        kl_loss *=.8
         vae_loss = K.mean(reconstruction_loss + kl_loss)
         return vae_loss
 

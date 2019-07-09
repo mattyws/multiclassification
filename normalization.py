@@ -33,8 +33,8 @@ def get_file_value_counts(file, pickle_object_path):
         df = df.drop(columns=['labevents_Unnamed: 0'])
     counts = dict()
     for column in df.columns:
-        counts[column] = df[column].value_counts()
-        counts[column].index = counts[column].index.map(float)
+        counts[column] = df[column].value_counts().to_dict()
+        # counts[column].index = counts[column].index.map(float)
     try:
         with open(pickle_fname, 'wb') as result_file:
             pickle.dump(counts, result_file)
