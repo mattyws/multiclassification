@@ -34,7 +34,7 @@ def cal_sum(lst):
     partial_merge_sum_dicts = partial(merge_sum_dicts, final_dict=final_dict)
     for i, l in enumerate(lst, 1):
         counts = load_saved_value_count(l)
-        print(counts)
+        # print(counts)
         chunks_size = ceil(len(counts.keys())/6)
         counts = [x for x in chunk_dict(counts, SIZE=chunks_size)]
         with mp.Pool(processes=6) as pool:
@@ -51,10 +51,11 @@ def chunk_dict(data, SIZE=10000):
 def merge_sum_dicts(iter_dict, final_dict):
     for k, v in iter_dict.items():
         if isinstance(v, dict):
-            sum(final_dict.setdefault(k, 0), v)
+            sum(final_dict.setdefault(k, dict()), v)
         elif isinstance(v, int):
             final_dict[k] = final_dict.get(k, 0) + v
+    print(final_dict)
 
 files = ['./normalization_values/' + x for x in os.listdir('./normalization_values/')][:2]
 result = cal_sum(files)
-print(result)
+# print(result)
