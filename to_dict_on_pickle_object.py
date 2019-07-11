@@ -24,7 +24,7 @@ import pandas as pd
 from math import ceil
 
 
-def load_saved_value_count(self, file):
+def load_saved_value_count(file):
     with open(file, 'rb') as normalization_values_file:
         values = pickle.load(normalization_values_file)
         return values
@@ -34,6 +34,7 @@ def cal_sum(lst):
     partial_merge_sum_dicts = partial(merge_sum_dicts, final_dict=final_dict)
     for i, l in enumerate(lst, 1):
         counts = load_saved_value_count(l)
+        print(counts)
         chunks_size = ceil(len(counts.keys())/6)
         counts = [x for x in chunk_dict(counts, SIZE=chunks_size)]
         with mp.Pool(processes=6) as pool:
@@ -42,12 +43,12 @@ def cal_sum(lst):
         sys.stderr.write('\rSum values: done {0:%}'.format(i / len(lst)))
     return final_dict
 
-def chunk_dict(self, data, SIZE=10000):
+def chunk_dict(data, SIZE=10000):
     it = iter(data)
     for i in range(0, len(data), SIZE):
         yield {k: data[k] for k in islice(it, SIZE)}
 
-def merge_sum_dicts(self, iter_dict, final_dict):
+def merge_sum_dicts(iter_dict, final_dict):
     for k, v in iter_dict.items():
         if isinstance(v, dict):
             sum(final_dict.setdefault(k, dict()), v)
