@@ -51,7 +51,7 @@ def chunk_dict(data, SIZE=10000):
 def merge_sum_dicts(iter_dict, final_dict):
     for k, v in iter_dict.items():
         if isinstance(v, dict):
-            sum(final_dict.setdefault(k, dict()), v)
+            sum(final_dict.setdefault(k, 0), v)
         elif isinstance(v, int):
             final_dict[k] = final_dict.get(k, 0) + v
 
