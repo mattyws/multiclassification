@@ -2,6 +2,7 @@ import csv
 import os
 import pickle
 from functools import partial
+from itertools import islice
 
 import math
 
@@ -10,6 +11,8 @@ import numpy as np
 import multiprocessing as mp
 
 import sys
+
+from math import ceil
 
 
 def get_file_value_counts(file, pickle_object_path):
@@ -23,8 +26,7 @@ def get_file_value_counts(file, pickle_object_path):
     pickle_fname = pickle_object_path + pickle_fname.split('.')[0] + '.pkl'
     if os.path.exists(pickle_fname):
         # File already exists, do not create it
-        counts = get_saved_value_count(pickle_fname)
-        return file, counts
+        return file, pickle_fname
     if file == None or (file != None and len(file) == 0):
         return None
     df = pd.read_csv(file)
@@ -39,7 +41,7 @@ def get_file_value_counts(file, pickle_object_path):
     try:
         with open(pickle_fname, 'wb') as result_file:
             pickle.dump(counts, result_file)
-        return file, counts
+        return file, pickle_fname
     except Exception as e:
         print("Some error happen on {}. Exception {}".format(file, e))
 
@@ -48,10 +50,6 @@ def get_saved_value_count(file):
     with open(file, 'rb') as normalization_values_file:
         values = pickle.load(normalization_values_file)
         return values
-
-## Sum a list of dicts
-# TODO : paralelization
-
 
 
 class NormalizationValues(object):
@@ -62,7 +60,6 @@ class NormalizationValues(object):
         if not os.path.exists(pickle_object_path):
             os.mkdir(pickle_object_path)
         self.get_file_value_counts = partial(get_file_value_counts, pickle_object_path=pickle_object_path)
-        self.get_saved_value_count = get_saved_value_count
         self.counts = None
 
     def prepare(self):
@@ -83,16 +80,16 @@ class NormalizationValues(object):
         Get the max, min, mean and std value for each column from a set of csv files used for training the model
         :return: a dict with the values for each column
         """
-        values = []
-        for file in training_files:
-            values.append(self.counts[file])
         # with mp.Pool(processes=6) as pool:
         #     for i, result in enumerate(pool.imap(self.get_saved_value_count, training_files), 1):
         #         sys.stderr.write('\rLoading files: Done {0:%}'.format(i / len(self.files_list)))
         #         if result is not None:
         #             values.append(result)
         #     print()
-        values = self.cal_sum(values)
+        fnames = []
+        for file in training_files:
+            fnames.append(self.counts[file])
+        values = self.cal_sum(fnames)
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()
@@ -104,20 +101,32 @@ class NormalizationValues(object):
         return new_values
 
     def cal_sum(self, lst):
-        final_dict = dict()
+        final_dict = mp.Manager().dict()
+        partial_merge_sum_dicts = partial(self.merge_sum_dicts, final_dict=final_dict)
         for i, l in enumerate(lst, 1):
+            counts = self.__load_saved_value_count(l)
+            #TODO : parallel on the sum, sum a chunk of n columns for each process (https://stackoverflow.com/questions/44934120/python-multiprocessing-merge-dictionaries-of-dictionaries-from-multiple-processe)
+            chunks_size = ceil(len(counts.keys())/6)
+            counts = [x for x in self.chunk_dict(counts, SIZE=chunks_size)]
+            with mp.Pool(processes=6) as pool:
+                pool.map(partial_merge_sum_dicts, counts)
+            # self.merge_sum_dicts(final_dict, l)
             sys.stderr.write('\rSum values: done {0:%}'.format(i / len(lst)))
-            sum(final_dict, l)
         return final_dict
 
-    def sum(self, final_dict, iter_dict):
+    def chunk_dict(self, data, SIZE=10000):
+        it = iter(data)
+        for i in range(0, len(data), SIZE):
+            yield {k: data[k] for k in islice(it, SIZE)}
+
+    def merge_sum_dicts(self, iter_dict, final_dict):
         for k, v in iter_dict.items():
             if isinstance(v, dict):
                 sum(final_dict.setdefault(k, dict()), v)
             elif isinstance(v, int):
                 final_dict[k] = final_dict.get(k, 0) + v
 
-    def __get_saved_value_count(self, file):
+    def __load_saved_value_count(self, file):
         with open(file, 'rb') as normalization_values_file:
             values = pickle.load(normalization_values_file)
             return values
