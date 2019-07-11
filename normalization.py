@@ -23,7 +23,8 @@ def get_file_value_counts(file, pickle_object_path):
     pickle_fname = pickle_object_path + pickle_fname.split('.')[0] + '.pkl'
     if os.path.exists(pickle_fname):
         # File already exists, do not create it
-        return file, pickle_fname
+        counts = get_saved_value_count(pickle_fname)
+        return file, counts
     if file == None or (file != None and len(file) == 0):
         return None
     df = pd.read_csv(file)
@@ -38,7 +39,7 @@ def get_file_value_counts(file, pickle_object_path):
     try:
         with open(pickle_fname, 'wb') as result_file:
             pickle.dump(counts, result_file)
-        return file, pickle_fname
+        return file, counts
     except Exception as e:
         print("Some error happen on {}. Exception {}".format(file, e))
 
@@ -50,18 +51,7 @@ def get_saved_value_count(file):
 
 ## Sum a list of dicts
 # TODO : paralelization
-def cal_sum(lst):
-    final_dict = dict()
-    for l in lst:
-        sum(final_dict,l)
-    return final_dict
 
-def sum(final_dict,iter_dict):
-    for k, v in iter_dict.items():
-        if isinstance(v, dict):
-            sum(final_dict.setdefault(k, dict()), v)
-        elif isinstance(v, int):
-            final_dict[k] = final_dict.get(k, 0) + v
 
 
 class NormalizationValues(object):
@@ -94,22 +84,15 @@ class NormalizationValues(object):
         :return: a dict with the values for each column
         """
         values = []
-        # Loop each file in dataset
-        with mp.Pool(processes=6) as pool:
-            for i, result in enumerate(pool.imap(self.get_saved_value_count, training_files), 1):
-                sys.stderr.write('\rLoading files: Done {0:%}'.format(i / len(self.files_list)))
-                if result is not None:
-                    values.append(result)
-            print()
-        for i, file in enumerate(training_files, 1):
-            sys.stderr.write('\rLoading files: done {0:%}'.format(i / len(training_files)))
-            file_value_count = self.__get_saved_value_count(self.counts[file])
-            if values is None:
-                values = file_value_count
-            else:
-                for key in values.keys():
-                    values[key] = values[key].combine(file_value_count[key], func = (lambda x1, x2: x1 + x2),
-                                                      fill_value=0.0)
+        for file in training_files:
+            values.append(self.counts[file])
+        # with mp.Pool(processes=6) as pool:
+        #     for i, result in enumerate(pool.imap(self.get_saved_value_count, training_files), 1):
+        #         sys.stderr.write('\rLoading files: Done {0:%}'.format(i / len(self.files_list)))
+        #         if result is not None:
+        #             values.append(result)
+        #     print()
+        values = self.cal_sum(values)
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()
@@ -119,6 +102,20 @@ class NormalizationValues(object):
             new_values[key]['mean'] = mean_std[0]
             new_values[key]['std'] = mean_std[1]
         return new_values
+
+    def cal_sum(self, lst):
+        final_dict = dict()
+        for i, l in enumerate(lst, 1):
+            sys.stderr.write('\rSum values: done {0:%}'.format(i / len(lst)))
+            sum(final_dict, l)
+        return final_dict
+
+    def sum(self, final_dict, iter_dict):
+        for k, v in iter_dict.items():
+            if isinstance(v, dict):
+                sum(final_dict.setdefault(k, dict()), v)
+            elif isinstance(v, int):
+                final_dict[k] = final_dict.get(k, 0) + v
 
     def __get_saved_value_count(self, file):
         with open(file, 'rb') as normalization_values_file:
