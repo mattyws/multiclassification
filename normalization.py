@@ -183,7 +183,7 @@ class Normalization(object):
         with mp.Pool(processes=len(filesList)) as pool:
             m = mp.Manager()
             queue = m.Queue()
-            partial_normalize_files = partial(self.__normalize_files, queue=queue)
+            partial_normalize_files = partial(self.do_normalization, queue=queue)
             map_obj = pool.map_async(partial_normalize_files, filesList)
             consumed = 0
             while not map_obj.ready():
@@ -196,7 +196,7 @@ class Normalization(object):
             for r in result:
                 self.new_paths.update(r)
 
-    def __normalize_files(self, files_list, queue=None):
+    def do_normalization(self, files_list, queue=None):
         new_paths = dict()
         for l in files_list:
             pair = self.__normalize_file(l)
