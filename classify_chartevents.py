@@ -97,7 +97,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         else:
             print("===== Getting values for normalization =====")
             # normalization_values = Normalization.get_normalization_values(data[trainIndex])
-            normalizer = Normalization(normalization_values.get_normalization_values(data[trainIndex]))
+            normalizer = Normalization(normalization_values.get_normalization_values(data[trainIndex]), temporary_path='data_tmp_{}/'.format(i))
             print("===== Normalizing fold data =====")
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))

@@ -217,6 +217,8 @@ class Normalization(object):
 
     def __normalize_file(self, file):
         fileName = file.split('/')[-1]
+        if os.path.exists(self.temporary_path + fileName):
+            return file, self.temporary_path + fileName
         data = pd.read_csv(file)
         if 'Unnamed: 0' in data.columns:
             data = data.drop(columns=['Unnamed: 0'])
