@@ -51,6 +51,11 @@ def get_saved_value_count(file):
         values = pickle.load(normalization_values_file)
         return values
 
+def chunk_lst(self, data, SIZE=10000):
+    it = iter(data)
+    for i in range(0, len(data), SIZE):
+        yield [k for k in islice(it, SIZE)]
+
 
 class NormalizationValues(object):
     def __init__(self, files_list, pickle_object_path="normalization_values/"):
@@ -99,7 +104,7 @@ class NormalizationValues(object):
     def sum_counts(self, lst):
         total_files = len(lst)
         chunks_size = ceil(len(lst) / 10)
-        lst = [x for x in self.chunk_lst(lst, SIZE=chunks_size)]
+        lst = [x for x in chunk_lst(lst, SIZE=chunks_size)]
         with mp.Pool(processes=len(lst)) as pool:
             m = mp.Manager()
             queue = m.Queue()
@@ -128,11 +133,6 @@ class NormalizationValues(object):
                 queue.put(l)
         return final_dict
 
-    def chunk_lst(self, data, SIZE=10000):
-        it = iter(data)
-        for i in range(0, len(data), SIZE):
-            yield [k for k in islice(it, SIZE)]
-
     def merge_sum_dicts(self, iter_dict, final_dict):
         new_dict = {}
         new_dict.update(final_dict)
@@ -158,39 +158,6 @@ class NormalizationValues(object):
         variance = np.average((values - average) ** 2, weights=weights)
         return (average, math.sqrt(variance))
 
-def normalize_file(file, temporary_path, normalization_values):
-    fileName = file.split('/')[-1]
-    data = pd.read_csv(file)
-    if 'Unnamed: 0' in data.columns:
-        data = data.drop(columns=['Unnamed: 0'])
-    if 'labevents_Unnamed: 0' in data.columns:
-        data = data.drop(columns=['labevents_Unnamed: 0'])
-    data = normalize_dataframe(data, normalization_values)
-    data.to_csv(temporary_path + fileName, index=False)
-    return file, temporary_path + fileName
-
-def normalize_dataframe(data, normalization_values):
-    """
-    Normalize data using the normalization_values (max and min for the column)
-    :param data: the data to be normalized
-    :return: the data normalized
-    """
-    for column in data.columns:
-        data.loc[:, column] = z_score_normalization(column, data[column], normalization_values)
-    return data
-
-def min_max_normalization(column, series, normalization_values):
-    max = normalization_values[column]['max']
-    min = normalization_values[column]['min']
-    return series.apply(lambda x: (x - min) / (max - min))
-
-def z_score_normalization(column, series, normalization_values):
-    # If std is equal to 0, all columns have the same value
-    if normalization_values[column]['std'] != 0:
-        mean = normalization_values[column]['mean']
-        std = normalization_values[column]['std']
-        return series.apply(lambda x: (x - mean) / std)
-    return series
 
 class Normalization(object):
 
@@ -201,8 +168,6 @@ class Normalization(object):
             os.mkdir(temporary_path)
         if not temporary_path.endswith('/'):
             temporary_path += '/'
-        self.normalize_file = partial(normalize_file, normalization_values=normalization_values,
-                                      temporary_path=temporary_path)
         self.new_paths = None
 
     def normalize_files(self, filesList):
@@ -211,15 +176,35 @@ class Normalization(object):
         :param filesList: the list of files path
         :return: a new list for the paths of the normalized data
         """
+        total_files = len(filesList)
+        chunks_size = ceil(len(filesList)/10)
+        filesList = chunk_lst(filesList, SIZE=chunks_size)
         self.new_paths = dict()
         with mp.Pool(processes=6) as pool:
-            # result_pairs = pool.map(self.normalize_file, filesList)
-            for i, result in enumerate(pool.imap(self.normalize_file, filesList), 1):
-                sys.stderr.write('\rdone {0:%}'.format(i / len(filesList)))
-                if result is not None:
-                    self.new_paths[result[0]] = result[1]
-        # for pair in result_pairs:
-        #     self.new_paths[pair[0]] = pair[1]
+            m = mp.Manager()
+            queue = m.Queue()
+            partial_normalize_files = partial(self.__normalize_files, queue=queue)
+            map_obj = pool.map_async(partial_normalize_files, filesList)
+            consumed = 0
+            while not map_obj.ready():
+                for _ in range(queue.qsize()):
+                    queue.get()
+                    consumed += 1
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            result = map_obj.get()
+            print()
+            for r in result:
+                self.new_paths.update(r)
+
+    def __normalize_files(self, files_list, queue=None):
+        new_paths = dict()
+        for l in files_list:
+            pair = self.__normalize_file(l)
+            new_paths[pair[0]] = pair[1]
+            if queue is not None:
+                queue.put(l)
+        return new_paths
+
 
     def get_new_paths(self, files_list):
         if self.new_paths is not None:
@@ -229,3 +214,37 @@ class Normalization(object):
             return new_list
         else:
             raise Exception("Data not normalized!")
+
+    def __normalize_file(self, file):
+        fileName = file.split('/')[-1]
+        data = pd.read_csv(file)
+        if 'Unnamed: 0' in data.columns:
+            data = data.drop(columns=['Unnamed: 0'])
+        if 'labevents_Unnamed: 0' in data.columns:
+            data = data.drop(columns=['labevents_Unnamed: 0'])
+        data = self.__normalize_dataframe(data, self.normalization_values)
+        data.to_csv(self.temporary_path + fileName, index=False)
+        return file, self.temporary_path + fileName
+
+    def __normalize_dataframe(self, data, normalization_values):
+        """
+        Normalize data using the normalization_values (max and min for the column)
+        :param data: the data to be normalized
+        :return: the data normalized
+        """
+        for column in data.columns:
+            data.loc[:, column] = self.__z_score_normalization(column, data[column], normalization_values)
+        return data
+
+    def __min_max_normalization(self, column, series, normalization_values):
+        max = normalization_values[column]['max']
+        min = normalization_values[column]['min']
+        return series.apply(lambda x: (x - min) / (max - min))
+
+    def __z_score_normalization(self, column, series, normalization_values):
+        # If std is equal to 0, all columns have the same value
+        if normalization_values[column]['std'] != 0:
+            mean = normalization_values[column]['mean']
+            std = normalization_values[column]['std']
+            return series.apply(lambda x: (x - mean) / std)
+        return series
