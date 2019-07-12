@@ -1,3 +1,4 @@
+import math
 import multiprocessing as mp
 import os
 import pickle
@@ -7,6 +8,7 @@ from functools import partial
 from itertools import islice
 from multiprocessing import Lock, Process
 from time import time
+import numpy as np
 
 import pandas as pd
 
@@ -108,14 +110,40 @@ def merge_sum_dicts(iter_dict, final_dict):
     #         new_dict[k] = new_dict.get(k, 0) + v
     final_dict.update(new_dict)
 
-files = ['./normalization_values/' + x for x in os.listdir('./normalization_values/')][:6000]
+def weighted_avg_and_std(values, weights):
+        """
+        Return the weighted average and standard deviation.
+
+        values, weights -- Numpy ndarrays with the same shape.
+        """
+        average = np.average(values, weights=weights)
+        # Fast and numerically precise:
+        variance = np.average((values - average) ** 2, weights=weights)
+        return (average, math.sqrt(variance))
+
+files = ['./normalization_values/' + x for x in os.listdir('./normalization_values/')][:1000]
 print(len(files))
 print("Multiprocessing ############################")
 start = time()
-result = sum_counts(files)
+values = sum_counts(files)
 end = time()
-print(result.keys())
-print(len(result.keys()))
+new_values = dict()
+for key in values.keys():
+    new_values[key] = dict()
+    unique_values = list(values[key].keys())
+    if len(unique_values) <= 2:
+        continue
+    count_values = [values[key][k] for k in unique_values]
+    print(unique_values)
+    print(count_values)
+    new_values[key]['max'] = max(unique_values)
+    new_values[key]['min'] = min(unique_values)
+    print(new_values[key]['max'], new_values[key]['min'])
+    mean_std = weighted_avg_and_std(unique_values, count_values)
+    new_values[key]['mean'] = mean_std[0]
+    new_values[key]['std'] = mean_std[1]
+    print(new_values[key]['mean'], new_values[key]['std'])
+    exit()
 print("{} seconds for multiprocess".format(end-start))
 # print("Sequential ############################")
 # start = time()

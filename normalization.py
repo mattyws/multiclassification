@@ -87,9 +87,11 @@ class NormalizationValues(object):
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()
-            new_values[key]['max'] = values[key].index.max()
-            new_values[key]['min'] = values[key].index.min()
-            mean_std = self.__weighted_avg_and_std(values[key].index, values[key].values)
+            unique_values = list(values[key].keys())
+            count_values = [values[key][k] for k in unique_values]
+            new_values[key]['max'] = max(unique_values)
+            new_values[key]['min'] = min(unique_values)
+            mean_std = self.__weighted_avg_and_std(unique_values, count_values)
             new_values[key]['mean'] = mean_std[0]
             new_values[key]['std'] = mean_std[1]
         return new_values
@@ -209,11 +211,15 @@ class Normalization(object):
         :param filesList: the list of files path
         :return: a new list for the paths of the normalized data
         """
-        with mp.Pool(processes=6) as pool:
-            result_pairs = pool.map(self.normalize_file, filesList)
         self.new_paths = dict()
-        for pair in result_pairs:
-            self.new_paths[pair[0]] = pair[1]
+        with mp.Pool(processes=6) as pool:
+            # result_pairs = pool.map(self.normalize_file, filesList)
+            for i, result in enumerate(pool.imap(self.normalize_file, self.filesList), 1):
+                sys.stderr.write('\rdone {0:%}'.format(i / len(self.files_list)))
+                if result is not None:
+                    self.new_paths[result[0]] = result[1]
+        # for pair in result_pairs:
+        #     self.new_paths[pair[0]] = pair[1]
 
     def get_new_paths(self, files_list):
         if self.new_paths is not None:
