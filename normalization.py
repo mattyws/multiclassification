@@ -80,16 +80,10 @@ class NormalizationValues(object):
         Get the max, min, mean and std value for each column from a set of csv files used for training the model
         :return: a dict with the values for each column
         """
-        # with mp.Pool(processes=6) as pool:
-        #     for i, result in enumerate(pool.imap(self.get_saved_value_count, training_files), 1):
-        #         sys.stderr.write('\rLoading files: Done {0:%}'.format(i / len(self.files_list)))
-        #         if result is not None:
-        #             values.append(result)
-        #     print()
         fnames = []
         for file in training_files:
             fnames.append(self.counts[file])
-        values = self.cal_sum(fnames)
+        values = self.sum_counts(fnames)
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()
@@ -100,31 +94,51 @@ class NormalizationValues(object):
             new_values[key]['std'] = mean_std[1]
         return new_values
 
-    def cal_sum(self, lst):
-        final_dict = mp.Manager().dict()
-        partial_merge_sum_dicts = partial(self.merge_sum_dicts, final_dict=final_dict)
-        for i, l in enumerate(lst, 1):
-            counts = self.__load_saved_value_count(l)
-            #TODO : parallel on the sum, sum a chunk of n columns for each process (https://stackoverflow.com/questions/44934120/python-multiprocessing-merge-dictionaries-of-dictionaries-from-multiple-processe)
-            chunks_size = ceil(len(counts.keys())/6)
-            counts = [x for x in self.chunk_dict(counts, SIZE=chunks_size)]
-            with mp.Pool(processes=6) as pool:
-                pool.map(partial_merge_sum_dicts, counts)
-            # self.merge_sum_dicts(final_dict, l)
-            sys.stderr.write('\rSum values: done {0:%}'.format(i / len(lst)))
+    def sum_counts(self, lst):
+        total_files = len(lst)
+        chunks_size = ceil(len(lst) / 10)
+        lst = [x for x in self.chunk_lst(lst, SIZE=chunks_size)]
+        with mp.Pool(processes=len(lst)) as pool:
+            m = mp.Manager()
+            queue = m.Queue()
+            partial_seq_cal_sum = partial(self.cal_sum, queue=queue)
+            map_obj = pool.map_async(partial_seq_cal_sum, lst)
+            consumed = 0
+            while not map_obj.ready():
+                for _ in range(queue.qsize()):
+                    queue.get()
+                    consumed += 1
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            result = map_obj.get()
+            print()
+        result = self.cal_sum(result, list_dicts=True)
+        return result
+
+    def cal_sum(self, lst, list_dicts=False, queue=None):
+        final_dict = dict()
+        for l in lst:
+            if list_dicts:
+                counts = l
+            else:
+                counts = self.__load_saved_value_count(l)
+            self.merge_sum_dicts(counts, final_dict)
+            if queue is not None:
+                queue.put(l)
         return final_dict
 
-    def chunk_dict(self, data, SIZE=10000):
+    def chunk_lst(self, data, SIZE=10000):
         it = iter(data)
         for i in range(0, len(data), SIZE):
-            yield {k: data[k] for k in islice(it, SIZE)}
+            yield [k for k in islice(it, SIZE)]
 
     def merge_sum_dicts(self, iter_dict, final_dict):
-        for k, v in iter_dict.items():
-            if isinstance(v, dict):
-                sum(final_dict.setdefault(k, dict()), v)
-            elif isinstance(v, int):
-                final_dict[k] = final_dict.get(k, 0) + v
+        new_dict = {}
+        new_dict.update(final_dict)
+        for key in iter_dict.keys():
+            new_dict.setdefault(key, dict())
+            for k, v in iter_dict[key].items():
+                new_dict[key][k] = new_dict[key].get(k, 0) + v
+        final_dict.update(new_dict)
 
     def __load_saved_value_count(self, file):
         with open(file, 'rb') as normalization_values_file:
