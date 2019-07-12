@@ -51,7 +51,7 @@ def get_saved_value_count(file):
         values = pickle.load(normalization_values_file)
         return values
 
-def chunk_lst(self, data, SIZE=10000):
+def chunk_lst(data, SIZE=10000):
     it = iter(data)
     for i in range(0, len(data), SIZE):
         yield [k for k in islice(it, SIZE)]
