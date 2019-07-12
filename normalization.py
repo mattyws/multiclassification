@@ -180,7 +180,7 @@ class Normalization(object):
         chunks_size = ceil(len(filesList)/10)
         filesList = chunk_lst(filesList, SIZE=chunks_size)
         self.new_paths = dict()
-        with mp.Pool(processes=6) as pool:
+        with mp.Pool(processes=len(filesList)) as pool:
             m = mp.Manager()
             queue = m.Queue()
             partial_normalize_files = partial(self.__normalize_files, queue=queue)
