@@ -178,7 +178,7 @@ class Normalization(object):
         """
         total_files = len(filesList)
         chunks_size = ceil(len(filesList)/10)
-        filesList = chunk_lst(filesList, SIZE=chunks_size)
+        filesList = [x for x in chunk_lst(filesList, SIZE=chunks_size)]
         self.new_paths = dict()
         with mp.Pool(processes=len(filesList)) as pool:
             m = mp.Manager()
