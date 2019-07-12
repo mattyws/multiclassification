@@ -214,8 +214,8 @@ class Normalization(object):
         self.new_paths = dict()
         with mp.Pool(processes=6) as pool:
             # result_pairs = pool.map(self.normalize_file, filesList)
-            for i, result in enumerate(pool.imap(self.normalize_file, self.filesList), 1):
-                sys.stderr.write('\rdone {0:%}'.format(i / len(self.files_list)))
+            for i, result in enumerate(pool.imap(self.normalize_file, filesList), 1):
+                sys.stderr.write('\rdone {0:%}'.format(i / len(filesList)))
                 if result is not None:
                     self.new_paths[result[0]] = result[1]
         # for pair in result_pairs:
