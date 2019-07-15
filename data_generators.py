@@ -78,6 +78,7 @@ class LongitudinalDataGenerator(Sequence):
         # Zero padding the matrices
         zero_padding_x = []
         print("Zero padding")
+        print(max_len, columns_len)
         for value in x:
             print("#####")
             zeros = np.zeros((max_len, columns_len))
