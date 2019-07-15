@@ -57,6 +57,12 @@ normalization_values = NormalizationValues(data)
 normalization_values.prepare()
 # Get input shape
 aux = pd.read_csv(data[0])
+if 'Unnamed: 0' in data.columns:
+    aux = aux.drop(columns=['Unnamed: 0'])
+if 'chartevents_Unnamed: 0' in data.columns:
+    aux = aux.drop(columns=['chartevents_Unnamed: 0'])
+if 'labevents_Unnamed: 0' in data.columns:
+    aux = aux.drop(columns=['labevents_Unnamed: 0'])
 inputShape = (None, len(aux.columns))
 
 config = None
