@@ -230,6 +230,8 @@ class Normalization(object):
         data = pd.read_csv(file)
         if 'Unnamed: 0' in data.columns:
             data = data.drop(columns=['Unnamed: 0'])
+        if 'chartevents_Unnamed: 0' in data.columns:
+            data = data.drop(columns=['chartevents_Unnamed: 0'])
         if 'labevents_Unnamed: 0' in data.columns:
             data = data.drop(columns=['labevents_Unnamed: 0'])
         data = self.__normalize_dataframe(data, self.normalization_values)

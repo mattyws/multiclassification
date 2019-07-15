@@ -70,6 +70,10 @@ class LongitudinalDataGenerator(Sequence):
             data = pd.read_csv(fileName)
             if 'Unnamed: 0' in data.columns:
                 data = data.drop(columns=['Unnamed: 0'])
+            if 'chartevents_Unnamed: 0' in data.columns:
+                data = data.drop(columns=['chartevents_Unnamed: 0'])
+            if 'labevents_Unnamed: 0' in data.columns:
+                data = data.drop(columns=['labevents_Unnamed: 0'])
             x.append(np.array(data.values))
             if max_len is None or len(data) > max_len:
                 max_len = len(data)
