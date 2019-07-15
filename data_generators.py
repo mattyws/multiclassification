@@ -96,7 +96,7 @@ class LongitudinalDataGenerator(Sequence):
 
     def __save_batch(self, idx, batch_x, batch_y):
         with open(self.saved_batch_dir+'batch_{}.pkl'.format(idx), 'wb') as batch_file:
-            pickle.dump((batch_x, batch_y), batch_file)
+            pickle.dump((batch_x, batch_y), batch_file, protocol=4)
 
     def __load_batch(self, idx):
         with open(self.saved_batch_dir+'batch_{}.pkl'.format(idx), 'rb') as batch_file:
