@@ -99,8 +99,12 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
             else:
                 return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
 
-    def create(self):
-        return adapter.KerasGeneratorAdapter(self.__build_model())
+    def create(self, model_summary_filename=None):
+        model = self.__build_model()
+        if model_summary_filename is not None:
+            with open(model_summary_filename, 'w') as summary_file:
+                summary_file.write(model.summary())
+        return adapter.KerasGeneratorAdapter()
 
     @staticmethod
     def create_from_path(filepath, custom_objects=None):

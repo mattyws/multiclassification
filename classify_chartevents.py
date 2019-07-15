@@ -117,7 +117,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                              gru=parameters['gru'], use_dropout=parameters['useDropout'],
                                                              dropout=parameters['dropout'],
                                                              metrics=[f1, precision, recall, keras.metrics.binary_accuracy])
-            kerasAdapter = modelCreator.create()
+            kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
             epochs = parameters['trainingEpochs']
             configSaver = SaveModelEpoch(parameters['modelConfigPath'],
                                          parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
@@ -125,9 +125,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         # class_weight = compute_class_weight('balanced', [0, 1], classes)
         # print(class_weight)
         # exit(
-        while  True:
-            batch_data = next(dataTrainGenerator)
-            print(batch_data)
+        for value in dataTrainGenerator:
+            print(value)
         exit()
         modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
