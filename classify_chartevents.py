@@ -97,7 +97,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         else:
             print("===== Getting values for normalization =====")
             # normalization_values = Normalization.get_normalization_values(data[trainIndex])
-            normalizer = Normalization(normalization_values.get_normalization_values(data[trainIndex]), temporary_path='data_tmp_{}/'.format(i))
+            values = normalization_values.get_normalization_values(data[trainIndex],
+                                                                   saved_file_name="normalization_values_{}.pkl".format(i))
+            normalizer = Normalization(values, temporary_path='data_tmp_{}/'.format(i))
             print("===== Normalizing fold data =====")
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))
@@ -122,7 +124,11 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
         # class_weight = compute_class_weight('balanced', [0, 1], classes)
         # print(class_weight)
-        # exit()
+        # exit(
+        while  True:
+            batch_data = next(dataTrainGenerator)
+            print(batch_data)
+        exit()
         modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
                          validationDataGenerator=dataTestGenerator, validationSteps=len(dataTestGenerator),

@@ -64,7 +64,9 @@ class LongitudinalDataGenerator(Sequence):
         y = []
         max_len = None
         columns_len = None
+        print("Loading files")
         for fileName in filesNames:
+            print("loading {}".format(fileName))
             data = pd.read_csv(fileName)
             if 'Unnamed: 0' in data.columns:
                 data = data.drop(columns=['Unnamed: 0'])
@@ -75,7 +77,9 @@ class LongitudinalDataGenerator(Sequence):
                 columns_len = len(data.columns)
         # Zero padding the matrices
         zero_padding_x = []
+        print("Zero padding")
         for value in x:
+            print("#####")
             zeros = np.zeros((max_len, columns_len))
             zeros[:value.shape[0], : value.shape[1]] = value
             zero_padding_x.append(zeros)

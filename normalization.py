@@ -80,11 +80,13 @@ class NormalizationValues(object):
                     self.counts[result[0]] = result[1]
             print()
 
-    def get_normalization_values(self, training_files):
+    def get_normalization_values(self, training_files, saved_file_name=None):
         """
         Get the max, min, mean and std value for each column from a set of csv files used for training the model
         :return: a dict with the values for each column
         """
+        if saved_file_name is not None and os.path.exists(saved_file_name):
+            return self.__load_saved_value_count(saved_file_name)
         fnames = []
         for file in training_files:
             fnames.append(self.counts[file])
@@ -99,6 +101,8 @@ class NormalizationValues(object):
             mean_std = self.__weighted_avg_and_std(unique_values, count_values)
             new_values[key]['mean'] = mean_std[0]
             new_values[key]['std'] = mean_std[1]
+        if saved_file_name is not None:
+            self.__save_value_count(new_values, saved_file_name)
         return new_values
 
     def sum_counts(self, lst):
@@ -141,6 +145,10 @@ class NormalizationValues(object):
             for k, v in iter_dict[key].items():
                 new_dict[key][k] = new_dict[key].get(k, 0) + v
         final_dict.update(new_dict)
+
+    def __save_value_count(self, values, filename):
+        with open(filename, 'wb') as normalization_values_file:
+            pickle.dump(values, normalization_values_file)
 
     def __load_saved_value_count(self, file):
         with open(file, 'rb') as normalization_values_file:
