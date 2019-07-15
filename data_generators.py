@@ -1,3 +1,4 @@
+import json
 import pickle
 import uuid
 import numpy as np
@@ -52,12 +53,17 @@ class EmbeddingObjectsDelete(object):
 
 class LongitudinalDataGenerator(Sequence):
 
-    def __init__(self, dataPaths, labels, batchSize, iterForever=False):
+    def __init__(self, dataPaths, labels, batchSize, iterForever=False, saved_batch_dir='saved_batch/'):
         self.batchSize = batchSize
         self.__labels = labels
         self.__filesList = dataPaths
         self.iterForever = iterForever
         self.__iterPos = 0
+        if not saved_batch_dir.endswith('/'):
+            saved_batch_dir += '/'
+        if not os.path.exists(saved_batch_dir):
+            os.mkdir(saved_batch_dir)
+        self.saved_batch_dir = saved_batch_dir
 
     def __load(self, filesNames):
         x = []
@@ -88,6 +94,18 @@ class LongitudinalDataGenerator(Sequence):
         x = np.array(zero_padding_x)
         return x
 
+    def __save_batch(self, idx, batch_x, batch_y):
+        with open(self.saved_batch_dir+'batch_{}.pkl'.format(idx), 'wb') as batch_file:
+            pickle.dump((batch_x, batch_y), batch_file)
+
+    def __load_batch(self, idx):
+        with open(self.saved_batch_dir+'batch_{}.pkl'.format(idx), 'rb') as batch_file:
+            data = json.load(batch_file)
+            return data
+
+    def __batch_exists(self, idx):
+        return os.path.exists(self.saved_batch_dir+'batch_{}.pkl'.format(idx))
+
     def __iter__(self):
         return self
 
@@ -96,9 +114,13 @@ class LongitudinalDataGenerator(Sequence):
         :param idx:
         :return:
         """
-        batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
-        batch_x = self.__load(batch_x)
-        batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
+        if self.__batch_exists(idx):
+            batch_x, batch_y = self.__load_batch(idx)
+        else:
+            batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
+            batch_x = self.__load(batch_x)
+            batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
+            self.__save_batch(idx, batch_x, batch_y)
         return batch_x, batch_y
 
     def __len__(self):

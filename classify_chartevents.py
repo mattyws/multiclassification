@@ -109,8 +109,12 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             print("===== Normalizing fold data =====")
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))
-            dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex], classes[trainIndex], parameters['batchSize'])
-            dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex], classes[testIndex], parameters['batchSize'])
+            dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
+                                                           classes[trainIndex], parameters['batchSize'],
+                                                           saved_batch_dir='training_batches_fold_{}'.format(i))
+            dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
+                                                          classes[testIndex], parameters['batchSize'],
+                                                          saved_batch_dir='testing_batches_fold_{}'.format(i))
             print("========= Saving generators")
             with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
                 pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
