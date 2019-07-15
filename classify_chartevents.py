@@ -125,8 +125,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         # class_weight = compute_class_weight('balanced', [0, 1], classes)
         # print(class_weight)
         # exit(
-        for value in dataTrainGenerator:
-            print(value)
+        while True:
+            batch = dataTrainGenerator[0]
+            print(batch)
         exit()
         modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
