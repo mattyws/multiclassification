@@ -103,7 +103,7 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         model = self.__build_model()
         if model_summary_filename is not None:
             with open(model_summary_filename, 'w') as summary_file:
-                summary_file.write(model.summary())
+                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
         return adapter.KerasGeneratorAdapter()
 
     @staticmethod
