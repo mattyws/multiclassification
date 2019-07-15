@@ -120,7 +120,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             configSaver = SaveModelEpoch(parameters['modelConfigPath'],
                                          parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
 
-        class_weight = compute_class_weight('balanced', [0, 1], classes)
+        # class_weight = compute_class_weight('balanced', [0, 1], classes)
         # print(class_weight)
         # exit()
         modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
