@@ -122,13 +122,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             configSaver = SaveModelEpoch(parameters['modelConfigPath'],
                                          parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
 
-        # class_weight = compute_class_weight('balanced', [0, 1], classes)
-        # print(class_weight)
-        # exit(
-        while True:
-            batch = dataTrainGenerator[0]
-            print(batch)
-        exit()
         modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
                          validationDataGenerator=dataTestGenerator, validationSteps=len(dataTestGenerator),
