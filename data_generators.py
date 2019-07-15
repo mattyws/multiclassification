@@ -79,8 +79,10 @@ class LongitudinalDataGenerator(Sequence):
         zero_padding_x = []
         print("Zero padding")
         print(max_len, columns_len)
+        i = 0
         for value in x:
-            print("#####")
+            print("##### {}".format(filesNames[i]))
+            i += 1
             zeros = np.zeros((max_len, columns_len))
             zeros[:value.shape[0], : value.shape[1]] = value
             zero_padding_x.append(zeros)
