@@ -100,7 +100,7 @@ class LongitudinalDataGenerator(Sequence):
 
     def __load_batch(self, idx):
         with open(self.saved_batch_dir+'batch_{}.pkl'.format(idx), 'rb') as batch_file:
-            data = json.load(batch_file)
+            data = pickle.load(batch_file)
             return data
 
     def __batch_exists(self, idx):

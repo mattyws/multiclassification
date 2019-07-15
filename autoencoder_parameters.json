@@ -1,0 +1,18 @@
+{
+    "datasetFilesPathBinary": "./mimic/sepsis_binary_merged/",
+    "datasetCsvFilePath": "dataset_patients.csv",
+    "modelCheckpointPath": "autoencoder_checkpoint/",
+    "modelConfigPath": "autoencoder_checkpoint/config.json",
+    "dataPath" : "mimic/sepsis_binary_merged/",
+    "trainingDataPath" :  "./dataTrainigChartevents/",
+    "testingDataPath" : "./dataTestChartevents/",
+    "datasetFilesFileName": "datasetFiles.pkl",
+    "datasetLabelsFileName": "datasetLabels.pkl",
+    "trainingGeneratorPath": "autoencoder_checkpoint/dataTrainGenerator.pkl",
+    "testingGeneratorPath": "autoencoder_checkpoint/dataTestGenerator.pkl",
+    "resultFilePath": "autoencoder_checkpoint/result.csv",
+
+    "intermediate_dim" : 500,
+    "latent_dim": 200,
+    "epochs" : 400
+}
