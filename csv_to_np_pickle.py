@@ -37,7 +37,7 @@ data_list = os.listdir(file_path)
 data_list = [ x for x in chunk_lst(data_list)]
 partial_csv_to_pkl = partial(csv_to_pkl, file_path=file_path, new_path=new_path)
 with mp.Pool(processes=6) as pool:
-    pool.map(data_list)
+    pool.map(partial_csv_to_pkl, data_list)
 
 new_list = os.listdir(new_path)
 with open(new_path+new_list[0], 'rb') as test:
