@@ -25,7 +25,7 @@ def csv_to_pkl(file_list, file_path, new_path):
             data = data.drop(columns=['labevents_Unnamed: 0'])
         data = np.array(data.values)
         new_file_name = os.path.splitext(file)[0]+'.pkl'
-        with open(new_path+new_file_name) as new_file:
+        with open(new_path+new_file_name, 'wb') as new_file:
             pkl.dump(data, new_file)
         print('### End {} ###'.format(file))
 
