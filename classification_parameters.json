@@ -27,5 +27,5 @@
     "useDropout": true,
     "dropout": 0.4,
     "trainingEpochs": 100,
-    "batchSize": 100
+    "batchSize": 50
 }
