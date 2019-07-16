@@ -14,6 +14,8 @@ from keras import backend as K
 from sklearn.neural_network.multilayer_perceptron import MLPClassifier
 
 import adapter
+from adapter import KerasGeneratorAutoencoderAdapter
+
 
 class ModelCreator(object, metaclass=abc.ABCMeta):
 
@@ -213,6 +215,13 @@ class KerasVariationalAutoencoder(ModelCreator):
         kl_loss *=.8
         vae_loss = K.mean(reconstruction_loss + kl_loss)
         return vae_loss
+
+    @staticmethod
+    def create_from_path(filename):
+        encoder = load_model('encoder_' + filename)
+        decoder = load_model('decoder_' + filename)
+        vae = load_model(filename)
+        return KerasGeneratorAutoencoderAdapter(encoder, decoder, vae)
 
 
 class SklearnNeuralNetwork(ModelCreator):

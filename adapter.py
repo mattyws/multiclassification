@@ -26,10 +26,6 @@ class ModelAdapter(object, metaclass=abc.ABCMeta):
         raise NotImplementedError('users must define \'save\' to use this base class')
 
     @abc.abstractmethod
-    def load(self, filename):
-        raise NotImplementedError('users must define \'load\' to use this base class')
-
-    @abc.abstractmethod
     def evaluate(self, testDocs, batch_size=10):
         raise NotImplementedError('users must define \'evaluate\' to use this base class')
 
@@ -40,7 +36,7 @@ class KerasGeneratorAdapter(ModelAdapter):
 
     def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator = None,
             validationSteps=None, callbacks=None):
-        self.model.fit_generator(dataGenerator, batch_size, epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
+        self.model.fit_generator(dataGenerator, batch_size, epochs=epochs, initial_epoch=0, max_queue_size=2, verbose=1,
                                  workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
                                  callbacks=callbacks)
 
@@ -66,8 +62,6 @@ class KerasGeneratorAdapter(ModelAdapter):
     def save(self, filename):
         self.model.save(filename)
 
-    def load(self, filename):
-        return KerasGeneratorAdapter(load_model(filename))
 
 class KerasGeneratorAutoencoderAdapter(ModelAdapter):
 
@@ -87,12 +81,6 @@ class KerasGeneratorAutoencoderAdapter(ModelAdapter):
         self.encoder.save('encoder_'+filename)
         self.decoder.save('decoder_' + filename)
         self.vae.save(filename)
-
-    def load(self, filename):
-        encoder = load_model('encoder_'+filename)
-        decoder = load_model('decoder_' + filename)
-        vae = load_model(filename)
-        return KerasGeneratorAutoencoderAdapter(encoder, decoder, vae)
 
     def predict(self, testDocs, batch_size=10):
         pass

@@ -14,5 +14,6 @@
 
     "intermediate_dim" : 500,
     "latent_dim": 200,
-    "epochs" : 400
+    "epochs" : 400,
+    "batch_size": 50
 }

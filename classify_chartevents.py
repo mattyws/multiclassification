@@ -134,7 +134,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
         modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
-                         validationDataGenerator=dataTestGenerator, validationSteps=len(dataTestGenerator),
+                         validationSteps=len(dataTestGenerator),
                          callbacks=[modelCheckpoint, configSaver])
         result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
         testClasses = classes[testIndex]
