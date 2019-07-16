@@ -224,7 +224,7 @@ class Normalization(object):
             raise Exception("Data not normalized!")
 
     def __normalize_file(self, file):
-        fileName = file.split('/')[-1]
+        fileName = self.__generate_file_name(file.split('/')[-1])
         if os.path.exists(self.temporary_path + fileName):
             return file, self.temporary_path + fileName
         data = pd.read_csv(file)
@@ -235,7 +235,8 @@ class Normalization(object):
         if 'labevents_Unnamed: 0' in data.columns:
             data = data.drop(columns=['labevents_Unnamed: 0'])
         data = self.__normalize_dataframe(data, self.normalization_values)
-        data.to_csv(self.temporary_path + fileName, index=False)
+        data = np.array(data.values)
+        self.__save_normalized_data(data, self.temporary_path, fileName)
         return file, self.temporary_path + fileName
 
     def __normalize_dataframe(self, data, normalization_values):
@@ -260,3 +261,13 @@ class Normalization(object):
             std = normalization_values[column]['std']
             return series.apply(lambda x: (x - mean) / std)
         return series
+
+    def __generate_file_name(self, file_name):
+        new_file_name = os.path.splitext(file_name)[0] + '.pkl'
+        return new_file_name
+
+    def __save_normalized_data(self, data, path, file_name):
+        # data.to_csv(path + file_name, index=False)
+        # return file_name
+        with open(path+file_name, 'wb') as normalized_data_file:
+            pickle.dump(data, normalized_data_file)

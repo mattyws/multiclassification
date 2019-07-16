@@ -40,7 +40,7 @@ class KerasGeneratorAdapter(ModelAdapter):
 
     def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator = None,
             validationSteps=None, callbacks=None):
-        self.model.fit_generator(dataGenerator, batch_size, epochs=epochs, initial_epoch=0, max_queue_size=3, verbose=1,
+        self.model.fit_generator(dataGenerator, batch_size, epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
                                  workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
                                  callbacks=callbacks)
 

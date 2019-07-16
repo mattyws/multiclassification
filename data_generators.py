@@ -71,18 +71,25 @@ class LongitudinalDataGenerator(Sequence):
         max_len = None
         columns_len = None
         for fileName in filesNames:
-            data = pd.read_csv(fileName)
-            if 'Unnamed: 0' in data.columns:
-                data = data.drop(columns=['Unnamed: 0'])
-            if 'chartevents_Unnamed: 0' in data.columns:
-                data = data.drop(columns=['chartevents_Unnamed: 0'])
-            if 'labevents_Unnamed: 0' in data.columns:
-                data = data.drop(columns=['labevents_Unnamed: 0'])
-            x.append(np.array(data.values))
+            with open(fileName, 'rb') as data_file:
+                data = pickle.load(data_file)
+            x.append(data)
             if max_len is None or len(data) > max_len:
                 max_len = len(data)
             if columns_len is None:
-                columns_len = len(data.columns)
+                columns_len = len(data[0])
+            # data = pd.read_csv(fileName)
+            # if 'Unnamed: 0' in data.columns:
+            #     data = data.drop(columns=['Unnamed: 0'])
+            # if 'chartevents_Unnamed: 0' in data.columns:
+            #     data = data.drop(columns=['chartevents_Unnamed: 0'])
+            # if 'labevents_Unnamed: 0' in data.columns:
+            #     data = data.drop(columns=['labevents_Unnamed: 0'])
+            # x.append(np.array(data.values))
+            # if max_len is None or len(data) > max_len:
+            #     max_len = len(data)
+            # if columns_len is None:
+            #     columns_len = len(data.columns)
         # Zero padding the matrices
         zero_padding_x = []
         i = 0
@@ -114,13 +121,13 @@ class LongitudinalDataGenerator(Sequence):
         :param idx:
         :return:
         """
-        if self.__batch_exists(idx):
-            batch_x, batch_y = self.__load_batch(idx)
-        else:
-            batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
-            batch_x = self.__load(batch_x)
-            batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
-            self.__save_batch(idx, batch_x, batch_y)
+        # if self.__batch_exists(idx):
+        #     batch_x, batch_y = self.__load_batch(idx)
+        # else:
+        batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
+        batch_x = self.__load(batch_x)
+        batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
+        # self.__save_batch(idx, batch_x, batch_y)
         return batch_x, batch_y
 
     def __len__(self):
