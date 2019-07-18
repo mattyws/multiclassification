@@ -49,6 +49,7 @@ data = np.array([itemid for itemid in list(data_csv['icustay_id'])
 data_csv = data_csv[data_csv['icustay_id'].isin(data)]
 data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
 print("========= Transforming classes")
+print(data_csv['class'].values_count())
 classes = np.array([1 if c == 'sepsis' else 1 for c in list(data_csv['class'])])
 counts = Counter(classes)
 print(counts)
