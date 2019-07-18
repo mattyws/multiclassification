@@ -12,9 +12,9 @@ import os
 from keras.callbacks import ModelCheckpoint
 from sklearn.cross_validation import train_test_split
 
-from adapter import KerasGeneratorAutoencoderAdapter
-from data_generators import LongitudinalDataGenerator
-from keras_callbacks import SaveModelEpoch
+from adapter import KerasAutoencoderAdapter
+from data_generators import LongitudinalDataGenerator, AutoencoderDataGenerator
+from keras_callbacks import ResumeTrainingCallback
 from model_creators import KerasVariationalAutoencoder
 from normalization import NormalizationValues, Normalization
 
@@ -75,22 +75,17 @@ if os.path.exists(parameters['modelConfigPath']):
         config = json.load(configHandler)
 
 if __name__ == '__main__':
-    # TODO: create generator
     print("===== Getting values for normalization =====")
     # normalization_values = Normalization.get_normalization_values(data[trainIndex])
     values = normalization_values.get_normalization_values(x_train,
-                                                           saved_file_name="normalization_values_{}.pkl".format(i))
+                                                           saved_file_name="normalization_values_autoencoder.pkl")
     normalizer = Normalization(values, temporary_path='data_tmp_autoencoder/')
     print("===== Normalizing fold data =====")
     normalizer.normalize_files(data)
     normalized_data = np.array(normalizer.get_new_paths(data))
     if not os.path.exists(parameters['trainingGeneratorPath']):
-        dataTrainGenerator = LongitudinalDataGenerator(x_train,
-                                                       y_train, parameters['batchSize'],
-                                                       saved_batch_dir='training_batches_fold_{}'.format(i))
-        dataTestGenerator = LongitudinalDataGenerator(x_test,
-                                                      y_test, parameters['batchSize'],
-                                                      saved_batch_dir='testing_batches_fold_{}'.format(i))
+        dataTrainGenerator = AutoencoderDataGenerator(x_train)
+        dataTestGenerator = AutoencoderDataGenerator(x_test)
         print("========= Saving generators")
         with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
             pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
@@ -105,32 +100,23 @@ if __name__ == '__main__':
         with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
             dataTestGenerator = pickle.load(testingGeneratorHandler)
 
+    if config is not None:
+        configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
+                                             parameters['modelCheckpointPath'] + 'autoencoder.model', 0,
+                                             alreadyTrainedEpochs=config['epoch'])
+    else:
+        configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
+                                             parameters['modelCheckpointPath'] + 'autoencoder.model', 0)
     autoencoder_creator = KerasVariationalAutoencoder((original_dim,),
                                                       intermediate_dim, latent_dim)
     if os.path.exists(parameters['modelCheckpointPath'] + 'autoencoder.model'):
-        # TODO : load models
         autoencoder_adapter = KerasVariationalAutoencoder.create_from_path('autoencoder.model')
     else:
-        # TODO: use adapter for training and prediction
         autoencoder_adapter = autoencoder_creator.create()
 
     modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath'] + 'autoencoder.model')
-    # train the autoencoder
-    # def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator=None,
-    #         validationSteps=None, callbacks=None):
     autoencoder_adapter.fit(x_train,
-            epochs=epochs,
-            batch_size=batch_size, callbacks=[modelCheckpoint])
-    timeseries_vae, timeseries_encoder = autoencoder_creator.timedistribute_vae(input_shape, autoencoder_adapter.vae,
-                                                                                encoder=autoencoder_adapter.encoder)
-    results = timeseries_vae.predict(x_train)
-    print("real", x_train[0])
-    print("predicted", results[0])
-    print("Encoder")
-    results = timeseries_encoder.predict(x_train)
-    print(results)
-
-    # plot_results(models,
-    #              data,
-    #              batch_size=batch_size,
-    #              model_name="vae_mlp")
+            epochs=epochs, validationDataGenerator=dataTestGenerator,
+            steps_per_epoch=len(data), callbacks=[modelCheckpoint, configSaver])
+    autoencoder_adapter.save(parameters['modelCheckpointPath'] + 'autoencoder_final.model')
+    print("{} events in database".format(dataTrainGenerator.total_events + dataTestGenerator.total_events))

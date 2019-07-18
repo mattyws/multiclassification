@@ -63,7 +63,7 @@ class KerasGeneratorAdapter(ModelAdapter):
         self.model.save(filename)
 
 
-class KerasGeneratorAutoencoderAdapter(ModelAdapter):
+class KerasAutoencoderAdapter(ModelAdapter):
 
     def __init__(self, encoder, decoder, vae):
         self.encoder = encoder
@@ -71,8 +71,8 @@ class KerasGeneratorAutoencoderAdapter(ModelAdapter):
         self.vae = vae
 
     def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator=None,
-            validationSteps=None, callbacks=None):
-        self.vae.fit_generator(dataGenerator, batch_size, epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
+            validationSteps=None, callbacks=None, steps_per_epoch=None):
+        self.vae.fit_generator(dataGenerator, steps_per_epoch=steps_per_epoch, epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
                                  workers=workers, validation_data=validationDataGenerator,
                                  validation_steps=validationSteps,
                                  callbacks=callbacks)

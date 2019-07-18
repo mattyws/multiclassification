@@ -14,7 +14,7 @@ from keras import backend as K
 from sklearn.neural_network.multilayer_perceptron import MLPClassifier
 
 import adapter
-from adapter import KerasGeneratorAutoencoderAdapter
+from adapter import KerasAutoencoderAdapter
 
 
 class ModelCreator(object, metaclass=abc.ABCMeta):
@@ -150,7 +150,7 @@ class KerasVariationalAutoencoder(ModelCreator):
             encoder, decoder, vae = self.__build_recurrent_model()
         else:
             encoder, decoder, vae = self.__build_model()
-        return adapter.KerasGeneratorAutoencoderAdapter(encoder, decoder, vae)
+        return adapter.KerasAutoencoderAdapter(encoder, decoder, vae)
 
     def timedistribute_vae(self, input_shape, vae, encoder=None):
         timeseries_input = Input(shape=input_shape)
@@ -221,7 +221,7 @@ class KerasVariationalAutoencoder(ModelCreator):
         encoder = load_model('encoder_' + filename)
         decoder = load_model('decoder_' + filename)
         vae = load_model(filename)
-        return KerasGeneratorAutoencoderAdapter(encoder, decoder, vae)
+        return KerasAutoencoderAdapter(encoder, decoder, vae)
 
 
 class SklearnNeuralNetwork(ModelCreator):

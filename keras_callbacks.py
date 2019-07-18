@@ -3,7 +3,7 @@ import os
 
 from keras.callbacks import Callback
 
-class SaveModelEpoch(Callback):
+class ResumeTrainingCallback(Callback):
 
     """
     Save a configuration file wth the last epoch trained and the path of the model file.

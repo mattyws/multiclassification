@@ -17,7 +17,7 @@ from sklearn.model_selection._split import StratifiedKFold
 
 from data_generators import Word2VecTextEmbeddingGenerator
 from data_representation import Word2VecEmbeddingCreator
-from keras_callbacks import SaveModelEpoch
+from keras_callbacks import ResumeTrainingCallback
 from model_creators import MultilayerKerasRecurrentNNCreator
 from metrics import f1, precision, recall
 
@@ -148,8 +148,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
             kerasAdapter = MultilayerKerasRecurrentNNCreator.create_from_path(config['filepath'],
                                                     custom_objects={'f1':f1, 'precision':precision, 'recall':recall})
-            configSaver = SaveModelEpoch(parameters['modelConfigPath'],
-                                         parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
+            configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
+                                                 parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
         else:
             # Training new fold
             print("========= Training word2vec")
@@ -174,8 +174,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                              metrics=[f1, precision, recall, keras.metrics.binary_accuracy])
             kerasAdapter = modelCreator.create()
             epochs = parameters['trainingEpochs']
-            configSaver = SaveModelEpoch(parameters['modelConfigPath'],
-                                         parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
+            configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
+                                                 parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
 
         modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),

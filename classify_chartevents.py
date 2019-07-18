@@ -18,7 +18,7 @@ from sklearn.model_selection._split import StratifiedKFold
 from sklearn.utils.class_weight import compute_class_weight
 
 from data_generators import LongitudinalDataGenerator
-from keras_callbacks import SaveModelEpoch
+from keras_callbacks import ResumeTrainingCallback
 from model_creators import MultilayerKerasRecurrentNNCreator
 from metrics import f1, precision, recall
 from normalization import Normalization, NormalizationValues
@@ -100,8 +100,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
             kerasAdapter = MultilayerKerasRecurrentNNCreator.create_from_path(config['filepath'],
                                                     custom_objects={'f1':f1, 'precision':precision, 'recall':recall})
-            configSaver = SaveModelEpoch(parameters['modelConfigPath'],
-                                         parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
+            configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
+                                                 parameters['modelCheckpointPath'] + 'fold_' + str(i), i, alreadyTrainedEpochs=config['epoch'])
         else:
             print("===== Getting values for normalization =====")
             # normalization_values = Normalization.get_normalization_values(data[trainIndex])
@@ -131,8 +131,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                              metrics=[f1, precision, recall, keras.metrics.binary_accuracy])
             kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
             epochs = parameters['trainingEpochs']
-            configSaver = SaveModelEpoch(parameters['modelConfigPath'],
-                                         parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
+            configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
+                                                 parameters['modelCheckpointPath'] + 'fold_' + str(i), i)
 
         modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath']+'fold_'+str(i))
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
