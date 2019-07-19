@@ -74,49 +74,48 @@ if os.path.exists(parameters['modelConfigPath']):
     with open(parameters['modelConfigPath'], 'r') as configHandler:
         config = json.load(configHandler)
 
-if __name__ == '__main__':
-    print("===== Getting values for normalization =====")
-    # normalization_values = Normalization.get_normalization_values(data[trainIndex])
-    values = normalization_values.get_normalization_values(x_train,
-                                                           saved_file_name="normalization_values_autoencoder.pkl")
-    normalizer = Normalization(values, temporary_path='data_tmp_autoencoder/')
-    print("===== Normalizing fold data =====")
-    normalizer.normalize_files(data)
-    normalized_data = np.array(normalizer.get_new_paths(data))
-    if not os.path.exists(parameters['trainingGeneratorPath']):
-        dataTrainGenerator = AutoencoderDataGenerator(x_train)
-        dataTestGenerator = AutoencoderDataGenerator(x_test)
-        print("========= Saving generators")
-        with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
-            pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
+print("===== Getting values for normalization =====")
+# normalization_values = Normalization.get_normalization_values(data[trainIndex])
+values = normalization_values.get_normalization_values(x_train,
+                                                       saved_file_name="normalization_values_autoencoder.pkl")
+normalizer = Normalization(values, temporary_path='data_tmp_autoencoder/')
+print("===== Normalizing fold data =====")
+normalizer.normalize_files(data)
+normalized_data = np.array(normalizer.get_new_paths(data))
+if not os.path.exists(parameters['trainingGeneratorPath']):
+    dataTrainGenerator = AutoencoderDataGenerator(x_train)
+    dataTestGenerator = AutoencoderDataGenerator(x_test)
+    print("========= Saving generators")
+    with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
+        pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
 
-        with open(parameters['testingGeneratorPath'], 'wb') as testingGeneratorHandler:
-            pickle.dump(dataTestGenerator, testingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
-    else:
-        print("========= Loading generators")
-        with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
-            dataTrainGenerator = pickle.load(trainingGeneratorHandler)
+    with open(parameters['testingGeneratorPath'], 'wb') as testingGeneratorHandler:
+        pickle.dump(dataTestGenerator, testingGeneratorHandler, pickle.HIGHEST_PROTOCOL)
+else:
+    print("========= Loading generators")
+    with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
+        dataTrainGenerator = pickle.load(trainingGeneratorHandler)
 
-        with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
-            dataTestGenerator = pickle.load(testingGeneratorHandler)
+    with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
+        dataTestGenerator = pickle.load(testingGeneratorHandler)
 
-    if config is not None:
-        configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
-                                             parameters['modelCheckpointPath'] + 'autoencoder.model', 0,
-                                             alreadyTrainedEpochs=config['epoch'])
-    else:
-        configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
-                                             parameters['modelCheckpointPath'] + 'autoencoder.model', 0)
-    autoencoder_creator = KerasVariationalAutoencoder((original_dim,),
-                                                      intermediate_dim, latent_dim)
-    if os.path.exists(parameters['modelCheckpointPath'] + 'autoencoder.model'):
-        autoencoder_adapter = KerasVariationalAutoencoder.create_from_path('autoencoder.model')
-    else:
-        autoencoder_adapter = autoencoder_creator.create()
+if config is not None:
+    configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
+                                         parameters['modelCheckpointPath'] + 'autoencoder.model', 0,
+                                         alreadyTrainedEpochs=config['epoch'])
+else:
+    configSaver = ResumeTrainingCallback(parameters['modelConfigPath'],
+                                         parameters['modelCheckpointPath'] + 'autoencoder.model', 0)
+autoencoder_creator = KerasVariationalAutoencoder((original_dim,),
+                                                  intermediate_dim, latent_dim)
+if os.path.exists(parameters['modelCheckpointPath'] + 'autoencoder.model'):
+    autoencoder_adapter = KerasVariationalAutoencoder.create_from_path('autoencoder.model')
+else:
+    autoencoder_adapter = autoencoder_creator.create()
 
-    modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath'] + 'autoencoder.model')
-    autoencoder_adapter.fit(x_train,
-            epochs=epochs, validationDataGenerator=dataTestGenerator,
-            steps_per_epoch=len(data), callbacks=[modelCheckpoint, configSaver])
-    autoencoder_adapter.save(parameters['modelCheckpointPath'] + 'autoencoder_final.model')
-    print("{} events in database".format(dataTrainGenerator.total_events + dataTestGenerator.total_events))
+modelCheckpoint = ModelCheckpoint(parameters['modelCheckpointPath'] + 'autoencoder.model')
+autoencoder_adapter.fit(x_train,
+        epochs=epochs, validationDataGenerator=dataTestGenerator,
+        steps_per_epoch=len(data), callbacks=[modelCheckpoint, configSaver])
+autoencoder_adapter.save(parameters['modelCheckpointPath'] + 'autoencoder_final.model')
+print("{} events in database".format(dataTrainGenerator.total_events + dataTestGenerator.total_events))
