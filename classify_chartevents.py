@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 
 import keras
+import sys
 from sklearn.metrics import f1_score
 
 from keras.callbacks import ModelCheckpoint
@@ -112,8 +113,12 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             print("===== Normalizing fold data =====")
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))
+            print("### Getting sizes ###")
             sizes = dict()
+            aux = 0
             for d in normalized_data:
+                sys.stderr.write('\rdone {0:%}'.format(aux / len(normalized_data)))
+                aux += 1
                 with open(d, 'rb') as file_handler:
                     values = pickle.load(d)
                     if len(values) not in sizes.keys():
