@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import pickle
+import pprint
 from collections import Counter
 
 import pandas as pd
@@ -111,6 +112,16 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             print("===== Normalizing fold data =====")
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))
+            sizes = dict()
+            for d in normalized_data:
+                with open(d, 'rb') as file_handler:
+                    values = pickle.load(d)
+                    if len(values) not in sizes.keys():
+                        sizes[len(values)] = []
+                    sizes[len(values)].append(d)
+            pp = pprint.PrettyPrinter(indent=4)
+            pp.pprint(sizes)
+            exit()
             dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
                                                            classes[trainIndex], parameters['batchSize'],
                                                            saved_batch_dir='training_batches_fold_{}'.format(i))
