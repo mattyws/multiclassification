@@ -116,7 +116,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             print("### Getting sizes ###")
             if os.path.exists('sizes.pkl'):
                 with open('sizes.pkl', 'rb') as sizes_handler:
-                    sizes = json.load(sizes_handler)
+                    sizes = pickle.load(sizes_handler)
                 pp = pprint.PrettyPrinter(indent=4)
                 pp.pprint(sizes)
                 sizes_sizes = dict()
