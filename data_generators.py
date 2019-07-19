@@ -63,6 +63,23 @@ class LengthLongitudinalDataGenerator(Sequence):
         self.iterForever = iterForever
         self.__iterPos = 0
 
+    def __create_batches_from_sizes(self):
+        key_sizes = list(self.sizes.keys())
+        key_sizes.sort(reverse=True)
+        batches = dict()
+        batch_num = 0
+        while len(key_sizes) != 0:
+            key = key_sizes.pop()
+            if len(self.sizes[key]) == self.max_batch_size:
+                batches[batch_num] = self.sizes[key]
+                batch_num += 1
+            elif len(self.sizes[key]) > self.max_batch_size:
+                batch_files = []
+                files = self.sizes[key]
+                while len(files) != 0:
+                    pass
+
+
     def __load(self, filesNames):
         x = []
         max_len = None
@@ -85,18 +102,6 @@ class LengthLongitudinalDataGenerator(Sequence):
             zero_padding_x.append(zeros)
         x = np.array(zero_padding_x)
         return x
-
-    def __save_batch(self, idx, batch_x, batch_y):
-        with open(self.saved_batch_dir+'batch_{}.pkl'.format(idx), 'wb') as batch_file:
-            pickle.dump((batch_x, batch_y), batch_file, protocol=4)
-
-    def __load_batch(self, idx):
-        with open(self.saved_batch_dir+'batch_{}.pkl'.format(idx), 'rb') as batch_file:
-            data = pickle.load(batch_file)
-            return data
-
-    def __batch_exists(self, idx):
-        return os.path.exists(self.saved_batch_dir+'batch_{}.pkl'.format(idx))
 
     def __iter__(self):
         return self

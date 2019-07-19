@@ -114,20 +114,30 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))
             print("### Getting sizes ###")
-            sizes = dict()
-            aux = 0
-            for d in normalized_data:
-                sys.stderr.write('\rdone {0:%}'.format(aux / len(normalized_data)))
-                aux += 1
-                with open(d, 'rb') as file_handler:
-                    values = pickle.load(file_handler)
-                    if len(values) not in sizes.keys():
-                        sizes[len(values)] = []
-                    sizes[len(values)].append(d)
-            pp = pprint.PrettyPrinter(indent=4)
-            pp.pprint(sizes)
-            with open('sizes.pkl', 'wb') as sizes_handler:
-                pickle.dump(sizes, sizes_handler)
+            if os.path.exists('sizes.pkl'):
+                with open('sizes.pkl', 'rb') as sizes_handler:
+                    sizes = json.load(sizes_handler)
+                pp = pprint.PrettyPrinter(indent=4)
+                pp.pprint(sizes)
+                sizes_sizes = dict()
+                for key in sizes.keys():
+                    sizes_sizes[key] = len(sizes[key])
+                pp.pprint(sizes_sizes)
+            else:
+                sizes = dict()
+                aux = 0
+                for d in normalized_data:
+                    sys.stderr.write('\rdone {0:%}'.format(aux / len(normalized_data)))
+                    aux += 1
+                    with open(d, 'rb') as file_handler:
+                        values = pickle.load(file_handler)
+                        if len(values) not in sizes.keys():
+                            sizes[len(values)] = []
+                        sizes[len(values)].append(d)
+                pp = pprint.PrettyPrinter(indent=4)
+                pp.pprint(sizes)
+                with open('sizes.pkl', 'wb') as sizes_handler:
+                    pickle.dump(sizes, sizes_handler)
             exit()
             dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
                                                            classes[trainIndex], parameters['batchSize'],
