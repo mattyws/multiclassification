@@ -51,6 +51,74 @@ class EmbeddingObjectsDelete(object):
         for file in self.__filesList:
             os.remove(file)
 
+
+class LengthLongitudinalDataGenerator(Sequence):
+    # TODO: finish this class, it will generate batches based on sequences sizes (pre-given)
+    def __init__(self, dataPaths, labels, sizes, max_batch_size=50, max_distance_timestamps=100, iterForever=False):
+        self.max_batch_size = max_batch_size
+        self.max_distance_timestamps = max_distance_timestamps
+        self.sizes = sizes
+        self.__labels = labels
+        self.__filesList = dataPaths
+        self.iterForever = iterForever
+        self.__iterPos = 0
+
+    def __load(self, filesNames):
+        x = []
+        max_len = None
+        columns_len = None
+        for fileName in filesNames:
+            with open(fileName, 'rb') as data_file:
+                data = pickle.load(data_file)
+            x.append(data)
+            if max_len is None or len(data) > max_len:
+                max_len = len(data)
+            if columns_len is None:
+                columns_len = len(data[0])
+        # Zero padding the matrices
+        zero_padding_x = []
+        i = 0
+        for value in x:
+            i += 1
+            zeros = np.zeros((max_len, columns_len))
+            zeros[:value.shape[0], : value.shape[1]] = value
+            zero_padding_x.append(zeros)
+        x = np.array(zero_padding_x)
+        return x
+
+    def __save_batch(self, idx, batch_x, batch_y):
+        with open(self.saved_batch_dir+'batch_{}.pkl'.format(idx), 'wb') as batch_file:
+            pickle.dump((batch_x, batch_y), batch_file, protocol=4)
+
+    def __load_batch(self, idx):
+        with open(self.saved_batch_dir+'batch_{}.pkl'.format(idx), 'rb') as batch_file:
+            data = pickle.load(batch_file)
+            return data
+
+    def __batch_exists(self, idx):
+        return os.path.exists(self.saved_batch_dir+'batch_{}.pkl'.format(idx))
+
+    def __iter__(self):
+        return self
+
+    def __getitem__(self, idx):
+        """
+        :param idx:
+        :return:
+        """
+        # if self.__batch_exists(idx):
+        #     batch_x, batch_y = self.__load_batch(idx)
+        # else:
+        batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
+        batch_x = self.__load(batch_x)
+        batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
+        # self.__save_batch(idx, batch_x, batch_y)
+        return batch_x, batch_y
+
+    def __len__(self):
+        return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
+
+
 class LongitudinalDataGenerator(Sequence):
 
     def __init__(self, dataPaths, labels, batchSize, iterForever=False, saved_batch_dir='saved_batch/'):
