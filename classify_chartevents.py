@@ -126,6 +126,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                     sizes[len(values)].append(d)
             pp = pprint.PrettyPrinter(indent=4)
             pp.pprint(sizes)
+            with open('sizes.pkl', 'wb') as sizes_handler:
+                pickle.dump(sizes, sizes_handler)
             exit()
             dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
                                                            classes[trainIndex], parameters['batchSize'],
