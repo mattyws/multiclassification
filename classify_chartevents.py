@@ -120,7 +120,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                 sys.stderr.write('\rdone {0:%}'.format(aux / len(normalized_data)))
                 aux += 1
                 with open(d, 'rb') as file_handler:
-                    values = pickle.load(d)
+                    values = pickle.load(file_handler)
                     if len(values) not in sizes.keys():
                         sizes[len(values)] = []
                     sizes[len(values)].append(d)
