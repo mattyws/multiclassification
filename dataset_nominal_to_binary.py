@@ -70,6 +70,7 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
         print("---- End {} ----".format(icustay_id))
 
+# TODO: remove events that are nominal but somehow they still exist
 
 
 # Using as arg only the icustay_id, bc of fixating the others parameters
