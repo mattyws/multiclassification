@@ -23,6 +23,7 @@ if parameters is None:
     exit(1)
 
 mimic_data_path = parameters['mimic_data_path']
+# TODO: loop through events like is done in dataset_filter_events (only for labevents and chartevents)
 features_event_label = 'labevents'
 events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
 new_events_files_path = mimic_data_path + 'sepsis_binary_{}/'.format(features_event_label)
@@ -60,12 +61,12 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
         if 'Unnamed: 0' in events.columns:
             events = events.set_index(['Unnamed: 0'])
-        events = events.fillna(0)
+        # events = events.fillna(0)
         if len(events.columns) != len(all_features):
             # zeros = np.zeros(len(events))
             features_not_in = all_features - set(events.columns)
             for itemid in features_not_in:
-                events[itemid] = 0
+                events[itemid] = np.nan
         events = events.sort_index(axis=1)
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
         print("---- End {} ----".format(icustay_id))
@@ -104,6 +105,14 @@ else:
     for result in results:
         features_after_binarized |= set(result)
     # features_after_binarized = list(features_after_binarized)
+
+# Removing nominal features in raw form if they exists (somehow that happens)
+are_nominal = []
+for feature in features_after_binarized:
+    if len(feature.split('_')) > 2:
+        are_nominal.append('_'.join(feature.split('_')[:2]))
+print(are_nominal)
+exit()
 
 print("========== Filling events ==========")
 partial_fill_missing_events = partial(fill_missing_events, all_features=features_after_binarized,

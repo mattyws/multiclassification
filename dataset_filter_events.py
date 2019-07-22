@@ -98,7 +98,7 @@ sepsis3_hadm_ids = sepsis3_df['hadm_id'].values
 
 partial_filter_events = partial(filter_events,
                           mimic_data_path=mimic_data_path)
-with Pool(processes=4) as pool:
+with Pool(processes=6) as pool:
     df_split = np.array_split(sepsis3_df, 10)
     product_parameters = product(df_split, table_names)
     pool.starmap(partial_filter_events, product_parameters)

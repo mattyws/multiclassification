@@ -4,6 +4,8 @@ import sys
 from datetime import datetime, timedelta
 import time
 import re
+from itertools import islice
+
 import pandas as pd
 
 from os.path import exists, join, abspath
@@ -18,6 +20,11 @@ def load_parameters_file():
         raise FileNotFoundError("Parameter file doesn't exists!")
     parameters = json.load(open('parameters.json'))
     return parameters
+
+def chunk_lst(data, SIZE=10000):
+    it = iter(data)
+    for i in range(0, len(data), SIZE):
+        yield [k for k in islice(it, SIZE)]
 
 
 def filter_events_before_infection(events, admittime, infection_time, preceding_time,
