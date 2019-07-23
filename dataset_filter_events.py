@@ -1,3 +1,7 @@
+"""
+Filter all events
+"""
+
 import csv
 import json
 from functools import partial
