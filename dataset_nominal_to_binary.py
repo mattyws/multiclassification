@@ -12,26 +12,6 @@ from pandas._libs import json
 
 import helper
 
-parametersFilePath = "parameters.json"
-
-#Loading parameters file
-print("========= Loading Parameters")
-parameters = None
-with open(parametersFilePath, 'r') as parametersFileHandler:
-    parameters = json.load(parametersFileHandler)
-if parameters is None:
-    exit(1)
-
-mimic_data_path = parameters['mimic_data_path']
-# TODO: loop through events like is done in dataset_filter_events (only for labevents and chartevents)
-features_event_label = 'labevents'
-events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
-new_events_files_path = mimic_data_path + 'sepsis_binary_{}/'.format(features_event_label)
-if not os.path.exists(new_events_files_path):
-    os.mkdir(new_events_files_path)
-
-dataset_csv = pd.read_csv(parameters['dataset_file_name'])
-
 def binarize_nominal_events(icustay_id, events_files_path, new_events_files_path):
     nominal_events = []
     if os.path.exists(events_files_path + '{}.csv'.format(icustay_id)) and \
@@ -55,7 +35,7 @@ def binarize_nominal_events(icustay_id, events_files_path, new_events_files_path
     print("#### End {} ####".format(icustay_id))
     return nominal_events
 
-def fill_missing_events(icustay_id, all_features, new_events_files_path):
+def fill_missing_events(icustay_id, all_features, new_events_files_path, are_nominal):
     print("---- {} ----".format(icustay_id))
     if os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
         events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
@@ -67,13 +47,30 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path):
             features_not_in = all_features - set(events.columns)
             for itemid in features_not_in:
                 events[itemid] = np.nan
+        events = events.drop(columns=are_nominal)
         events = events.sort_index(axis=1)
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
         print("---- End {} ----".format(icustay_id))
 
-# TODO: remove events that are nominal but somehow they still exist
+parametersFilePath = "parameters.json"
 
+# Loading parameters file
+print("========= Loading Parameters")
+parameters = None
+with open(parametersFilePath, 'r') as parametersFileHandler:
+    parameters = json.load(parametersFileHandler)
+if parameters is None:
+    exit(1)
 
+mimic_data_path = parameters['mimic_data_path']
+# TODO: loop through events like is done in dataset_filter_events (only for labevents and chartevents)
+features_event_label = 'labevents'
+events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
+new_events_files_path = mimic_data_path + 'sepsis_binary_{}/'.format(features_event_label)
+if not os.path.exists(new_events_files_path):
+    os.mkdir(new_events_files_path)
+
+dataset_csv = pd.read_csv(parameters['dataset_file_name'])
 # Using as arg only the icustay_id, bc of fixating the others parameters
 args = list(dataset_csv['icustay_id'])
 # If the dir already exists and it has files for all dataset already created, only loop to get all possible events
@@ -107,15 +104,16 @@ else:
     # features_after_binarized = list(features_after_binarized)
 
 # Removing nominal features in raw form if they exists (somehow that happens)
-are_nominal = []
+print("========== Removing binary raw features from set of all features ==========")
+are_nominal = set()
 for feature in features_after_binarized:
     if len(feature.split('_')) > 2:
-        are_nominal.append('_'.join(feature.split('_')[:2]))
-print(are_nominal)
-exit()
+        are_nominal.add('_'.join(feature.split('_')[:2]))
+for feature in are_nominal:
+    features_after_binarized.discard(feature)
 
 print("========== Filling events ==========")
 partial_fill_missing_events = partial(fill_missing_events, all_features=features_after_binarized,
-                                      new_events_files_path=new_events_files_path)
+                                      new_events_files_path=new_events_files_path, are_nominal=are_nominal)
 with mp.Pool(processes=6) as pool:
     pool.map(partial_fill_missing_events, args)
