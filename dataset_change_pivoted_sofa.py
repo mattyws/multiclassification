@@ -113,8 +113,8 @@ def get_renal_score(urine_output, creatinine):
     return 0
 
 parameters = functions.load_parameters_file()
-
-if not os.path.exists('new_pivoted_sofa.csv'):
+temporary_pivoted_filename = 'tmp_pivoted_sofa.csv'
+if not os.path.exists(parameters['mimic_data_path']+temporary_pivoted_filename):
     print("Reading pivoted sofa")
     pivoted_sofa = pd.read_csv(parameters['pivoted_sofa'])
     variables_columns = ['icustay_id', 'hr', 'starttime', 'endtime',
@@ -129,10 +129,10 @@ if not os.path.exists('new_pivoted_sofa.csv'):
         icu_pivoted_sofa = icu_pivoted_sofa.ffill()
         icu_pivoted_sofa = icu_pivoted_sofa.bfill()
         new_pivoted_sofa = pd.concat([new_pivoted_sofa, icu_pivoted_sofa], ignore_index=True)
-    new_pivoted_sofa.to_csv('new_pivoted_sofa.csv', index=False)
+    new_pivoted_sofa.to_csv(parameters['mimic_data_path']+temporary_pivoted_filename, index=False)
 else:
     print("Reading pivoted sofa")
-    new_pivoted_sofa = pd.read_csv('new_pivoted_sofa.csv')
+    new_pivoted_sofa = pd.read_csv(parameters['mimic_data_path']+temporary_pivoted_filename)
 
 # Calculate sofa score
 print("Calculating sofa")
@@ -171,4 +171,4 @@ new_pivoted_sofa['liver'] = liver
 new_pivoted_sofa['sofa_24hours'] = new_pivoted_sofa['cardiovascular'] + new_pivoted_sofa['coagulation'] \
                                    + new_pivoted_sofa['respiratory'] + new_pivoted_sofa['renal'] \
                                    + new_pivoted_sofa['neurological'] + new_pivoted_sofa['liver']
-new_pivoted_sofa.to_csv('pivoted_sofa.csv', index=False)
+new_pivoted_sofa.to_csv(parameters['mimic_data_path'] + parameters['pivoted_sofa'], index=False)
