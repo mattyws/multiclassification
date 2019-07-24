@@ -129,11 +129,13 @@ if not os.path.exists('new_pivoted_sofa.csv'):
         icu_pivoted_sofa = icu_pivoted_sofa.ffill()
         icu_pivoted_sofa = icu_pivoted_sofa.bfill()
         new_pivoted_sofa = pd.concat([new_pivoted_sofa, icu_pivoted_sofa], ignore_index=True)
-    new_pivoted_sofa.to_csv('new_pivoted_sofa.csv')
+    new_pivoted_sofa.to_csv('new_pivoted_sofa.csv', index=False)
 else:
+    print("Reading pivoted sofa")
     new_pivoted_sofa = pd.read_csv('new_pivoted_sofa.csv')
 
 # Calculate sofa score
+print("Calculating sofa")
 cardiovascular = []
 coagulation = []
 respiratory = []
@@ -169,3 +171,4 @@ new_pivoted_sofa['liver'] = liver
 new_pivoted_sofa['sofa_24hours'] = new_pivoted_sofa['cardiovascular'] + new_pivoted_sofa['coagulation'] \
                                    + new_pivoted_sofa['respiratory'] + new_pivoted_sofa['renal'] \
                                    + new_pivoted_sofa['neurological'] + new_pivoted_sofa['liver']
+new_pivoted_sofa.to_csv('pivoted_sofa.csv', index=False)
