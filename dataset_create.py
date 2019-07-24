@@ -184,4 +184,3 @@ sepsis3_patients = sepsis3_patients[~(sepsis3_patients['icustay_id'].isin(icusta
 removed_patients.to_csv('removed_patients_create_dataset.csv')
 sepsis3_patients.to_csv(parameters['dataset_file_name'])
 print(sepsis3_patients['class'].value_counts())
-

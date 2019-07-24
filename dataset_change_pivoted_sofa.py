@@ -134,3 +134,38 @@ else:
     new_pivoted_sofa = pd.read_csv('new_pivoted_sofa.csv')
 
 # Calculate sofa score
+cardiovascular = []
+coagulation = []
+respiratory = []
+renal = []
+neurological = []
+liver = []
+for index, row in new_pivoted_sofa.iterrows():
+    cardiovascular.append(get_cardiovascular_score(
+        row['rate_dopamine'],
+        row['rate_epinephrine'],
+        row['rate_norepinephrine'],
+        row['rate_dobutamine'],
+        row['meanbp_min'],
+    ))
+    coagulation.append(get_coagulation_score(row['platelet_min']))
+    respiratory.append(get_respiration_score(
+        row['pao2fio2ratio_vent'],
+        row['pao2fio2ratio_novent']
+    ))
+    renal.append(get_renal_score(
+        row['urineoutput'],
+        row['creatinine_max']
+    ))
+    neurological.append(get_neurological_score(row['gcs_min']))
+    liver.append(get_liver_score(row['bilirubin_max']))
+new_pivoted_sofa['cardiovascular'] = cardiovascular
+new_pivoted_sofa['coagulation'] = coagulation
+new_pivoted_sofa['respiratory'] = respiratory
+new_pivoted_sofa['renal'] = renal
+new_pivoted_sofa['neurological'] = neurological
+new_pivoted_sofa['liver'] = liver
+# Just to keep the same name as the original pivoted_sofa (scripts use this name)
+new_pivoted_sofa['sofa_24hours'] = new_pivoted_sofa['cardiovascular'] + new_pivoted_sofa['coagulation'] \
+                                   + new_pivoted_sofa['respiratory'] + new_pivoted_sofa['renal'] \
+                                   + new_pivoted_sofa['neurological'] + new_pivoted_sofa['liver']
