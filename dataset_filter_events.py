@@ -6,7 +6,7 @@ import csv
 import json
 from functools import partial
 from itertools import product
-from multiprocessing.pool import Pool
+import multiprocessing as mp
 
 import math
 import os
@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 import functions
 
-def filter_events(sepsis3_df_spĺit, table_name, mimic_data_path=""):
+def filter_events(sepsis3_df_spĺit, table_name, mimic_data_path="", manager_queue=None):
     events_csv_path = mimic_data_path + table_name + '/'
     filtered_events_file_path = mimic_data_path + 'sepsis_{}/'.format(table_name.lower())
     # Loop through all patients that fits the sepsis 3 definition
@@ -26,12 +26,10 @@ def filter_events(sepsis3_df_spĺit, table_name, mimic_data_path=""):
         # Ignore this icustay if already have their events filtered
         filtered_events_file_name = filtered_events_file_path + '{}.csv'.format(row['icustay_id'])
         if os.path.exists(filtered_events_file_name):
-            print("Event already filtered for {}".format(row['icustay_id']))
             continue
         # If the file isn't found, ignore this admission
         csv_events_file_name = events_csv_path + '{}_{}.csv'.format(table_name, row['hadm_id'])
         if not os.path.exists(csv_events_file_name):
-            print("File {} do not exists".format(events_csv_path + '{}_{}.csv'.format(table_names, row['hadm_id'])))
             continue
 
         intime = row['intime']
@@ -50,8 +48,6 @@ def filter_events(sepsis3_df_spĺit, table_name, mimic_data_path=""):
         # Filter events that occurs between ICU intime and ICU outtime, as the csv corresponds to events that occurs
         # to all hospital admission
         events_df.loc[:, 'CHARTTIME'] = pd.to_datetime(events_df['CHARTTIME'], format=datetime_pattern)
-
-        print("==== {} : Looping events for {} ====".format(table_name, row['hadm_id']))
         for index, event in events_df.iterrows():
             # Check if event was an error.
             # As each table has their error columns, we pass the event label to the check function
@@ -66,18 +62,16 @@ def filter_events(sepsis3_df_spĺit, table_name, mimic_data_path=""):
                     events_in_patient[itemid] = dict()
                     events_in_patient[itemid]['itemid'] = itemid
                 events_in_patient[itemid][event_timestamp] = event_value
-        print("Converting to dataframe")
         patient_data = pd.DataFrame([])
         for event_id in events_in_patient.keys():
             events = pd.DataFrame(events_in_patient[event_id], index=[0])
             patient_data = pd.concat([patient_data, events], ignore_index=True)
         if len(patient_data) != 0:
-            print("==== Creating csv ====")
             patient_data = patient_data.set_index(['itemid'])
             patient_data = patient_data.T
             patient_data.to_csv(filtered_events_file_name, quoting=csv.QUOTE_NONNUMERIC)
-        else:
-            print("Error in file {}, events is empty".format(row['icustay_id']))
+        if manager_queue is not None:
+            manager_queue.put(index)
 
 
 
@@ -92,17 +86,27 @@ for table_name in table_names:
     if not os.path.exists(events_files_path):
         os.mkdir(events_files_path)
 
-sepsis3_df = pd.read_csv(parameters["dataset_file_name"])
+sepsis3_df = pd.read_csv(parameters['mimic_data_path'] + parameters["dataset_file_name"])
 # sepsis3_df = sepsis3_df[sepsis3_df["sepsis-3"] == 1]
 sepsis3_df['intime'] = pd.to_datetime(sepsis3_df['intime'], format=datetime_pattern)
 sepsis3_df['outtime'] = pd.to_datetime(sepsis3_df['outtime'], format=datetime_pattern)
 sepsis3_df = sepsis3_df.sort_values(by=['hadm_id', 'intime'])
 
 sepsis3_hadm_ids = sepsis3_df['hadm_id'].values
+total_files = len(sepsis3_df)
 
-partial_filter_events = partial(filter_events,
-                          mimic_data_path=mimic_data_path)
-with Pool(processes=6) as pool:
+with mp.Pool(processes=6) as pool:
+    manager = mp.Manager()
+    queue = manager.Queue()
+    partial_filter_events = partial(filter_events,
+                                    mimic_data_path=mimic_data_path, manager_queue=queue)
     df_split = np.array_split(sepsis3_df, 10)
     product_parameters = product(df_split, table_names)
-    pool.starmap(partial_filter_events, product_parameters)
+    # pool.starmap(partial_filter_events, product_parameters)
+    map_obj = pool.starmap_async(partial_filter_events, product_parameters)
+    consumed = 0
+    while not map_obj.ready():
+        for _ in range(queue.qsize()):
+            queue.get()
+            consumed += 1
+        sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))

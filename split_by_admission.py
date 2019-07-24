@@ -54,7 +54,6 @@ for file in files:
             file_path = data_path+"/{}_{}.csv".format(file, row["HADM_ID"])
             if row["HADM_ID"] not in files_dict.keys():
                 files_dict[row["HADM_ID"]] = dict()
-                files_dict[row["HADM_ID"]]['file'] = open(file_path, 'w')
                 files_dict[row["HADM_ID"]]['csv'] = csv.DictWriter(open(file_path, 'w'), row.keys())
                 files_dict[row["HADM_ID"]]['csv'].writeheader()
             files_dict[row["HADM_ID"]]['csv'].writerow(row)

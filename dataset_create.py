@@ -53,7 +53,7 @@ if not os.path.exists(parameters["raw_dataset_file_name"]):
     not_infected_patients = 0
     aleatory_patients = 0
     for index, infected_patient in infected_icu.iterrows():
-        if infected_patient['age'] < 18 or infected_patient['age'] > 80:
+        if infected_patient['age'] < 15 or infected_patient['age'] > 80:
             print("Patient age do not meet criteria")
             continue
         print("==== {} ====".format(infected_patient['icustay_id']))
@@ -159,7 +159,7 @@ if not os.path.exists(parameters["raw_dataset_file_name"]):
     print("errors metavision", errors_metavision)
     print("Infected patients {}".format(infected_patients))
     print("Not Infected patients {}".format(not_infected_patients))
-    sepsis3_patients.to_csv(parameters["raw_dataset_file_name"])
+    sepsis3_patients.to_csv(mimic_data_path + parameters["raw_dataset_file_name"])
 else:
     sepsis3_patients = pd.read_csv(parameters['raw_dataset_file_name'])
     sepsis3_patients.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(sepsis3_patients['sofa_increasing_time_poe'],
@@ -181,6 +181,6 @@ for index, patient in sepsis3_patients.iterrows():
         icustays_to_remove.append(patient['icustay_id'])
 removed_patients = sepsis3_patients[sepsis3_patients['icustay_id'].isin(icustays_to_remove)]
 sepsis3_patients = sepsis3_patients[~(sepsis3_patients['icustay_id'].isin(icustays_to_remove))]
-removed_patients.to_csv('removed_patients_create_dataset.csv')
-sepsis3_patients.to_csv(parameters['dataset_file_name'])
+removed_patients.to_csv(mimic_data_path + 'removed_patients_create_dataset.csv')
+sepsis3_patients.to_csv(mimic_data_path + parameters['dataset_file_name'])
 print(sepsis3_patients['class'].value_counts())
