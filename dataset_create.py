@@ -70,7 +70,6 @@ if not os.path.exists(parameters["raw_dataset_file_name"]):
             infection_time = datetime.strptime(infected_patient['suspected_infection_time_poe'], datetime_pattern)
         else:
             infection_time = intime + timedelta(hours=48)
-        #todo dont need this bc its ok infection before intime
         # if infection_time < intime:
         #     print("Infection  time is lower than the intime")
         #     continue
@@ -92,7 +91,6 @@ if not os.path.exists(parameters["raw_dataset_file_name"]):
         # The before is truncated by data availability, and after is truncated by the icu outtime
         # Truncate will not remove any event if either the conditions happen
         before_truncate = infection_time - timedelta(hours=48)
-        #todo cap outtime
         after_truncate = infection_time + timedelta(hours=24)
         if infected_patient['outtime'] < after_truncate:
             after_truncate = infected_patient['outtime']
