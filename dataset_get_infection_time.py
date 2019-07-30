@@ -46,7 +46,7 @@ antibiotics_names = [
     'vibra-tabs', 'vibramycin', 'zinacef', 'zithromax', 'zmax', 'zosyn', 'zyvox'
 ]
 
-icustays_for_infection = pd.DataFrame([])
+icustays_for_infection = []
 consumed = 0
 total_files = len(icustays)
 for index, icustay in icustays.iterrows():
@@ -85,29 +85,29 @@ for index, icustay in icustays.iterrows():
     icu_microbiologyevents = icu_microbiologyevents.sort_values(by=['CHARTTIME'])
     # print(icu_microbiologyevents[['HADM_ID', 'CHARTTIME', 'ORG_NAME']])
     icustay = icustay[['HADM_ID', 'ICUSTAY_ID', 'INTIME', 'OUTTIME']]
+    infection_time = None
     for index2, prescription in icu_prescriptions.iterrows():
         before_prescription = prescription['STARTDATE'] - timedelta(hours=24)
         aux_microbiologyevents = icu_microbiologyevents[
             (icu_microbiologyevents['CHARTTIME'] <= before_prescription)
         ]
         if len(aux_microbiologyevents) != 0:
-            icustay['suspected_infection_time_poe'] = aux_microbiologyevents.iloc[0]['CHARTTIME']
+            infection_time = aux_microbiologyevents.iloc[0]['CHARTTIME']
             break
         after_prescription = prescription['STARTDATE'] + timedelta(hours=72)
         aux_microbiologyevents = icu_microbiologyevents[
             (icu_microbiologyevents['CHARTTIME'] >= after_prescription)
         ]
         if len(aux_microbiologyevents) != 0:
-            icustay['suspected_infection_time_poe'] = prescription['STARTDATE']
+            infection_time = prescription['STARTDATE']
             break
-    if 'suspected_infection_time_poe' not in icustay.names:
-        icustay['suspected_infection_time_poe'] = None
+    if infection_time is None:
+        icustay.loc['suspected_infection_time_poe'] = None
     else:
-        icustay['suspected_infection_time_poe'] = pd.to_datetime(icustay['suspected_infection_time_poe'], format=parameters['datetime_pattern'])
-    print(icustay)
-    icustays_for_infection.append(icustay, ignore_index=True)
+        icustay.loc['suspected_infection_time_poe'] = pd.to_datetime(infection_time, format=parameters['datetime_pattern'])
+    icustays_for_infection.append(icustay)
     consumed += 1
-
+icustays_for_infection = pd.DataFrame(icustays_for_infection)
 for column in icustays_for_infection.columns:
     icustays_for_infection[column.lower()] = icustays_for_infection[column]
     icustays_for_infection.drop(columns=[column])
