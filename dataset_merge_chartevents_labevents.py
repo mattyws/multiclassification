@@ -70,7 +70,10 @@ def merge_events(icustay_id, chartevents_files_path, labevents_files_path, new_e
             labevents = labevents.add_prefix('labevents_')
             events = pd.merge(chartevents, labevents, how='outer', left_index=True, right_index=True)
             events = events.fillna(0)
-            events = events.drop(['labevents_Unnamed: 0'])
+            if 'labevents_Unnamed: 0' in events.columns:
+                events = events.drop(['labevents_Unnamed: 0'])
+            if 'chartevents_Unnamed: 0' in events.columns:
+                events = events.drop(['chartevents_Unnamed: 0'])
             # print(events)
             events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
 

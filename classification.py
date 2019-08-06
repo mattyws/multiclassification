@@ -114,6 +114,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))
             print("### Getting sizes ###")
+            # TODO: transform this operation into a class
             if os.path.exists('sizes.pkl'):
                 with open('sizes.pkl', 'rb') as sizes_handler:
                     sizes = pickle.load(sizes_handler)

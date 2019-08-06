@@ -22,7 +22,7 @@ The reason that we test if the dataset is already created is:
     Separate the logic of patients exclusion criteria from the filtering criteria, so it's easier to undestand the logic for both
     And honestly this script was executed and the file already exists 
 """
-if not os.path.exists(parameters["raw_dataset_file_name"]):
+if not os.path.exists(mimic_data_path + parameters["raw_dataset_file_name"]):
     print("===== Creating dataset =====")
     print("Loading icustays")
     icustays = pd.read_csv(mimic_data_path + parameters['csv_files_directory'] + 'ICUSTAYS.csv')
@@ -41,8 +41,10 @@ if not os.path.exists(parameters["raw_dataset_file_name"]):
     sofa_scores = pd.merge(sofa_scores, icustays, how="inner", on=["icustay_id"])
     sofa_scores = sofa_scores.sort_values(by=['hadm_id', 'icustay_id', 'starttime'])
     # infected_icu = infected_icu[infected_icu['suspected_infection_time_poe'].notna()]
-    infected_icu['intime'] = pd.to_datetime(infected_icu['intime'], format=datetime_pattern)
-    infected_icu['outtime'] = pd.to_datetime(infected_icu['outtime'], format=datetime_pattern)
+    infected_icu.loc[:, 'intime'] = pd.to_datetime(infected_icu['intime'], format=datetime_pattern)
+    infected_icu.loc[:, 'outtime'] = pd.to_datetime(infected_icu['outtime'], format=datetime_pattern)
+    infected_icu.loc[:, 'suspected_infection_time_poe'] = pd.to_datetime(infected_icu['suspected_infection_time_poe'],
+                                                                         format=datetime_pattern)
     total_aleatory_patients = 20000
     sepsis3_patients = pd.DataFrame([])
     less_7 = 0
@@ -67,7 +69,10 @@ if not os.path.exists(parameters["raw_dataset_file_name"]):
         # If the patient is with a suspicion of infection, use the time of suspicion, and if isn't with the suspicion
         # use 48h after the intime, because the window for the change on sofa that is been used is 48h before and 24h after
         if infected_patient['suspicion_poe']:
-            infection_time = datetime.strptime(infected_patient['suspected_infection_time_poe'], datetime_pattern)
+            # if infected_patient['suspected_infection_time_poe'] > infected_patient['intime']:
+            infection_time = infected_patient['suspected_infection_time_poe']
+            # else:
+            #     infection_time = infected_patient['intime']
         else:
             infection_time = intime + timedelta(hours=48)
         # if infection_time < intime:
@@ -85,11 +90,10 @@ if not os.path.exists(parameters["raw_dataset_file_name"]):
             errors_metavision += 1 if infected_patient['dbsource'] == 'metavision' else 0
             file_errors += 1
             continue
-        patient_sofa_scores['timestep'] = pd.to_datetime(patient_sofa_scores['starttime'], format=datetime_pattern)
+        patient_sofa_scores.loc[:, 'timestep'] = pd.to_datetime(patient_sofa_scores['starttime'], format=datetime_pattern)
         patient_sofa_scores = patient_sofa_scores.set_index('timestep').sort_index()
         # Get only events that occurs in before 48h up to 24h after the infection time
         # The before is truncated by data availability, and after is truncated by the icu outtime
-        # Truncate will not remove any event if either the conditions happen
         before_truncate = infection_time - timedelta(hours=48)
         after_truncate = infection_time + timedelta(hours=24)
         if infected_patient['outtime'] < after_truncate:
@@ -152,9 +156,6 @@ if not os.path.exists(parameters["raw_dataset_file_name"]):
             aux_patient = pd.DataFrame(aux_patient, index=[0])
             sepsis3_patients = pd.concat([sepsis3_patients, aux_patient], ignore_index=True)
             aleatory_patients += 1
-
-
-
     print(len(sepsis3_patients))
     print("metavision", metavision)
     print('file errors', file_errors)
@@ -163,7 +164,7 @@ if not os.path.exists(parameters["raw_dataset_file_name"]):
     print("Not Infected patients {}".format(not_infected_patients))
     sepsis3_patients.to_csv(mimic_data_path + parameters["raw_dataset_file_name"])
 else:
-    sepsis3_patients = pd.read_csv(parameters['raw_dataset_file_name'])
+    sepsis3_patients = pd.read_csv(mimic_data_path + parameters['raw_dataset_file_name'])
     sepsis3_patients.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(sepsis3_patients['sofa_increasing_time_poe'],
                                                                          format=datetime_pattern)
     sepsis3_patients.loc[:, 'intime'] = pd.to_datetime(sepsis3_patients['intime'],
@@ -177,8 +178,7 @@ for index, patient in sepsis3_patients.iterrows():
     difference = patient['sofa_increasing_time_poe'] - patient['intime']
     days = difference.days
     hours = difference.seconds/3600
-    print(patient['icustay_id'], difference)
-    if (days == 0 and hours/3600 < 7) or (days < 0) \
+    if (days == 0 and hours < 7) or (days < 0) \
             or ( (days*24) + hours > 500 ):
         icustays_to_remove.append(patient['icustay_id'])
 removed_patients = sepsis3_patients[sepsis3_patients['icustay_id'].isin(icustays_to_remove)]

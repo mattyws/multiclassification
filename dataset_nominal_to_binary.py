@@ -1,6 +1,7 @@
 """
 Creates the binary columns for nominal data, adding the columns that doesn't appear at each patients events
 """
+# TODO: use percentage to give feedback for how much files are preprocessed
 import csv
 import os
 from functools import partial
@@ -10,7 +11,6 @@ import numpy as np
 import multiprocessing as mp
 from pandas._libs import json
 
-import helper
 
 def binarize_nominal_events(icustay_id, events_files_path, new_events_files_path):
     nominal_events = []
@@ -47,7 +47,7 @@ def fill_missing_events(icustay_id, all_features, new_events_files_path, are_nom
             features_not_in = all_features - set(events.columns)
             for itemid in features_not_in:
                 events[itemid] = np.nan
-        events = events.drop(columns=are_nominal)
+        events = events.drop(columns=are_nominal, errors='ignore')
         events = events.sort_index(axis=1)
         events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
         print("---- End {} ----".format(icustay_id))
@@ -63,7 +63,7 @@ if parameters is None:
     exit(1)
 
 mimic_data_path = parameters['mimic_data_path']
-features_event_label = 'labevents'
+features_event_label = 'chartevents'
 events_files_path = mimic_data_path + 'sepsis_{}/'.format(features_event_label)
 new_events_files_path = mimic_data_path + 'sepsis_binary_{}/'.format(features_event_label)
 if not os.path.exists(new_events_files_path):

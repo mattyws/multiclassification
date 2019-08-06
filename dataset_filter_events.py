@@ -16,6 +16,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
+import sys
+
 import functions
 
 def filter_events(sepsis3_df_spĺit, table_name, mimic_data_path="", manager_queue=None):

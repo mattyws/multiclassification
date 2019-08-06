@@ -54,31 +54,24 @@ class EmbeddingObjectsDelete(object):
 
 class LengthLongitudinalDataGenerator(Sequence):
     # TODO: finish this class, it will generate batches based on sequences sizes (pre-given)
-    def __init__(self, dataPaths, labels, sizes, max_batch_size=50, max_distance_timestamps=100, iterForever=False):
+    # TODO: get classes based on sizes
+    def __init__(self, dataPaths, labels, sizes, max_batch_size=50, iterForever=False):
         self.max_batch_size = max_batch_size
-        self.max_distance_timestamps = max_distance_timestamps
-        self.sizes = sizes
+        self.batches = sizes
         self.__labels = labels
         self.__filesList = dataPaths
         self.iterForever = iterForever
         self.__iterPos = 0
 
-    def __create_batches_from_sizes(self):
-        key_sizes = list(self.sizes.keys())
-        key_sizes.sort(reverse=True)
-        batches = dict()
+    def __create_batches(self):
+        new_batches = dict()
         batch_num = 0
-        while len(key_sizes) != 0:
-            key = key_sizes.pop()
-            if len(self.sizes[key]) == self.max_batch_size:
-                batches[batch_num] = self.sizes[key]
+        for key in self.batches.keys():
+            split = np.array_split(self.batches[key], len(self.batches[key])/self.max_batch_size )
+            for s in split:
+                new_batches[batch_num] = s
                 batch_num += 1
-            elif len(self.sizes[key]) > self.max_batch_size:
-                batch_files = []
-                files = self.sizes[key]
-                while len(files) != 0:
-                    pass
-
+        self.batches = new_batches
 
     def __load(self, filesNames):
         x = []
@@ -114,14 +107,14 @@ class LengthLongitudinalDataGenerator(Sequence):
         # if self.__batch_exists(idx):
         #     batch_x, batch_y = self.__load_batch(idx)
         # else:
-        batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
+        batch_x = self.batches[idx]
         batch_x = self.__load(batch_x)
         batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
         # self.__save_batch(idx, batch_x, batch_y)
         return batch_x, batch_y
 
     def __len__(self):
-        return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
+        return len(self.batches.keys())
 
 
 class LongitudinalDataGenerator(Sequence):

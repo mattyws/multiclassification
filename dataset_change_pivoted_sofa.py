@@ -116,7 +116,7 @@ parameters = functions.load_parameters_file()
 temporary_pivoted_filename = 'tmp_pivoted_sofa.csv'
 if not os.path.exists(parameters['mimic_data_path']+temporary_pivoted_filename):
     print("Reading pivoted sofa")
-    pivoted_sofa = pd.read_csv(parameters['pivoted_sofa'])
+    pivoted_sofa = pd.read_csv(parameters['mimic_data_path']+parameters['pivoted_sofa'])
     variables_columns = ['icustay_id', 'hr', 'starttime', 'endtime',
                          'pao2fio2ratio_novent', 'pao2fio2ratio_vent', 'rate_epinephrine',
                          'rate_norepinephrine', 'rate_dopamine', 'rate_dobutamine', 'meanbp_min',
