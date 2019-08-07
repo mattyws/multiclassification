@@ -54,9 +54,13 @@ for file in files:
             file_path = data_path+"/{}_{}.csv".format(file, row["HADM_ID"])
             if row["HADM_ID"] not in files_dict.keys():
                 files_dict[row["HADM_ID"]] = dict()
-                files_dict[row["HADM_ID"]]['csv'] = csv.DictWriter(open(file_path, 'w'), row.keys())
-                files_dict[row["HADM_ID"]]['csv'].writeheader()
-            files_dict[row["HADM_ID"]]['csv'].writerow(row)
+                files_dict[row["HADM_ID"]]['csv'] = file_path
+                with open(file_path, 'w') as file_handler:
+                    csv_writer = csv.DictWriter(file_handler, row.keys())
+                    csv_writer.writeheader()
+            with open(files_dict[row["HADM_ID"]]['csv'], 'a') as file_handler:
+                csv_writer = csv.DictWriter(file_handler, row.keys())
+                csv_writer.writerow(row)
         end = time()
         print("Took {} seconds to process file. Total rows processed {}, and {} rows with empty admission id.".
               format(end-start, total_rows, empty_admission))
