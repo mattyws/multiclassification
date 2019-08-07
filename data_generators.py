@@ -1,6 +1,8 @@
 import json
 import pickle
 import uuid
+from math import ceil
+
 import numpy as np
 import os
 import pandas as pd
@@ -51,27 +53,27 @@ class EmbeddingObjectsDelete(object):
         for file in self.__filesList:
             os.remove(file)
 
-
 class LengthLongitudinalDataGenerator(Sequence):
-    # TODO: finish this class, it will generate batches based on sequences sizes (pre-given)
-    # TODO: get classes based on sizes
-    def __init__(self, dataPaths, labels, sizes, max_batch_size=50, iterForever=False):
+    def __init__(self, sizesDataPaths, labels, max_batch_size=50, iterForever=False):
         self.max_batch_size = max_batch_size
-        self.batches = sizes
-        self.__labels = labels
-        self.__filesList = dataPaths
+        self.batches = sizesDataPaths
+        self.labels = labels
         self.iterForever = iterForever
         self.__iterPos = 0
 
-    def __create_batches(self):
+    def create_batches(self):
         new_batches = dict()
+        new_labels = dict()
         batch_num = 0
         for key in self.batches.keys():
-            split = np.array_split(self.batches[key], len(self.batches[key])/self.max_batch_size )
-            for s in split:
+            split_data = np.array_split(self.batches[key], ceil(len(self.batches[key])/self.max_batch_size) )
+            split_classes = np.array_split(self.batches[key], ceil(len(self.batches[key]) / self.max_batch_size))
+            for s, c in zip(split_data, split_classes):
                 new_batches[batch_num] = s
+                new_labels[batch_num] = c
                 batch_num += 1
         self.batches = new_batches
+        self.labels = new_labels
 
     def __load(self, filesNames):
         x = []
@@ -109,7 +111,7 @@ class LengthLongitudinalDataGenerator(Sequence):
         # else:
         batch_x = self.batches[idx]
         batch_x = self.__load(batch_x)
-        batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
+        batch_y = self.labels[idx]
         # self.__save_batch(idx, batch_x, batch_y)
         return batch_x, batch_y
 

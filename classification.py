@@ -19,7 +19,8 @@ from sklearn.metrics.ranking import roc_auc_score
 from sklearn.model_selection._split import StratifiedKFold
 from sklearn.utils.class_weight import compute_class_weight
 
-from data_generators import LongitudinalDataGenerator
+import functions
+from data_generators import LongitudinalDataGenerator, LengthLongitudinalDataGenerator
 from keras_callbacks import ResumeTrainingCallback
 from model_creators import MultilayerKerasRecurrentNNCreator
 from metrics import f1, precision, recall
@@ -114,38 +115,16 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))
             print("### Getting sizes ###")
-            # TODO: transform this operation into a class
-            if os.path.exists('sizes.pkl'):
-                with open('sizes.pkl', 'rb') as sizes_handler:
-                    sizes = pickle.load(sizes_handler)
-                pp = pprint.PrettyPrinter(indent=4)
-                pp.pprint(sizes)
-                sizes_sizes = dict()
-                for key in sizes.keys():
-                    sizes_sizes[key] = len(sizes[key])
-                pp.pprint(sizes_sizes)
-            else:
-                sizes = dict()
-                aux = 0
-                for d in normalized_data:
-                    sys.stderr.write('\rdone {0:%}'.format(aux / len(normalized_data)))
-                    aux += 1
-                    with open(d, 'rb') as file_handler:
-                        values = pickle.load(file_handler)
-                        if len(values) not in sizes.keys():
-                            sizes[len(values)] = []
-                        sizes[len(values)].append(d)
-                pp = pprint.PrettyPrinter(indent=4)
-                pp.pprint(sizes)
-                with open('sizes.pkl', 'wb') as sizes_handler:
-                    pickle.dump(sizes, sizes_handler)
-            exit()
-            dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
-                                                           classes[trainIndex], parameters['batchSize'],
-                                                           saved_batch_dir='training_batches_fold_{}'.format(i))
-            dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
-                                                          classes[testIndex], parameters['batchSize'],
-                                                          saved_batch_dir='testing_batches_fold_{}'.format(i))
+            train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex], classes[trainIndex])
+            test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex])
+            dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels)
+            dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
+            # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
+            #                                                classes[trainIndex], parameters['batchSize'],
+            #                                                saved_batch_dir='training_batches_fold_{}'.format(i))
+            # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
+            #                                               classes[testIndex], parameters['batchSize'],
+            #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
             print("========= Saving generators")
             with open(parameters['trainingGeneratorPath'], 'wb') as trainingGeneratorHandler:
                 pickle.dump(dataTrainGenerator, trainingGeneratorHandler, pickle.HIGHEST_PROTOCOL)

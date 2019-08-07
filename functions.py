@@ -1,5 +1,6 @@
 import json
 import os
+import pickle
 import sys
 from datetime import datetime, timedelta
 import time
@@ -14,6 +15,7 @@ from os import pathsep
 
 DATE_PATTERN = "%Y-%m-%d"
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
+
 
 def load_parameters_file():
     if not os.path.exists('parameters.json'):
@@ -159,3 +161,43 @@ def get_event_itemid_and_value(event_label, event):
     else:
         raise NotImplemented("Event label don't have a filter for its value and itemid!")
     return itemid, event_value
+
+
+def divide_by_events_lenght(data_list, classes, sizes_filename="sizes.pkl", classes_filename="sizes_labels.pkl"):
+    """
+    Divide a dataset based on their number of timesteps
+    :param data_list: list of data
+    :param classes: labels for these data
+    :param sizes_filename: filename used to save the final sizes object
+    :param classes_filename: filename to save the final labels object
+    :return:
+    """
+    sizes = None
+    labels = None
+    if os.path.exists(sizes_filename):
+        with open(sizes_filename, 'rb') as sizes_handler:
+            sizes = pickle.load(sizes_handler)
+    if os.path.exists(classes_filename):
+        with open(classes_filename, 'rb') as sizes_handler:
+            labels = pickle.load(sizes_handler)
+    if sizes is None and labels is None:
+        sizes = dict()
+        labels = dict()
+        aux = 0
+        for d, c in zip(data_list, classes):
+            sys.stderr.write('\rdone {0:%}'.format(aux / len(data_list)))
+            aux += 1
+            with open(d, 'rb') as file_handler:
+                values = pickle.load(file_handler)
+                if len(values) not in sizes.keys():
+                    sizes[len(values)] = []
+                    labels[len(values)] = []
+                sizes[len(values)].append(d)
+                labels[len(values)].append(c)
+        with open(sizes_filename, 'wb') as sizes_handler:
+            pickle.dump(sizes, sizes_handler)
+        with open(classes_filename, 'wb') as sizes_handler:
+            pickle.dump(labels, sizes_handler)
+    else:
+        raise Exception("Some problem on sizes/labels file.")
+    return sizes, labels
