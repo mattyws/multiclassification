@@ -16,14 +16,6 @@ files = [
     'INPUTEVENTS_CV', 'INPUTEVENTS_MV'
 ]
 
-def writeBuffer(writer, buffer):
-    for data in buffer:
-        writer.writerow(data)
-
-def closeFilePointer(files_dict):
-    for key in files_dict.keys():
-        files_dict[key]['file'].close()
-
 for file in files:
     print("========================================= {} ====================================================".format(file))
     data_path = mimic_data_path+file
@@ -64,4 +56,3 @@ for file in files:
         end = time()
         print("Took {} seconds to process file. Total rows processed {}, and {} rows with empty admission id.".
               format(end-start, total_rows, empty_admission))
-        closeFilePointer(files_dict)
