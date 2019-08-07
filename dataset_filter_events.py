@@ -43,7 +43,7 @@ def filter_events(sepsis3_df_spĺit, table_name, mimic_data_path="", manager_que
             cut_poe = datetime.strptime(row['sofa_increasing_time_poe'], datetime_pattern)
         else:
             # If patient is healthy, the cut point will be after 24h of admission at the ICU
-            cut_poe = intime + timedelta(hours=24)
+            cut_poe = outtime
 
         # Loading event csv
         events_df = pd.read_csv(csv_events_file_name)
