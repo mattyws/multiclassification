@@ -10,8 +10,6 @@ import numpy as np
 import multiprocessing as mp
 from pandas._libs import json
 
-import helper
-
 parametersFilePath = "parameters.json"
 
 #Loading parameters file
