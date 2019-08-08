@@ -95,7 +95,7 @@ sepsis3_df['outtime'] = pd.to_datetime(sepsis3_df['outtime'], format=datetime_pa
 sepsis3_df = sepsis3_df.sort_values(by=['hadm_id', 'intime'])
 
 sepsis3_hadm_ids = sepsis3_df['hadm_id'].values
-total_files = len(sepsis3_df)
+total_files = len(sepsis3_df) * len(table_names)
 
 with mp.Pool(processes=6) as pool:
     manager = mp.Manager()
