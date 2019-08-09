@@ -183,6 +183,6 @@ for index, patient in sepsis3_patients.iterrows():
         icustays_to_remove.append(patient['icustay_id'])
 removed_patients = sepsis3_patients[sepsis3_patients['icustay_id'].isin(icustays_to_remove)]
 sepsis3_patients = sepsis3_patients[~(sepsis3_patients['icustay_id'].isin(icustays_to_remove))]
-removed_patients.to_csv(mimic_data_path + 'removed_patients_create_dataset.csv')
+removed_patients.to_csv(mimic_data_path + 'removed_patients_dataset_create.csv')
 sepsis3_patients.to_csv(mimic_data_path + parameters['dataset_file_name'])
 print(sepsis3_patients['class'].value_counts())

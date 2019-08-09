@@ -20,11 +20,11 @@ import sys
 
 import functions
 
-def filter_events(sepsis3_df_spĺit, table_name, mimic_data_path="", manager_queue=None):
+def filter_events(sepsis3_df_split, table_name, mimic_data_path="", manager_queue=None, events_dirname=""):
     events_csv_path = mimic_data_path + table_name + '/'
-    filtered_events_file_path = mimic_data_path + 'sepsis_{}/'.format(table_name.lower())
+    filtered_events_file_path = mimic_data_path + events_dirname.format(table_name.lower())
     # Loop through all patients that fits the sepsis 3 definition
-    for index, row in sepsis3_df_spĺit.iterrows():
+    for index, row in sepsis3_df_split.iterrows():
         # Ignore this icustay if already have their events filtered
         filtered_events_file_name = filtered_events_file_path + '{}.csv'.format(row['icustay_id'])
         if os.path.exists(filtered_events_file_name):
@@ -84,7 +84,7 @@ table_names = ['NOTEEVENTS', 'CHARTEVENTS', 'LABEVENTS']
 mimic_data_path = parameters['mimic_data_path']
 # Creating directories for the filtered events
 for table_name in table_names:
-    events_files_path = mimic_data_path + 'sepsis_{}/'.format(table_name.lower())
+    events_files_path = mimic_data_path + parameters["raw_events_dirname"].format(table_name.lower())
     if not os.path.exists(events_files_path):
         os.mkdir(events_files_path)
 
@@ -101,7 +101,8 @@ with mp.Pool(processes=6) as pool:
     manager = mp.Manager()
     queue = manager.Queue()
     partial_filter_events = partial(filter_events,
-                                    mimic_data_path=mimic_data_path, manager_queue=queue)
+                                    mimic_data_path=mimic_data_path, manager_queue=queue,
+                                    events_dirname=parameters["raw_events_dirname"])
     df_split = np.array_split(sepsis3_df, 10)
     product_parameters = product(df_split, table_names)
     # pool.starmap(partial_filter_events, product_parameters)

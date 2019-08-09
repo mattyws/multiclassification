@@ -7,6 +7,9 @@
   "raw_dataset_file_name" : "dataset_patients_no_filtering.csv",
   "dataset_file_name" : "dataset_patients.csv",
 
+  "raw_events_dirname" : "sepsis_{}/",
+  "hotencoded_events_dirname" : "sepsis_hotencoded_{}/",
+
   "date_pattern" : "%Y-%m-%d",
   "datetime_pattern" : "%Y-%m-%d %H:%M:%S"
 }
