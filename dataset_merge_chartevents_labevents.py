@@ -21,11 +21,11 @@ if parameters is None:
     exit(1)
 
 mimic_data_path = parameters['mimic_data_path']
-new_events_files_path = mimic_data_path + 'sepsis_binary_merged/'
+new_events_files_path = mimic_data_path + 'sepsis_merged/'
 if not os.path.exists(new_events_files_path):
     os.mkdir(new_events_files_path)
-chartevents_files_path= mimic_data_path + "sepsis_binary_chartevents/"
-labevents_files_path= mimic_data_path + "sepsis_binary_labevents/"
+chartevents_files_path= mimic_data_path + "sepsis_chartevents/"
+labevents_files_path= mimic_data_path + "sepsis_labevents/"
 
 print("Getting chartevents features")
 file = os.listdir(chartevents_files_path)[0]
