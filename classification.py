@@ -44,7 +44,7 @@ if not os.path.exists(parameters['modelCheckpointPath']):
 
 # Loading csv
 print("========= Loading data")
-data_csv = pd.read_csv(parameters['datasetCsvFilePathInsight'])
+data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
 data_csv = data_csv.sort_values(['icustay_id'])
 # Get the values in data_csv that have events saved
 data = np.array([itemid for itemid in list(data_csv['icustay_id'])

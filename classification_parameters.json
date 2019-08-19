@@ -1,8 +1,7 @@
 {
     "datasetFilesPath": "./mimic/sepsis_chartevents/",
     "datasetFilesPathBinary": "./mimic/sepsis_insight_bucket/",
-    "datasetCsvFilePath": "dataset_patients.csv",
-    "datasetCsvFilePathInsight": "dataset_patients.csv",
+    "datasetCsvFilePath": "dataset_patients_insight.csv",
     "modelCheckpointPath": "chartevents_checkpoint/",
     "modelConfigPath": "chartevents_checkpoint/config.json",
     "dataPath" : "mimic/sepsis_binary_merged/",
