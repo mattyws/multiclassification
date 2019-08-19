@@ -59,8 +59,8 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
 
 
 parameters = functions.load_parameters_file()
-events_path = "./mimic/sepsis_binary_merged/"
-new_events_path = "./mimic/sepsis_bucket/"
+events_path =  parameters['mimic_data_path'] + "sepsis_insight/"
+new_events_path = parameters['mimic_data_path'] + "sepsis_insight_bucket/"
 if not os.path.exists(new_events_path):
     os.mkdir(new_events_path)
 
