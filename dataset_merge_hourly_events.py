@@ -64,7 +64,7 @@ new_events_path = parameters['mimic_data_path'] + "sepsis_insight_bucket/"
 if not os.path.exists(new_events_path):
     os.mkdir(new_events_path)
 
-dataset = pd.read_csv(parameters['dataset_file_name'])
+dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
 if 'Unnamed: 0' in dataset.columns:
     dataset = dataset.drop(columns=['Unnamed: 0'])
 dataset.loc[:, 'intime'] = pd.to_datetime(dataset['intime'], format=parameters['datetime_pattern'])
