@@ -1,8 +1,15 @@
 """
 Filter selected features ids in mimic dataset and gets statistical values about the filtered features
 """
+from functools import partial
+from itertools import product
+
 import pandas as pd
 import numpy as np
+import multiprocessing as mp
+import pprint
+
+import sys
 
 import functions
 import os
@@ -56,6 +63,8 @@ parameters = functions.load_parameters_file()
 
 dataset_merged_files_path = parameters['mimic_data_path'] + 'sepsis_chartevents/'
 dataset_filtered_files_path = parameters['mimic_data_path'] + parameters['raw_events_dirname'].format('filtered')
+if not os.path.exists(dataset_filtered_files_path):
+    os.mkdir(dataset_filtered_files_path)
 
 events_ids = {
     "systolic_blood_pressure" : [6, 51, 442, 455, 3315, 3317, 3321, 3323, 6701, 224167, 227243, 220050, 220179, 225309],
@@ -72,5 +81,36 @@ events_ids = {
     "gcs_eyes" : [184, 220739]
 }
 
-files_list = [dataset_merged_files_path + x for x in os.listdir(dataset_merged_files_path)]
-files_list = np.array_split(files_list, 10)
+files_list = [dataset_merged_files_path + x for x in os.listdir(dataset_merged_files_path)][:2]
+total_files = len(files_list)
+with mp.Pool(processes=6) as pool:
+    manager = mp.Manager()
+    queue = manager.Queue()
+    # Generate data to be used by the processes
+    files_list = np.array_split(files_list, 10)
+    # Creating a partial maintaining some arguments with fixed values
+    partial_filter_features = partial(filter_features,
+                                      events_ids=events_ids,
+                                      manager_queue=queue)
+    print("===== Filtering events =====")
+    # Using starmap to pass the tuple as separated parameters to the functions
+    map_obj = pool.map_async(partial_filter_features, files_list)
+    consumed = 0
+    while not map_obj.ready():
+        for _ in range(queue.qsize()):
+            queue.get()
+            consumed += 1
+        sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+    results = map_obj.get()
+    statistics = dict()
+    for result in results:
+        for key in result.keys():
+            if key not in statistics.keys():
+                statistics[key] = result[key]
+            else:
+                for key2 in statistics[key].keys():
+                    statistics[key][key2] += result[key][key2]
+    print()
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(statistics)
+
