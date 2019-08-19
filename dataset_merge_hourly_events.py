@@ -90,4 +90,4 @@ with mp.Pool(processes=len(dataset_for_mp)) as pool:
     result = numpy.concatenate(result, axis=0)
     dataset_to_remove = dataset[dataset['icustay_id'].isin(result)]
     dataset = dataset.drop(dataset_to_remove.index)
-    dataset.to_csv(new_events_path+'dataset_patients_merged_hourly_events.csv')
+    dataset.to_csv(parameters['mimic_data_path'] +'dataset_patients_merged_hourly_events.csv')
