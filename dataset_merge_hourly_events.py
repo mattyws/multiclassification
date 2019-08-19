@@ -72,7 +72,7 @@ dataset.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(dataset['sofa_increa
                                                              format=parameters['datetime_pattern'])
 total_files = len(dataset)
 icustay_ids = list(dataset['icustay_id'])
-dataset_for_mp = numpy.array_split(icustay_ids, 10)
+dataset_for_mp = numpy.array_split(dataset, 10)
 
 m = mp.Manager()
 queue = m.Queue()
