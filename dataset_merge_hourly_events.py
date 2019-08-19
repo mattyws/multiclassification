@@ -71,10 +71,8 @@ dataset.loc[:, 'intime'] = pd.to_datetime(dataset['intime'], format=parameters['
 dataset.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(dataset['sofa_increasing_time_poe'],
                                                              format=parameters['datetime_pattern'])
 total_files = len(dataset)
-icustay_ids = dataset['icustay_id'].to_list()
-icustay_ids = [x for x in functions.chunk_lst(icustay_ids, SIZE=ceil(len(icustay_ids)/6))]
-dataset_for_mp = [ dataset[dataset['icustay_id'].isin(x)] for x in icustay_ids ]
-dataset_for_mp = dataset_for_mp[:2]
+icustay_ids = list(dataset['icustay_id'])
+dataset_for_mp = numpy.array_split(icustay_ids)
 
 m = mp.Manager()
 queue = m.Queue()
