@@ -60,7 +60,7 @@ def filter_features(files_list, events_ids, dataset_filtered_files_path, manager
             .mean(axis=1, skipna=True)
         patient_events = patient_events.drop(
             columns=["gcs_verbal", "gcs_motor", "gcs_eyes", "diastolic_blood_pressure", "temperature_fahrenheit"])
-        patient_events.to_csv(dataset_filtered_files_path + os.path.basename(f), index=False)
+        patient_events.to_csv(dataset_filtered_files_path + os.path.basename(f))
         if manager_queue is not None:
             manager_queue.put(f)
     return data_statistic
