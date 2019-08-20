@@ -48,6 +48,7 @@ def filter_features(files_list, events_ids, dataset_filtered_files_path, manager
             data_statistic[key]["missing_events"] += len([x for x in new_features[key].isna() if x is True])
             data_statistic[key]["total_events"] += len(new_features[key])
         patient_events = pd.DataFrame(new_features)
+        patient_events = patient_events.set_index('Unnamed: 0')
 
         patient_events['pulse_pressure'] = patient_events['systolic_blood_pressure'] \
             .sub(patient_events['diastolic_blood_pressure'], fill_value=0)
