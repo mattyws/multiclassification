@@ -121,9 +121,11 @@ with mp.Pool(processes=6) as pool:
     pp.pprint(statistics)
     # Now loop through all created files, remove all patients with only nan's
     data_csv = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
+    data_csv = data_csv.set_index(['icustay_id'])
     new_files_list = [dataset_filtered_files_path + x for x in os.listdir(dataset_filtered_files_path)]
     print("==== Removing patients with no events ====")
     consumed = 0
+    icustay_to_remove = []
     for f in new_files_list:
         sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
         icustay_id = os.path.basename(f).split('.')[0]
@@ -131,12 +133,13 @@ with mp.Pool(processes=6) as pool:
         # Don't have any events from insight, remove it from the csv and delete the file
         if new_patient_events.dropna(how='all').empty:
             os.remove(f)
-            data_csv = data_csv[data_csv['icustay_id'] != int(icustay_id)]
+            icustay_to_remove.append(icustay_id)
         else:
             # if not empty, do the na filling of values
             new_patient_events = new_patient_events.ffill().bfill()
             new_patient_events.to_csv(f)
         consumed += 1
+    data_csv = data_csv.drop(icustay_to_remove)
     data_csv.to_csv(parameters['mimic_data_path'] + 'dataset_patients_insight.csv')
 
 

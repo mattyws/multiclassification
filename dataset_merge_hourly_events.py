@@ -70,6 +70,7 @@ if 'Unnamed: 0' in dataset.columns:
 dataset.loc[:, 'intime'] = pd.to_datetime(dataset['intime'], format=parameters['datetime_pattern'])
 dataset.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(dataset['sofa_increasing_time_poe'],
                                                              format=parameters['datetime_pattern'])
+original_len = len(dataset)
 total_files = len(dataset)
 icustay_ids = list(dataset['icustay_id'])
 dataset_for_mp = numpy.array_split(dataset, 10)
@@ -90,4 +91,5 @@ with mp.Pool(processes=len(dataset_for_mp)) as pool:
     result = numpy.concatenate(result, axis=0)
     dataset_to_remove = dataset[dataset['icustay_id'].isin(result)]
     dataset = dataset.drop(dataset_to_remove.index)
-    dataset.to_csv(parameters['mimic_data_path'] +'dataset_patients_merged_hourly_events.csv')
+    if len(dataset) != original_len:
+        dataset.to_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
