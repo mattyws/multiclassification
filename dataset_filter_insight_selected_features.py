@@ -58,7 +58,6 @@ def filter_features(files_list, events_ids, dataset_filtered_files_path, manager
         patient_events.loc[:, 'temperature_fahrenheit'] = (patient_events['temperature_fahrenheit'] - 32) / 1.8
         patient_events.loc[:, 'temperature_celsius'] = patient_events[['temperature_fahrenheit', 'temperature_celsius']]\
             .mean(axis=1, skipna=True)
-        print(patient_events)
         patient_events = patient_events.drop(
             columns=["gcs_verbal", "gcs_motor", "gcs_eyes", "diastolic_blood_pressure", "temperature_fahrenheit"])
         patient_events.to_csv(dataset_filtered_files_path + os.path.basename(f))
