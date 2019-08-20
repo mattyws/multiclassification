@@ -47,20 +47,20 @@ def filter_features(files_list, events_ids, dataset_filtered_files_path, manager
                 new_features[key] = new_features[key].mean(axis=1, skipna=True)
             data_statistic[key]["missing_events"] += len([x for x in new_features[key].isna() if x is True])
             data_statistic[key]["total_events"] += len(new_features[key])
-        patient_events = pd.DataFrame(new_features)
+        new_patient_events = pd.DataFrame(new_features)
 
-        patient_events['pulse_pressure'] = patient_events['systolic_blood_pressure'] \
-            .sub(patient_events['diastolic_blood_pressure'], fill_value=0)
-        patient_events['gcs'] = patient_events['gcs_motor'].add(
-            patient_events['gcs_eyes'].add(patient_events['gcs_verbal'], fill_value=0)
+        new_patient_events['pulse_pressure'] = new_patient_events['systolic_blood_pressure'] \
+            .sub(new_patient_events['diastolic_blood_pressure'], fill_value=0)
+        new_patient_events['gcs'] = new_patient_events['gcs_motor'].add(
+            new_patient_events['gcs_eyes'].add(new_patient_events['gcs_verbal'], fill_value=0)
             , fill_value = 0
         )
-        patient_events.loc[:, 'temperature_fahrenheit'] = (patient_events['temperature_fahrenheit'] - 32) / 1.8
-        patient_events.loc[:, 'temperature_celsius'] = patient_events[['temperature_fahrenheit', 'temperature_celsius']]\
+        new_patient_events.loc[:, 'temperature_fahrenheit'] = (new_patient_events['temperature_fahrenheit'] - 32) / 1.8
+        new_patient_events.loc[:, 'temperature_celsius'] = new_patient_events[['temperature_fahrenheit', 'temperature_celsius']]\
             .mean(axis=1, skipna=True)
-        patient_events = patient_events.drop(
+        new_patient_events = new_patient_events.drop(
             columns=["gcs_verbal", "gcs_motor", "gcs_eyes", "diastolic_blood_pressure", "temperature_fahrenheit"])
-        patient_events.to_csv(dataset_filtered_files_path + os.path.basename(f))
+        new_patient_events.to_csv(dataset_filtered_files_path + os.path.basename(f))
         if manager_queue is not None:
             manager_queue.put(f)
     return data_statistic
