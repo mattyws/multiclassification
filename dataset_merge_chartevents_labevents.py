@@ -21,31 +21,19 @@ if parameters is None:
     exit(1)
 
 mimic_data_path = parameters['mimic_data_path']
-new_events_files_path = mimic_data_path + 'sepsis_merged/'
+new_events_files_path = mimic_data_path + 'sepsis_raw_merged/'
 if not os.path.exists(new_events_files_path):
     os.mkdir(new_events_files_path)
 chartevents_files_path= mimic_data_path + "sepsis_chartevents/"
 labevents_files_path= mimic_data_path + "sepsis_labevents/"
 
-print("Getting chartevents features")
-file = os.listdir(chartevents_files_path)[0]
-events = pd.read_csv(chartevents_files_path + file)
-chartevents_features = list(events.columns)
-print("Getting labevents features")
-file = os.listdir(labevents_files_path)[0]
-events = pd.read_csv(labevents_files_path + file)
-labevents_features = list(events.columns)
-
-
 dataset_csv = pd.read_csv(parameters['dataset_file_name'])
 
-def merge_events(icustay_id, chartevents_files_path, labevents_files_path, new_events_files_path,
-                            chartevents_features, labevents_features, datetime_pattern):
+def merge_events(icustay_id, chartevents_files_path, labevents_files_path, new_events_files_path, datetime_pattern):
     if not os.path.exists(new_events_files_path+'{}.csv'.format(icustay_id)) :
         if os.path.exists(chartevents_files_path + '{}.csv'.format(icustay_id)) or \
                 os.path.exists(labevents_files_path + '{}.csv'.format(icustay_id)):
             print("#### {} ####".format(icustay_id))
-            # Get events and change nominal to binary
             if os.path.exists(chartevents_files_path + '{}.csv'.format(icustay_id)):
                 chartevents = pd.read_csv(chartevents_files_path + '{}.csv'.format(icustay_id))
                 chartevents.loc[:, 'Unnamed: 0'] = pd.to_datetime(chartevents['Unnamed: 0'], format=datetime_pattern)
@@ -59,20 +47,16 @@ def merge_events(icustay_id, chartevents_files_path, labevents_files_path, new_e
             else:
                 labevents = None
             if chartevents is None:
-                print("{} Creating zero filled dataframe for chartevents".format(icustay_id))
-                chartevents = pd.DataFrame(0, index=labevents.index, columns=chartevents_features)
+                chartevents = pd.DataFrame([])
             if labevents is None:
-                print("{} Creating zero filled dataframe for labevents".format(icustay_id))
-                labevents = pd.DataFrame(0, index=chartevents.index, columns=labevents_features)
+                labevents = pd.DataFrame([])
             chartevents = chartevents.add_prefix('chartevents_')
             labevents = labevents.add_prefix('labevents_')
             events = pd.merge(chartevents, labevents, how='outer', left_index=True, right_index=True)
-            events = events.fillna(0)
             if 'labevents_Unnamed: 0' in events.columns:
                 events = events.drop(columns=['labevents_Unnamed: 0'])
             if 'chartevents_Unnamed: 0' in events.columns:
                 events = events.drop(columns=['chartevents_Unnamed: 0'])
-            # print(events)
             events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
 
 # Using as arg only the icustay_id, bc of fixating the others parameters
@@ -82,8 +66,6 @@ partial_merge_events = partial(merge_events,
                                chartevents_files_path=chartevents_files_path,
                                labevents_files_path=labevents_files_path,
                                new_events_files_path=new_events_files_path,
-                               chartevents_features = chartevents_features,
-                               labevents_features = labevents_features,
                                datetime_pattern = parameters['datetime_pattern'])
 # The results of the processes
 results = []
