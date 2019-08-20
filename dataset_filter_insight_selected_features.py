@@ -123,7 +123,7 @@ with mp.Pool(processes=6) as pool:
     pp = pprint.PrettyPrinter(indent=4)
     pp.pprint(statistics)
     # Now loop through all created files, remove all patients with only nan's
-    data_csv = pd.read_csv(parameters['mimic_data_path'] + parameters['raw_dataset_file_name'])
+    data_csv = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
     data_csv = data_csv.set_index(['icustay_id'])
     new_files_list = [dataset_filtered_files_path + x for x in os.listdir(dataset_filtered_files_path)]
     print("==== Removing patients with no events ====")

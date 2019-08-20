@@ -5,7 +5,8 @@
   "sepsis3_df_no_exclusions" :  "sepsis3-df-no-exclusions.csv",
   "pivoted_sofa" :  "pivoted_sofa.csv",
   "raw_dataset_file_name" : "dataset_patients_no_filtering.csv",
-  "dataset_file_name" : "dataset_patients_insight.csv",
+  "dataset_file_name" : "dataset_patients.csv",
+  "insight_dataset_file_name" : "dataset_patients_insight.csv",
 
   "raw_events_dirname" : "sepsis_{}/",
   "hotencoded_events_dirname" : "sepsis_hotencoded_{}/",
