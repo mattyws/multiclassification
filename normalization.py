@@ -234,6 +234,10 @@ class Normalization(object):
             data = data.drop(columns=['chartevents_Unnamed: 0'])
         if 'labevents_Unnamed: 0' in data.columns:
             data = data.drop(columns=['labevents_Unnamed: 0'])
+        if 'starttime' in data.columns:
+            data = data.drop(columns=['starttime'])
+        if 'endtime' in data.columns:
+            data = data.drop(columns=['endtime'])
         data = self.__normalize_dataframe(data, self.normalization_values)
         data = np.array(data.values)
         self.__save_normalized_data(data, self.temporary_path, fileName)

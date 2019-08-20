@@ -12,6 +12,7 @@
     "trainingGeneratorPath": "chartevents_checkpoint/dataTrainGenerator.pkl",
     "testingGeneratorPath": "chartevents_checkpoint/dataTestGenerator.pkl",
     "resultFilePath": "chartevents_checkpoint/result.csv",
+    "temporary_data_path" : "mimic/data_tmp_{}/",
     "dataLength" : 12,
     "outputUnits": [
         128,

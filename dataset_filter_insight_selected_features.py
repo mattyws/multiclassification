@@ -128,7 +128,7 @@ with mp.Pool(processes=6) as pool:
     icustay_to_remove = []
     for f in new_files_list:
         sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-        icustay_id = os.path.basename(f).split('.')[0]
+        icustay_id = int(os.path.basename(f).split('.')[0])
         new_patient_events = pd.read_csv(f)
         # Don't have any events from insight, remove it from the csv and delete the file
         if new_patient_events.dropna(how='all').empty:

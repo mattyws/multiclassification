@@ -54,9 +54,9 @@ class EmbeddingObjectsDelete(object):
             os.remove(file)
 
 class LengthLongitudinalDataGenerator(Sequence):
-    def __init__(self, sizesDataPaths, labels, max_batch_size=50, iterForever=False):
+    def __init__(self, sizes_data_paths, labels, max_batch_size=50, iterForever=False):
         self.max_batch_size = max_batch_size
-        self.batches = sizesDataPaths
+        self.batches = sizes_data_paths
         self.labels = labels
         self.iterForever = iterForever
         self.__iterPos = 0
