@@ -39,7 +39,6 @@ def filter_features(files_list, events_ids, dataset_filtered_files_path, manager
                 data_statistic[key]["total_events"] = 0
             new_features[key] = patient_events[
                 [x for x in ids_in_patients if x != 'Unnamed: 0' and int(x.split('_')[-1]) in events_ids[key]]
-                    .append('Unnamed: 0')
             ]
             if new_features[key].empty:
                 new_features[key] = pd.Series(np.nan, index=patient_events.index)
@@ -48,8 +47,8 @@ def filter_features(files_list, events_ids, dataset_filtered_files_path, manager
                 new_features[key] = new_features[key].mean(axis=1, skipna=True)
             data_statistic[key]["missing_events"] += len([x for x in new_features[key].isna() if x is True])
             data_statistic[key]["total_events"] += len(new_features[key])
-        patient_events = pd.DataFrame(new_features)
-        patient_events = patient_events.set_index(['Unnamed: 0'])
+        new_patient_events = pd.DataFrame(new_features)
+        print(new_patient_events)
 
         patient_events['pulse_pressure'] = patient_events['systolic_blood_pressure'] \
             .sub(patient_events['diastolic_blood_pressure'], fill_value=0)
