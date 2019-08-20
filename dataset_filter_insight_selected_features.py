@@ -51,7 +51,10 @@ def filter_features(files_list, events_ids, dataset_filtered_files_path, manager
 
         patient_events['pulse_pressure'] = patient_events['systolic_blood_pressure'] \
             .sub(patient_events['diastolic_blood_pressure'], fill_value=0)
-        patient_events['gcs'] = patient_events['gcs_motor'] + patient_events['gcs_eyes'] + patient_events['gcs_verbal']
+        patient_events['gcs'] = patient_events['gcs_motor'].add(
+            patient_events['gcs_eyes'].add(patient_events['gcs_verbal'], fill_value=0)
+            , fill_value = 0
+        )
         patient_events.loc[:, 'temperature_fahrenheit'] = (patient_events['temperature_fahrenheit'] - 32) / 1.8
         patient_events.loc[:, 'temperature_celsius'] = patient_events[['temperature_fahrenheit', 'temperature_celsius']]\
             .mean(axis=1, skipna=True)
