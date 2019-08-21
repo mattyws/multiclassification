@@ -25,6 +25,8 @@ def filter_events(sepsis3_df_split, table_name, mimic_data_path="", manager_queu
     filtered_events_file_path = mimic_data_path + events_dirname.format(table_name.lower())
     # Loop through all patients that fits the sepsis 3 definition
     for index, row in sepsis3_df_split.iterrows():
+        if manager_queue is not None:
+            manager_queue.put(index)
         # Ignore this icustay if already have their events filtered
         filtered_events_file_name = filtered_events_file_path + '{}.csv'.format(row['icustay_id'])
         if os.path.exists(filtered_events_file_name):
@@ -72,9 +74,6 @@ def filter_events(sepsis3_df_split, table_name, mimic_data_path="", manager_queu
             patient_data = patient_data.set_index(['itemid'])
             patient_data = patient_data.T
             patient_data.to_csv(filtered_events_file_name, quoting=csv.QUOTE_NONNUMERIC)
-    if manager_queue is not None:
-        manager_queue.put(index)
-
 
 
 parameters = functions.load_parameters_file()
