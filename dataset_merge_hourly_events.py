@@ -92,4 +92,4 @@ with mp.Pool(processes=len(dataset_for_mp)) as pool:
     dataset_to_remove = dataset[dataset['icustay_id'].isin(result)]
     dataset = dataset.drop(dataset_to_remove.index)
     if len(dataset) != original_len:
-        dataset.to_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
+        dataset.to_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'])
