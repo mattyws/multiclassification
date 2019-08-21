@@ -44,6 +44,8 @@ def merge_events(icustay_id, chartevents_files_path, labevents_files_path, new_e
             labevents = labevents.set_index(["Unnamed: 0"])
         else:
             labevents = None
+        if chartevents is None and labevents is None:
+            return
         if chartevents is None:
             chartevents = pd.DataFrame([])
         if labevents is None:
