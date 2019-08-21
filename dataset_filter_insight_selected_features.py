@@ -144,7 +144,7 @@ with mp.Pool(processes=6) as pool:
             new_patient_events.to_csv(f, index=False)
         consumed += 1
     data_csv = data_csv.drop(icustay_to_remove)
-    data_csv.to_csv(parameters['mimic_data_path'] + 'dataset_patients_insight.csv')
+    data_csv.to_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'])
 
 
 
