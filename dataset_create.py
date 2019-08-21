@@ -45,7 +45,6 @@ if not os.path.exists(mimic_data_path + parameters["raw_dataset_file_name"]):
     infected_icu.loc[:, 'outtime'] = pd.to_datetime(infected_icu['outtime'], format=datetime_pattern)
     infected_icu.loc[:, 'suspected_infection_time_poe'] = pd.to_datetime(infected_icu['suspected_infection_time_poe'],
                                                                          format=datetime_pattern)
-    total_aleatory_patients = 20000
     sepsis3_patients = pd.DataFrame([])
     less_7 = 0
     metavision = 0
@@ -140,7 +139,7 @@ if not os.path.exists(mimic_data_path + parameters["raw_dataset_file_name"]):
             logging.debug("Sofa incresing time: {} - Sofa = {}".format(aux_patient['sofa_increasing_time_poe'].values, aux_patient['sofa_on_increasing_time'].values))
             sepsis3_patients = pd.concat([sepsis3_patients, aux_patient], ignore_index=True)
 
-        if aux_patient is None and aleatory_patients <= total_aleatory_patients:
+        if aux_patient is None:
             aux_patient = dict()
             aux_patient['is_infected'] = infected_patient['suspicion_poe']
             aux_patient['hadm_id'] = infected_patient['hadm_id']
