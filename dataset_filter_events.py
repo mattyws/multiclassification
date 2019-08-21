@@ -72,8 +72,8 @@ def filter_events(sepsis3_df_split, table_name, mimic_data_path="", manager_queu
             patient_data = patient_data.set_index(['itemid'])
             patient_data = patient_data.T
             patient_data.to_csv(filtered_events_file_name, quoting=csv.QUOTE_NONNUMERIC)
-        if manager_queue is not None:
-            manager_queue.put(index)
+    if manager_queue is not None:
+        manager_queue.put(index)
 
 
 
