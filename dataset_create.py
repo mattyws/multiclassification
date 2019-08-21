@@ -55,6 +55,8 @@ if not os.path.exists(mimic_data_path + parameters["raw_dataset_file_name"]):
     not_infected_patients = 0
     aleatory_patients = 0
     for index, infected_patient in infected_icu.iterrows():
+        if not os.path.exists('mimic/sepsis_raw_merged/{}.csv'.format(infected_patient['icustay_id'])):
+            continue
         if infected_patient['age'] < 15 or infected_patient['age'] > 80:
             print("Patient age do not meet criteria")
             continue
