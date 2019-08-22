@@ -30,7 +30,7 @@ if not os.path.exists(new_events_files_path):
 chartevents_files_path= mimic_data_path + "sepsis_chartevents/"
 labevents_files_path= mimic_data_path + "sepsis_labevents/"
 
-dataset_csv = pd.read_csv(parameters['dataset_file_name'])
+dataset_csv = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
 
 def merge_events(icustay_ids, chartevents_files_path, labevents_files_path, new_events_files_path, datetime_pattern,
                  manager_queue=None):
@@ -48,8 +48,8 @@ def merge_events(icustay_ids, chartevents_files_path, labevents_files_path, new_
                 labevents = labevents.set_index(["Unnamed: 0"])
             else:
                 labevents = None
-            # if chartevents is None and labevents is None:
-            #     return
+            if chartevents is None and labevents is None:
+                return
             if chartevents is None:
                 chartevents = pd.DataFrame([])
             if labevents is None:
