@@ -48,6 +48,7 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
             starttime += timedelta(hours=1)
         print(events)
         print(buckets)
+        exit()
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
         if buckets.empty:
@@ -74,7 +75,7 @@ dataset.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(dataset['sofa_increa
 original_len = len(dataset)
 total_files = len(dataset)
 icustay_ids = list(dataset['icustay_id'])
-dataset_for_mp = numpy.array_split(dataset, 10)
+dataset_for_mp = numpy.array_split(dataset, 10)[0]
 
 
 with mp.Pool(processes=len(dataset_for_mp)) as pool:
@@ -82,19 +83,20 @@ with mp.Pool(processes=len(dataset_for_mp)) as pool:
     queue = m.Queue()
     partial_normalize_files = partial(process_events, events_path=events_path, new_events_path=new_events_path,
                                       manager_queue=queue)
-    map_obj = pool.map_async(partial_normalize_files, dataset_for_mp)
-    consumed = 0
-    while not map_obj.ready():
-        for _ in range(queue.qsize()):
-            queue.get()
-            consumed += 1
-        sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-    result = map_obj.get()
-    result = numpy.concatenate(result, axis=0)
-    print(result)
-    print(len(result))
-    dataset_to_remove = dataset[dataset['icustay_id'].isin(result)]
-    dataset = dataset.drop(dataset_to_remove.index)
-    print(original_len, len(dataset))
+    partial_normalize_files(dataset_for_mp)
+    # map_obj = pool.map_async(partial_normalize_files, dataset_for_mp)
+    # consumed = 0
+    # while not map_obj.ready():
+    #     for _ in range(queue.qsize()):
+    #         queue.get()
+    #         consumed += 1
+    #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+    # result = map_obj.get()
+    # result = numpy.concatenate(result, axis=0)
+    # print(result)
+    # print(len(result))
+    # dataset_to_remove = dataset[dataset['icustay_id'].isin(result)]
+    # dataset = dataset.drop(dataset_to_remove.index)
+    # print(original_len, len(dataset))
     # if len(dataset) != original_len:
     #     dataset.to_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'] + '2')
