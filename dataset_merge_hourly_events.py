@@ -46,6 +46,7 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
                     bucket[column] = numpy.nan
             buckets.append(bucket)
             starttime += timedelta(hours=1)
+        print(events)
         print(buckets)
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
