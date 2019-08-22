@@ -36,7 +36,6 @@ def merge_events(icustay_ids, chartevents_files_path, labevents_files_path, new_
                  manager_queue=None):
     for icustay_id in icustay_ids:
         if not os.path.exists(new_events_files_path+'{}.csv'.format(icustay_id)) :
-            print("#### {} ####".format(icustay_id))
             if os.path.exists(chartevents_files_path + '{}.csv'.format(icustay_id)):
                 chartevents = pd.read_csv(chartevents_files_path + '{}.csv'.format(icustay_id))
                 chartevents.loc[:, 'Unnamed: 0'] = pd.to_datetime(chartevents['Unnamed: 0'], format=datetime_pattern)
