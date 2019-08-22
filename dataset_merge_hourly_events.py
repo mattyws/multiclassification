@@ -36,7 +36,6 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
             bucket['starttime'] = starttime
             bucket['endtime'] = endtime
             bucket_events = events[(events['Unnamed: 0'] > starttime) & (events['Unnamed: 0'] <= endtime)]
-            print(bucket_events)
             for column in bucket_events.columns:
                 if column == 'Unnamed: 0':
                     continue
