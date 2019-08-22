@@ -31,7 +31,11 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
         # events.loc[: 'starttime']
         starttime = patient['intime'].replace(minute=0, second=0)
         buckets = []
-        while starttime < patient['sofa_increasing_time_poe']:
+        if pd.isna(patient['sofa_increasing_time_poe']):
+            cut_time = patient['outtime']
+        else:
+            cut_time = patient['sofa_increasing_time_poe']
+        while starttime < cut_time:
             endtime = starttime + timedelta(hours=1)
             print(starttime, endtime)
             bucket = dict()
@@ -73,6 +77,7 @@ dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['insight_datase
 if 'Unnamed: 0' in dataset.columns:
     dataset = dataset.drop(columns=['Unnamed: 0'])
 dataset.loc[:, 'intime'] = pd.to_datetime(dataset['intime'], format=parameters['datetime_pattern'])
+dataset.loc[:, 'outtime'] = pd.to_datetime(dataset['outtime'], format=parameters['datetime_pattern'])
 dataset.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(dataset['sofa_increasing_time_poe'],
                                                              format=parameters['datetime_pattern'])
 original_len = len(dataset)
