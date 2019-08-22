@@ -48,6 +48,8 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
         if buckets.empty:
+            print(buckets)
+            print("empty")
             icustays_to_remove.append(patient['icustay_id'])
         else:
             buckets.to_csv(new_events_path+'{}.csv'.format(patient['icustay_id']), index=False)
@@ -88,6 +90,8 @@ with mp.Pool(processes=len(dataset_for_mp)) as pool:
         sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
     result = map_obj.get()
     result = numpy.concatenate(result, axis=0)
+    print(result)
+    print(len(result))
     dataset_to_remove = dataset[dataset['icustay_id'].isin(result)]
     dataset = dataset.drop(dataset_to_remove.index)
     print(original_len, len(dataset))
