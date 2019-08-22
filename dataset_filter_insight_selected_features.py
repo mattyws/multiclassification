@@ -135,7 +135,7 @@ with mp.Pool(processes=6) as pool:
         new_patient_events = pd.read_csv(f)
         # Don't have any events from insight, remove it from the csv and delete the file
         if new_patient_events.dropna(how='all').empty:
-            os.remove(f)
+            # os.remove(f)
             if icustay_id in data_csv.index:
                 icustay_to_remove.append(icustay_id)
         else:
@@ -143,7 +143,8 @@ with mp.Pool(processes=6) as pool:
             new_patient_events = new_patient_events.ffill().bfill()
             new_patient_events.to_csv(f, index=False)
         consumed += 1
-    data_csv = data_csv.drop(icustay_to_remove)
+    print("Patients with empty events: " + len(icustay_to_remove))
+    # data_csv = data_csv.drop(icustay_to_remove)
     data_csv.to_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'])
 
 
