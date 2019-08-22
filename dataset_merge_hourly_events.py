@@ -48,6 +48,7 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
         if buckets.empty:
+            print(events)
             print(buckets)
             print("empty")
             icustays_to_remove.append(patient['icustay_id'])
