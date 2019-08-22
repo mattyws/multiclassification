@@ -50,10 +50,10 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
             starttime += timedelta(hours=1)
         print(events)
         print(buckets)
-        exit()
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
         if buckets.empty:
+            exit()
             icustays_to_remove.append(patient['icustay_id'])
         else:
             buckets.to_csv(new_events_path+'{}.csv'.format(patient['icustay_id']), index=False)
