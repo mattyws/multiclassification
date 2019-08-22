@@ -22,6 +22,7 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
                    manager_queue=None):
     icustays_to_remove = []
     for index, patient in dataset.iterrows():
+        print(patient)
         if not os.path.exists(events_path+'{}.csv'.format(patient['icustay_id'])):
             continue
         events = pd.read_csv(events_path+'{}.csv'.format(patient['icustay_id']))
