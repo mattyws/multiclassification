@@ -22,7 +22,6 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
                    manager_queue=None):
     icustays_to_remove = []
     for index, patient in dataset.iterrows():
-        print(patient)
         if not os.path.exists(events_path+'{}.csv'.format(patient['icustay_id'])):
             continue
         events = pd.read_csv(events_path+'{}.csv'.format(patient['icustay_id']))
@@ -37,7 +36,6 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
             cut_time = patient['sofa_increasing_time_poe']
         while starttime < cut_time:
             endtime = starttime + timedelta(hours=1)
-            print(starttime, endtime)
             bucket = dict()
             bucket['starttime'] = starttime
             bucket['endtime'] = endtime
@@ -50,15 +48,11 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
                     bucket[column] = sum(values)/len(values)
                 else:
                     bucket[column] = numpy.nan
-            print(bucket)
             buckets.append(bucket)
             starttime += timedelta(hours=1)
-        print(events)
-        print(buckets)
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
         if buckets.empty:
-            exit()
             icustays_to_remove.append(patient['icustay_id'])
         else:
             buckets.to_csv(new_events_path+'{}.csv'.format(patient['icustay_id']), index=False)
@@ -83,28 +77,27 @@ dataset.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(dataset['sofa_increa
 original_len = len(dataset)
 total_files = len(dataset)
 icustay_ids = list(dataset['icustay_id'])
-dataset_for_mp = numpy.array_split(dataset, 10)[0]
+dataset_for_mp = numpy.array_split(dataset, 10)
 
 
-# with mp.Pool(processes=len(dataset_for_mp)) as pool:
-m = mp.Manager()
-queue = m.Queue()
-partial_normalize_files = partial(process_events, events_path=events_path, new_events_path=new_events_path,
+with mp.Pool(processes=len(dataset_for_mp)) as pool:
+    m = mp.Manager()
+    queue = m.Queue()
+    partial_normalize_files = partial(process_events, events_path=events_path, new_events_path=new_events_path,
                                   manager_queue=queue)
-partial_normalize_files(dataset_for_mp)
-    # map_obj = pool.map_async(partial_normalize_files, dataset_for_mp)
-    # consumed = 0
-    # while not map_obj.ready():
-    #     for _ in range(queue.qsize()):
-    #         queue.get()
-    #         consumed += 1
-    #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-    # result = map_obj.get()
-    # result = numpy.concatenate(result, axis=0)
-    # print(result)
-    # print(len(result))
-    # dataset_to_remove = dataset[dataset['icustay_id'].isin(result)]
-    # dataset = dataset.drop(dataset_to_remove.index)
-    # print(original_len, len(dataset))
-    # if len(dataset) != original_len:
-    #     dataset.to_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'] + '2')
+    partial_normalize_files(dataset_for_mp)
+    map_obj = pool.map_async(partial_normalize_files, dataset_for_mp)
+    consumed = 0
+    while not map_obj.ready():
+        for _ in range(queue.qsize()):
+            queue.get()
+            consumed += 1
+        sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+    result = map_obj.get()
+    result = numpy.concatenate(result, axis=0)
+    dataset_to_remove = dataset[dataset['icustay_id'].isin(result)]
+    dataset = dataset.drop(dataset_to_remove.index)
+    print(original_len, len(dataset))
+    if len(dataset) != original_len:
+        print("Removed some data")
+        dataset.to_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'] + '2')
