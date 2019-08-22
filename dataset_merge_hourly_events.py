@@ -47,15 +47,13 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
             starttime += timedelta(hours=1)
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
-        if len(buckets) == 0:
+        if buckets.empty:
             icustays_to_remove.append(patient['icustay_id'])
         else:
             buckets.to_csv(new_events_path+'{}.csv'.format(patient['icustay_id']), index=False)
         if manager_queue is not None:
             manager_queue.put(index)
     return icustays_to_remove
-
-
 
 
 parameters = functions.load_parameters_file()
@@ -92,5 +90,6 @@ with mp.Pool(processes=len(dataset_for_mp)) as pool:
     result = numpy.concatenate(result, axis=0)
     dataset_to_remove = dataset[dataset['icustay_id'].isin(result)]
     dataset = dataset.drop(dataset_to_remove.index)
-    if len(dataset) != original_len:
-        dataset.to_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'])
+    print(original_len, len(dataset))
+    # if len(dataset) != original_len:
+    #     dataset.to_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'] + '2')
