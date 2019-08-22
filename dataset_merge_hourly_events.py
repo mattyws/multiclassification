@@ -27,6 +27,7 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
         events = pd.read_csv(events_path+'{}.csv'.format(patient['icustay_id']))
         # Unnamed: 0 here represents the time for the events
         events.loc[:, 'Unnamed: 0'] = pd.to_datetime(events['Unnamed: 0'], format=datetime_pattern)
+        # events.loc[: 'starttime']
         starttime = patient['intime'].replace(minute=0, second=0)
         buckets = []
         while starttime < patient['sofa_increasing_time_poe']:
@@ -35,6 +36,7 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
             bucket['starttime'] = starttime
             bucket['endtime'] = endtime
             bucket_events = events[(events['Unnamed: 0'] > starttime) & (events['Unnamed: 0'] <= endtime)]
+            print(bucket_events)
             for column in bucket_events.columns:
                 if column == 'Unnamed: 0':
                     continue
@@ -48,9 +50,6 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
         if buckets.empty:
-            print(events)
-            print(buckets)
-            print("empty")
             icustays_to_remove.append(patient['icustay_id'])
         else:
             buckets.to_csv(new_events_path+'{}.csv'.format(patient['icustay_id']), index=False)
