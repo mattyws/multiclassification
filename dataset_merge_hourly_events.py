@@ -85,7 +85,6 @@ with mp.Pool(processes=len(dataset_for_mp)) as pool:
     queue = m.Queue()
     partial_normalize_files = partial(process_events, events_path=events_path, new_events_path=new_events_path,
                                   manager_queue=queue)
-    partial_normalize_files(dataset_for_mp)
     map_obj = pool.map_async(partial_normalize_files, dataset_for_mp)
     consumed = 0
     while not map_obj.ready():
