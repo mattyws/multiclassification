@@ -48,7 +48,6 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
             starttime += timedelta(hours=1)
         print(events)
         print(buckets)
-        exit()
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
         if buckets.empty:
