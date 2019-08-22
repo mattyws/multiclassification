@@ -32,6 +32,7 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
         buckets = []
         while starttime < patient['sofa_increasing_time_poe']:
             endtime = starttime + timedelta(hours=1)
+            print(starttime, endtime)
             bucket = dict()
             bucket['starttime'] = starttime
             bucket['endtime'] = endtime
@@ -44,10 +45,12 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
                     bucket[column] = sum(values)/len(values)
                 else:
                     bucket[column] = numpy.nan
+            print(bucket)
             buckets.append(bucket)
             starttime += timedelta(hours=1)
         print(events)
         print(buckets)
+        exit()
         buckets = pd.DataFrame(buckets)
         buckets = buckets.sort_index(axis=1)
         if buckets.empty:
