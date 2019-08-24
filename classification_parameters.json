@@ -1,5 +1,5 @@
 {
-    "datasetCsvFilePath": "dataset_patients_insight.csv",
+    "datasetCsvFilePath": "mimic/dataset_patients_insight.csv",
     "modelCheckpointPath": "mimic/insight_training/checkpoint/",
     "modelConfigPath": "mimic/insight_training/checkpoint/config.json",
     "dataPath" : "mimic/sepsis_insight_bucket/",
