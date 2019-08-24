@@ -10,7 +10,8 @@
     "trainingGeneratorPath": "mimic/insight_training/checkpoint/dataTrainGenerator.pkl",
     "testingGeneratorPath": "mimic/insight_training/checkpoint/dataTestGenerator.pkl",
     "resultFilePath": "mimic/insight_training/checkpoint/result.csv",
-    "temporary_data_path" : "mimic/data_tmp_{}/",
+    "temporary_data_path" : "mimic/insight_training/data_tmp_{}/",
+    "normalization_data_path": "mimic/insight_training/normalization_values_{}.pkl/",
     "dataLength" : 12,
     "outputUnits": [
         128,
