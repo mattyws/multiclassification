@@ -68,6 +68,10 @@ if 'chartevents_Unnamed: 0' in aux.columns:
     aux = aux.drop(columns=['chartevents_Unnamed: 0'])
 if 'labevents_Unnamed: 0' in aux.columns:
     aux = aux.drop(columns=['labevents_Unnamed: 0'])
+if 'starttime' in aux.columns:
+    aux = aux.drop(columns=['starttime'])
+if 'endtime' in aux.columns:
+    aux = aux.drop(columns=['endtime'])
 inputShape = (None, len(aux.columns))
 
 config = None

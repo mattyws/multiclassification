@@ -41,6 +41,7 @@ def get_file_value_counts(file, pickle_object_path):
     if 'endtime' in df.columns:
         df = df.drop(columns=['endtime'])
     counts = dict()
+    print(df.columns)
     for column in df.columns:
         counts[column] = df[column].value_counts().to_dict()
         # counts[column].index = counts[column].index.map(float)
