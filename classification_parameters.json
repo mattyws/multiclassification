@@ -13,8 +13,10 @@
     "temporary_data_path" : "mimic/insight_training/data_tmp_{}/",
     "normalization_data_path": "mimic/insight_training/normalization_values_{}.pkl",
     "normalization_value_counts_path" : "mimic/insight_training/value_counts/",
-    "events_sizes_file" : "mimic/insight_training/sizes.pkl",
-    "events_sizes_labels_file" : "mimic/insight_training/sizes_labels.pkl",
+    "training_events_sizes_file" : "mimic/insight_training/sizes.pkl",
+    "training_events_sizes_labels_file" : "mimic/insight_training/sizes_labels.pkl",
+    "testing_events_sizes_file" : "mimic/insight_training/sizes.pkl",
+    "testing_events_sizes_labels_file" : "mimic/insight_training/sizes_labels.pkl",
     "dataLength" : 12,
     "outputUnits": [
         128,

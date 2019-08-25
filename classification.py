@@ -121,9 +121,11 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             print("### Getting sizes ###")
             train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                           , classes[trainIndex]
-                                                                          , sizes_filename=parameters['events_sizes_file']
-                                                                          , classes_filename=parameters['events_sizes_labels_file'])
-            test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex])
+                                                                          , sizes_filename=parameters['training_events_sizes_file']
+                                                                          , classes_filename=parameters['training_events_sizes_labels_file'])
+            test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
+                                                                , sizes_filename = parameters['testing_events_sizes_file']
+                                                                , classes_filename = parameters['tessting_events_sizes_labels_file'])
             dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels)
             dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
             # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
