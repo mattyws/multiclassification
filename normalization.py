@@ -41,7 +41,6 @@ def get_file_value_counts(file, pickle_object_path):
     if 'endtime' in df.columns:
         df = df.drop(columns=['endtime'])
     counts = dict()
-    print(df.columns)
     for column in df.columns:
         counts[column] = df[column].value_counts().to_dict()
         # counts[column].index = counts[column].index.map(float)
@@ -65,7 +64,7 @@ def chunk_lst(data, SIZE=10000):
 
 
 class NormalizationValues(object):
-    def __init__(self, files_list, pickle_object_path="normalization_values/"):
+    def __init__(self, files_list, pickle_object_path="value_counts/"):
         self.files_list = files_list
         if pickle_object_path[-1] != '/':
             pickle_object_path += '/'

@@ -58,7 +58,7 @@ classes_for_stratified = np.array([1 if c == 'sepsis' else 0 for c in list(data_
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 
 print("========= Preparing normalization values")
-normalization_values = NormalizationValues(data)
+normalization_values = NormalizationValues(data, pickle_object_path=parameters['normalization_value_counts_path'])
 normalization_values.prepare()
 # Get input shape
 aux = pd.read_csv(data[0])
