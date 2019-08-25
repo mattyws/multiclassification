@@ -161,7 +161,12 @@ class NormalizationValues(object):
 
         values, weights -- Numpy ndarrays with the same shape.
         """
-        average = np.average(values, weights=weights)
+        try:
+            average = np.average(values, weights=weights)
+        except Exception as e:
+            print(values, weights)
+            print(e)
+            exit()
         # Fast and numerically precise:
         variance = np.average((values - average) ** 2, weights=weights)
         return (average, math.sqrt(variance))
