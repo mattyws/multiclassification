@@ -180,9 +180,6 @@ def divide_by_events_lenght(data_list, classes, sizes_filename="sizes.pkl", clas
     if os.path.exists(classes_filename):
         with open(classes_filename, 'rb') as sizes_handler:
             labels = pickle.load(sizes_handler)
-    print(sizes_filename)
-    print(sizes)
-    print(labels)
     if sizes is None and labels is None:
         sizes = dict()
         labels = dict()
@@ -201,6 +198,4 @@ def divide_by_events_lenght(data_list, classes, sizes_filename="sizes.pkl", clas
             pickle.dump(sizes, sizes_handler)
         with open(classes_filename, 'wb') as sizes_handler:
             pickle.dump(labels, sizes_handler)
-    else:
-        raise Exception("Some problem on sizes/labels file.")
     return sizes, labels
