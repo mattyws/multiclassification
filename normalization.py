@@ -31,9 +31,15 @@ def get_file_value_counts(file, pickle_object_path):
         return None
     df = pd.read_csv(file)
     if 'Unnamed: 0' in df.columns:
-        df = df.set_index(['Unnamed: 0'])
+        df = df.drop(columns=['Unnamed: 0'])
+    if 'chartevents_Unnamed: 0' in df.columns:
+        df = df.drop(columns=['chartevents_Unnamed: 0'])
     if 'labevents_Unnamed: 0' in df.columns:
         df = df.drop(columns=['labevents_Unnamed: 0'])
+    if 'starttime' in df.columns:
+        df = df.drop(columns=['starttime'])
+    if 'endtime' in df.columns:
+        df = df.drop(columns=['endtime'])
     counts = dict()
     for column in df.columns:
         counts[column] = df[column].value_counts().to_dict()
