@@ -119,7 +119,10 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))
             print("### Getting sizes ###")
-            train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex], classes[trainIndex])
+            train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
+                                                                          , classes[trainIndex]
+                                                                          , sizes_filename=parameters['events_sizes_file']
+                                                                          , classes_filename=parameters['events_sizes_labels_file'])
             test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex])
             dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels)
             dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
