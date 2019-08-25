@@ -164,7 +164,7 @@ class NormalizationValues(object):
         try:
             average = np.average(values, weights=weights)
         except Exception as e:
-            print(values, weights)
+            print(values)
             print(e)
             exit()
         # Fast and numerically precise:
