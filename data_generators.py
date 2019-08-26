@@ -67,7 +67,7 @@ class LengthLongitudinalDataGenerator(Sequence):
         batch_num = 0
         for key in self.batches.keys():
             split_data = np.array_split(self.batches[key], ceil(len(self.batches[key])/self.max_batch_size) )
-            split_classes = np.array_split(self.batches[key], ceil(len(self.batches[key]) / self.max_batch_size))
+            split_classes = np.array_split(self.labels[key], ceil(len(self.labels[key]) / self.max_batch_size))
             for s, c in zip(split_data, split_classes):
                 new_batches[batch_num] = s
                 new_labels[batch_num] = c
