@@ -128,8 +128,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                                 , classes_filename = parameters['testing_events_sizes_labels_file'])
             dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels)
             dataTrainGenerator.create_batches()
-            for i in range(len(dataTestGenerator)):
-                print(dataTestGenerator[i])
+            for i in range(len(dataTrainGenerator)):
+                print(dataTrainGenerator[i])
                 if i == 3:
                     exit()
             exit()
