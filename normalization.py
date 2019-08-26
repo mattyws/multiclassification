@@ -250,6 +250,8 @@ class Normalization(object):
         if 'endtime' in data.columns:
             data = data.drop(columns=['endtime'])
         data = self.__normalize_dataframe(data, self.normalization_values)
+        # Fill na with 0
+        data = data.fillna(0)
         data = np.array(data.values)
         self.__save_normalized_data(data, self.temporary_path, fileName)
         return file, self.temporary_path + fileName

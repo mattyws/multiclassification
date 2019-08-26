@@ -83,19 +83,19 @@ class LengthLongitudinalDataGenerator(Sequence):
             with open(fileName, 'rb') as data_file:
                 data = pickle.load(data_file)
             x.append(data)
-            if max_len is None or len(data) > max_len:
-                max_len = len(data)
-            if columns_len is None:
-                columns_len = len(data[0])
-        # Zero padding the matrices
-        zero_padding_x = []
-        i = 0
-        for value in x:
-            i += 1
-            zeros = np.zeros((max_len, columns_len))
-            zeros[:value.shape[0], : value.shape[1]] = value
-            zero_padding_x.append(zeros)
-        x = np.array(zero_padding_x)
+            # if max_len is None or len(data) > max_len:
+            #     max_len = len(data)
+            # if columns_len is None:
+            #     columns_len = len(data[0])
+        # # Zero padding the matrices
+        # zero_padding_x = []
+        # i = 0
+        # for value in x:
+        #     i += 1
+        #     zeros = np.zeros((max_len, columns_len))
+        #     zeros[:value.shape[0], : value.shape[1]] = value
+        #     zero_padding_x.append(zeros)
+        # x = np.array(zero_padding_x)
         return x
 
     def __iter__(self):
