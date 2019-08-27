@@ -41,9 +41,7 @@ class KerasGeneratorAdapter(ModelAdapter):
                                  callbacks=callbacks, use_multiprocessing=True)
 
     def predict(self, testDocs, batch_size=10):
-        result = []
-        for data in testDocs:
-            result.append(self.model.predict_classes(data, batch_size, verbose=1))
+        result = self.model.predict_classes(testDocs, batch_size, verbose=1)
         # result = self.model.predict_generator(testDocs)
         return result
 
