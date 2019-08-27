@@ -101,12 +101,12 @@ if 'endtime' in aux.columns:
     aux = aux.drop(columns=['endtime'])
 inputShape = (None, len(aux.columns))
 
-print("========= Loading generators")
-with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
-    dataTrainGenerator = pickle.load(trainingGeneratorHandler)
-
-with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
-    dataTestGenerator = pickle.load(testingGeneratorHandler)
+# print("========= Loading generators")
+# with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
+#     dataTrainGenerator = pickle.load(trainingGeneratorHandler)
+#
+# with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
+#     dataTestGenerator = pickle.load(testingGeneratorHandler)
 
 # print(len(data))
 # print(len(dataTrainGenerator), len(dataTestGenerator))
