@@ -44,7 +44,7 @@ class KerasGeneratorAdapter(ModelAdapter):
         # result = []
         # for data in testDocs:
         #     result.append(self.model.predict_classes(data, batch_size, verbose=1))
-        result = self.model.predict_generator(testDocs, steps=batch_size, use_multiprocessing=True)
+        result = self.model.predict_generator(testDocs, use_multiprocessing=True)
         return result
 
     def predict_one(self, doc):
@@ -52,7 +52,7 @@ class KerasGeneratorAdapter(ModelAdapter):
         return np.argmax(result)
 
     def evaluate(self, testDocs, batch_size=10):
-        result = self.model.evaluate_generator(testDocs, batch_size)
+        result = self.model.evaluate_generator(testDocs)
         result = {self.model.metrics_names[i] : result[i] for i in range(len(result)) }
         return result
 
