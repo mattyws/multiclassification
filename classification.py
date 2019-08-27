@@ -32,12 +32,13 @@ DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
     total = 0
     for i in range(len(dataTestGenerator)):
-        print(len(dataTestGenerator[i]))
         total += len(dataTestGenerator[i])
     result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
     print(result)
     print(testClasses)
     print(total, len(result), len(testClasses))
+    result2 = kerasAdapter.evaluate(dataTestGenerator)
+    print(result2)
     # testClasses = classes[testIndex]
     metrics = dict()
     metrics['fscore'] = f1_score(testClasses, result, average='weighted')
