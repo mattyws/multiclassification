@@ -69,8 +69,6 @@ config = None
 if os.path.exists(parameters['modelConfigPath']):
     with open(parameters['modelConfigPath'], 'r') as configHandler:
         config = json.load(configHandler)
-print(config)
-exit()
 
 # Loading csv
 print("========= Loading data")
