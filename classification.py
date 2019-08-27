@@ -110,7 +110,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             print("Pass fold {}".format(i))
             i += 1
             continue
-        if config is not None and config['epoch'] == parameters['trainingEpochs']:
+        if config is not None and config['epoch'] == i and config['epoch'] == parameters['trainingEpochs']:
             print("Training reach the max of epochs for fold {}, testing last generated model".format(i))
             print("========= Loading generators")
             with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
