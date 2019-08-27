@@ -32,7 +32,8 @@ DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
     result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
     print(result)
-    exit()
+    print(testClasses)
+    print(len(result), len(testClasses))
     # testClasses = classes[testIndex]
     metrics = dict()
     metrics['fscore'] = f1_score(testClasses, result, average='weighted')
@@ -50,6 +51,7 @@ def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
     tn, fp, fn, metrics['tp_rate'] = confusion_matrix(testClasses, result).ravel()
     print(classification_report(testClasses, result))
     metrics["fold"] = fold
+    exit()
     return metrics
 
 
