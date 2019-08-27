@@ -35,7 +35,7 @@ def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
     for i in range(len(dataTestGenerator)):
         test = dataTestGenerator[i]
         print(test)
-        print(kerasAdapter.predict_one(test[0]))
+        print(kerasAdapter.predict(test[0]))
         exit()
         total += len(dataTestGenerator[i])
     print("Predicting")
