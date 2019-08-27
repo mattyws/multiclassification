@@ -41,9 +41,10 @@ class KerasGeneratorAdapter(ModelAdapter):
                                  callbacks=callbacks)
 
     def predict(self, testDocs, batch_size=10):
-        result = []
-        for data in testDocs:
-            result.append(self.model.predict_classes(data, batch_size, verbose=1))
+        # result = []
+        # for data in testDocs:
+        #     result.append(self.model.predict_classes(data, batch_size, verbose=1))
+        result = self.model.predict_generator(testDocs, steps=batch_size)
         return result
 
     def predict_one(self, doc):
