@@ -110,10 +110,10 @@ with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
 
 print(len(dataTrainGenerator), len(dataTestGenerator))
 for i in range(len(dataTrainGenerator)):
-    print(len(dataTrainGenerator[i]))
+    print(len(dataTrainGenerator[i][0]))
     break
 for i in range(len(dataTestGenerator)):
-    print(len(dataTestGenerator[i]))
+    print(len(dataTestGenerator[i][0]))
     break
 
 exit()
