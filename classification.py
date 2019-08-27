@@ -78,7 +78,8 @@ config = None
 if os.path.exists(parameters['modelConfigPath']):
     with open(parameters['modelConfigPath'], 'r') as configHandler:
         config = json.load(configHandler)
-
+print(config)
+exit()
 i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
