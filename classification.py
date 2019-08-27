@@ -108,15 +108,15 @@ with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler
 with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
     dataTestGenerator = pickle.load(testingGeneratorHandler)
 
-print(len(data))
-print(len(dataTrainGenerator), len(dataTestGenerator))
-total = 0
-for i in range(len(dataTrainGenerator)):
-    total += len(dataTrainGenerator[i][0])
-total_test = 0
-for i in range(len(dataTestGenerator)):
-    total_test += len(dataTestGenerator[i][0])
-print(total, total_test)
+# print(len(data))
+# print(len(dataTrainGenerator), len(dataTestGenerator))
+# total = 0
+# for i in range(len(dataTrainGenerator)):
+#     total += len(dataTrainGenerator[i][0])
+# total_test = 0
+# for i in range(len(dataTestGenerator)):
+#     total_test += len(dataTestGenerator[i][0])
+# print(total, total_test)
 # exit()
 
 i = 0
