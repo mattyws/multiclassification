@@ -22,6 +22,10 @@ class ModelAdapter(object, metaclass=abc.ABCMeta):
         raise NotImplementedError('users must define \'predict_one\' to use this base class')
 
     @abc.abstractmethod
+    def predict_generator(self, generator):
+        raise NotImplementedError('users must define \'predict_one\' to use this base class')
+
+    @abc.abstractmethod
     def save(self, filename):
         raise NotImplementedError('users must define \'save\' to use this base class')
 
@@ -60,6 +64,17 @@ class KerasGeneratorAdapter(ModelAdapter):
 
     def save(self, filename):
         self.model.save(filename)
+
+    def predict_generator(self, generator):
+        result = []
+        testClasses = []
+        for i in range(len(generator)):
+            data = generator[i]
+            r = generator.predict(data[0])
+            r = r.flatten()
+            result.extend(r)
+            testClasses.extend(data[1])
+        return testClasses, result
 
 
 class KerasAutoencoderAdapter(ModelAdapter):

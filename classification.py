@@ -34,14 +34,13 @@ def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
     print("Counting")
     result = []
     testClasses = []
-    for i in range(len(dataTestGenerator)):
+    for i in range(len(dataTestGenerator)+1):
         data = dataTestGenerator[i]
         r = kerasAdapter.predict(data[0])
         r = r.flatten()
         result.extend(r)
         testClasses.extend(data[1])
         total += len(dataTestGenerator[i])
-        break
     print(result, testClasses)
     # print(result)
     # print(testClasses)
