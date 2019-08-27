@@ -31,8 +31,12 @@ DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
 def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
     total = 0
+    print("Counting")
     for i in range(len(dataTestGenerator)):
+        test = kerasAdapter.predict_one(dataTestGenerator[i])
+        print(test)
         total += len(dataTestGenerator[i])
+    print("Predicting")
     result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
     print(result)
     print(testClasses)
