@@ -109,13 +109,13 @@ with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
     dataTestGenerator = pickle.load(testingGeneratorHandler)
 
 print(len(dataTrainGenerator), len(dataTestGenerator))
+total = 0
 for i in range(len(dataTrainGenerator)):
-    print(len(dataTrainGenerator[i][0]))
-    break
+    total += len(dataTrainGenerator[i][0])
+total_test = 0
 for i in range(len(dataTestGenerator)):
-    print(len(dataTestGenerator[i][0]))
-    break
-
+    total_test += len(dataTestGenerator[i][0])
+print(total, total_test)
 exit()
 
 i = 0
