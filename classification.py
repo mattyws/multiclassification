@@ -29,25 +29,8 @@ from normalization import Normalization, NormalizationValues
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
-def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
-    total = 0
-    print("Counting")
-    result = []
-    testClasses = []
-    for i in range(len(dataTestGenerator)+1):
-        data = dataTestGenerator[i]
-        r = kerasAdapter.predict(data[0])
-        r = r.flatten()
-        result.extend(r)
-        testClasses.extend(data[1])
-        total += len(dataTestGenerator[i])
-    print(result, testClasses)
-    # print(result)
-    # print(testClasses)
-    # print(total, len(result), len(testClasses))
-    # result2 = kerasAdapter.evaluate(dataTestGenerator)
-    # print(result2)
-    # testClasses = classes[testIndex]
+def test_model(kerasAdapter, dataTestGenerator, fold):
+    testClasses, result = kerasAdapter.predict_generator(dataTestGenerator)
     metrics = dict()
     metrics['fscore'] = f1_score(testClasses, result, average='weighted')
     metrics['precision'] = precision_score(testClasses, result, average='weighted')
@@ -64,7 +47,6 @@ def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
     tn, fp, fn, metrics['tp_rate'] = confusion_matrix(testClasses, result).ravel()
     print(classification_report(testClasses, result))
     metrics["fold"] = fold
-    exit()
     return metrics
 
 
@@ -136,12 +118,13 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
             with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
                 dataTestGenerator = pickle.load(testingGeneratorHandler)
-
+            print("========= Loading model")
             kerasAdapter = MultilayerKerasRecurrentNNCreator.create_from_path(config['filepath'],
                                                                               custom_objects={'f1': f1,
                                                                                               'precision': precision,
                                                                                               'recall': recall})
-            metrics = test_model(kerasAdapter, dataTestGenerator, classes[testIndex], i, parameters)
+            print("========= Testing model")
+            metrics = test_model(kerasAdapter, dataTestGenerator, i)
             if dictWriter is None:
                 dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
             if metrics['fold'] == 0:
@@ -214,7 +197,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
                          validationSteps=len(dataTestGenerator),
                          callbacks=[modelCheckpoint, configSaver])
-        metrics = test_model(kerasAdapter, dataTestGenerator, classes[testIndex], i, parameters)
+        metrics = test_model(kerasAdapter, dataTestGenerator, i)
         if dictWriter is None:
             dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
         if metrics['fold'] == 0:

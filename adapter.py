@@ -5,6 +5,7 @@ import keras
 import numpy as np
 import itertools
 
+import sys
 from keras.models import load_model
 
 
@@ -45,7 +46,7 @@ class KerasGeneratorAdapter(ModelAdapter):
                                  callbacks=callbacks, use_multiprocessing=True)
 
     def predict(self, testDocs, batch_size=10):
-        result = self.model.predict_classes(testDocs, batch_size, verbose=1)
+        result = self.model.predict_classes(testDocs, batch_size, verbose=0)
         # result = self.model.predict_generator(testDocs)
         return result
 
@@ -69,8 +70,9 @@ class KerasGeneratorAdapter(ModelAdapter):
         result = []
         testClasses = []
         for i in range(len(generator)):
+            sys.stderr.write('\rdone {0:%}'.format(i / len(generator)))
             data = generator[i]
-            r = generator.predict(data[0])
+            r = self.predict(data[0])
             r = r.flatten()
             result.extend(r)
             testClasses.extend(data[1])
