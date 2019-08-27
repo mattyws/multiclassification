@@ -178,6 +178,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             normalizer.normalize_files(data)
             normalized_data = np.array(normalizer.get_new_paths(data))
             print("### Getting sizes ###")
+            print(len(normalized_data[trainIndex]), len(normalized_data[testIndex]))
+            exit()
             train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                           , classes[trainIndex]
                                                                           , sizes_filename=parameters['training_events_sizes_file']
