@@ -29,6 +29,29 @@ from normalization import Normalization, NormalizationValues
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
+def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
+    result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
+    # testClasses = classes[testIndex]
+    metrics = dict()
+    metrics['fscore'] = f1_score(testClasses, result, average='weighted')
+    metrics['precision'] = precision_score(testClasses, result, average='weighted')
+    metrics['recall'] = recall_score(testClasses, result, average='weighted')
+    metrics['auc'] = roc_auc_score(testClasses, result, average='weighted')
+
+    metrics['fscore_b'] = f1_score(testClasses, result)
+    metrics['precision_b'] = precision_score(testClasses, result)
+    metrics['recall_b'] = recall_score(testClasses, result)
+    metrics['auc_b'] = roc_auc_score(testClasses, result)
+
+    metrics['kappa'] = cohen_kappa_score(testClasses, result)
+    metrics['accuracy'] = accuracy_score(testClasses, result)
+    tn, fp, fn, metrics['tp_rate'] = confusion_matrix(testClasses, result).ravel()
+    print(classification_report(testClasses, result))
+    metrics["fold"] = fold
+    return metrics
+
+
+
 parametersFilePath = "./classification_parameters.json"
 
 #Loading parameters file
@@ -91,7 +114,24 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             i += 1
             continue
         if config is not None and config['epoch'] == parameters['trainingEpochs']:
-            print("Pass fold {}-".format(i))
+            print("Training reach the max of epochs for fold {}, testing last generated model".format(i))
+            print("========= Loading generators")
+            with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
+                dataTrainGenerator = pickle.load(trainingGeneratorHandler)
+
+            with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
+                dataTestGenerator = pickle.load(testingGeneratorHandler)
+
+            kerasAdapter = MultilayerKerasRecurrentNNCreator.create_from_path(config['filepath'],
+                                                                              custom_objects={'f1': f1,
+                                                                                              'precision': precision,
+                                                                                              'recall': recall})
+            metrics = test_model(kerasAdapter, dataTestGenerator, classes[testIndex], parameters)
+            if dictWriter is None:
+                dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
+            if metrics['fold'] == 0:
+                dictWriter.writeheader()
+            dictWriter.writerow(metrics)
             i += 1
             continue
         print("======== Fold {} ========".format(i))
@@ -159,24 +199,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
                          validationSteps=len(dataTestGenerator),
                          callbacks=[modelCheckpoint, configSaver])
-        result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
-        testClasses = classes[testIndex]
-        metrics = dict()
-        metrics['fscore'] =  f1_score(testClasses, result, average='weighted')
-        metrics['precision'] = precision_score(testClasses, result, average='weighted')
-        metrics['recall'] = recall_score(testClasses, result, average='weighted')
-        metrics['auc'] = roc_auc_score(testClasses, result, average='weighted')
-
-        metrics['fscore_b'] = f1_score(testClasses, result)
-        metrics['precision_b'] = precision_score(testClasses, result)
-        metrics['recall_b'] = recall_score(testClasses, result)
-        metrics['auc_b'] = roc_auc_score(testClasses, result)
-
-        metrics['kappa'] = cohen_kappa_score(testClasses, result)
-        metrics['accuracy'] = accuracy_score(testClasses, result)
-        tn, fp, fn, metrics['tp_rate'] = confusion_matrix(testClasses, result).ravel()
-        print(classification_report(testClasses, result))
-        metrics["fold"] = i
+        metrics = test_model(kerasAdapter, dataTestGenerator, classes[testIndex], parameters)
         if dictWriter is None:
             dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
         if metrics['fold'] == 0:
