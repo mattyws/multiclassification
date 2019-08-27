@@ -124,7 +124,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                                               custom_objects={'f1': f1,
                                                                                               'precision': precision,
                                                                                               'recall': recall})
-            metrics = test_model(kerasAdapter, dataTestGenerator, classes[testIndex], parameters)
+            metrics = test_model(kerasAdapter, dataTestGenerator, classes[testIndex], i, parameters)
             if dictWriter is None:
                 dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
             if metrics['fold'] == 0:
@@ -197,7 +197,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator),
                          validationSteps=len(dataTestGenerator),
                          callbacks=[modelCheckpoint, configSaver])
-        metrics = test_model(kerasAdapter, dataTestGenerator, classes[testIndex], parameters)
+        metrics = test_model(kerasAdapter, dataTestGenerator, classes[testIndex], i, parameters)
         if dictWriter is None:
             dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
         if metrics['fold'] == 0:
