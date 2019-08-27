@@ -30,11 +30,11 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
 def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
-    result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
     total = 0
     for i in range(len(dataTestGenerator)):
         print(len(dataTestGenerator[i]))
         total += len(dataTestGenerator[i])
+    result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
     print(result)
     print(testClasses)
     print(total, len(result), len(testClasses))
