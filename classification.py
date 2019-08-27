@@ -33,8 +33,10 @@ def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
     total = 0
     print("Counting")
     for i in range(len(dataTestGenerator)):
-        test = kerasAdapter.predict_one(dataTestGenerator[i])
+        test = dataTestGenerator[i]
         print(test)
+        print(kerasAdapter.predict_one(test))
+        exit()
         total += len(dataTestGenerator[i])
     print("Predicting")
     result = kerasAdapter.predict(dataTestGenerator, batch_size=parameters['batchSize'])
