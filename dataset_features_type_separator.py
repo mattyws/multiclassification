@@ -13,8 +13,15 @@ dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_n
 patient_events_path = parameters['mimic_data_path'] + "sepsis_raw_merged/"
 
 if not os.path.exists(parameters['mimic_data_path'] + parameters['features_types_file_name']):
+    features_types = dict()
     for icustay in dataset['icustay_id']:
         events = pd.read_csv(patient_events_path + "{}.csv".format(icustay))
+        for column in events.columns:
+            print(events[column].dtype)
+            exit()
+            if column not in features_types.keys():
+                features_types[column] = set()
+            features_types[column].add(events[column].dtype)
 
 else:
     features_types = pickle.load(parameters['mimic_data_path'] + parameters['features_types_file_name'])
