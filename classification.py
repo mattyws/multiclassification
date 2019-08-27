@@ -37,6 +37,7 @@ def test_model(kerasAdapter, dataTestGenerator, testClasses, fold, parameters):
     for i in range(len(dataTestGenerator)):
         data = dataTestGenerator[i]
         r = kerasAdapter.predict(data[0])
+        r = r.flatten()
         result.extend(r)
         testClasses.extend(data[1])
         total += len(dataTestGenerator[i])
