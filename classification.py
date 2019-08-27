@@ -179,7 +179,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             normalized_data = np.array(normalizer.get_new_paths(data))
             print("### Getting sizes ###")
             print(len(normalized_data[trainIndex]), len(normalized_data[testIndex]))
-            exit()
             train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                           , classes[trainIndex]
                                                                           , sizes_filename=parameters['training_events_sizes_file']
@@ -187,6 +186,14 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                                 , sizes_filename = parameters['testing_events_sizes_file']
                                                                 , classes_filename = parameters['testing_events_sizes_labels_file'])
+            total = 0
+            for key in train_sizes.keys():
+                total += len(train_sizes[key])
+            total_test = 0
+            for key in test_sizes.keys():
+                total_test += len(test_sizes[key])
+            print(total, total_test)
+            exit()
             dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels)
             dataTrainGenerator.create_batches()
             dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
