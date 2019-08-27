@@ -117,13 +117,14 @@ total_test = 0
 for i in range(len(dataTestGenerator)):
     total_test += len(dataTestGenerator[i][0])
 print(total, total_test)
-exit()
+# exit()
 
 i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
     dictWriter = None
     for trainIndex, testIndex in kf.split(data, classes):
+        print(len(trainIndex), len(testIndex))
         if config is not None and config['fold'] > i:
             print("Pass fold {}".format(i))
             i += 1
