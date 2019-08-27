@@ -42,6 +42,13 @@ if parameters is None:
 if not os.path.exists(parameters['modelCheckpointPath']):
     os.mkdir(parameters['modelCheckpointPath'])
 
+config = None
+if os.path.exists(parameters['modelConfigPath']):
+    with open(parameters['modelConfigPath'], 'r') as configHandler:
+        config = json.load(configHandler)
+print(config)
+exit()
+
 # Loading csv
 print("========= Loading data")
 data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
@@ -74,12 +81,6 @@ if 'endtime' in aux.columns:
     aux = aux.drop(columns=['endtime'])
 inputShape = (None, len(aux.columns))
 
-config = None
-if os.path.exists(parameters['modelConfigPath']):
-    with open(parameters['modelConfigPath'], 'r') as configHandler:
-        config = json.load(configHandler)
-print(config)
-exit()
 i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
