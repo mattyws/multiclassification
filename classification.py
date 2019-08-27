@@ -101,24 +101,6 @@ if 'endtime' in aux.columns:
     aux = aux.drop(columns=['endtime'])
 inputShape = (None, len(aux.columns))
 
-# print("========= Loading generators")
-# with open(parameters['trainingGeneratorPath'], 'rb') as trainingGeneratorHandler:
-#     dataTrainGenerator = pickle.load(trainingGeneratorHandler)
-#
-# with open(parameters['testingGeneratorPath'], 'rb') as testingGeneratorHandler:
-#     dataTestGenerator = pickle.load(testingGeneratorHandler)
-
-# print(len(data))
-# print(len(dataTrainGenerator), len(dataTestGenerator))
-# total = 0
-# for i in range(len(dataTrainGenerator)):
-#     total += len(dataTrainGenerator[i][0])
-# total_test = 0
-# for i in range(len(dataTestGenerator)):
-#     total_test += len(dataTestGenerator[i][0])
-# print(total, total_test)
-# exit()
-
 i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
