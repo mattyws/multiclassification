@@ -1,6 +1,7 @@
 import json
 import os
 import numpy as np
+from decorator import __init__
 
 from keras.callbacks import Callback
 from sklearn.metrics import f1_score, recall_score, precision_score
@@ -30,6 +31,9 @@ class ResumeTrainingCallback(Callback):
 # Some of the code was adapted from https://medium.com/@thongonary/how-to-compute-f1-score-for-each-epoch-in-keras-a1acd17715a2
 class Metrics(Callback):
 
+    def __init__(self, val_data):
+        self.val_data = val_data
+
     def on_train_begin(self, logs={}):
         self.val_f1s = []
         self.val_recalls = []
@@ -37,11 +41,11 @@ class Metrics(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         # 5.4.1 For each validation batch
-        for batch_index in range(0, len(self.validation_data)):
+        for batch_index in range(0, len(self.val_data)):
             # 5.4.1.1 Get the batch target values
-            temp_targ = self.validation_data[batch_index][1]
+            temp_targ = self.val_data[batch_index][1]
             # 5.4.1.2 Get the batch prediction values
-            temp_predict = self.model.predict_classes(self.validation_data[batch_index][0]).flatten()
+            temp_predict = self.model.predict_classes(self.val_data[batch_index][0]).flatten()
             # 5.4.1.3 Append them to the corresponding output objects
             if(batch_index == 0):
                 val_targ = temp_targ

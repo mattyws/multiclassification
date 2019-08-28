@@ -144,9 +144,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                          metrics=[keras.metrics.binary_accuracy])
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
         epochs = parameters['trainingEpochs']
-        metrics_callback = Metrics()
-        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator)
-                         , validationDataGenerator=dataTestGenerator, callbacks=[metrics_callback])
+        metrics_callback = Metrics(dataTestGenerator)
+        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator), callbacks=[metrics_callback])
         metrics = test_model(kerasAdapter, dataTestGenerator, i)
         if dictWriter is None:
             dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
