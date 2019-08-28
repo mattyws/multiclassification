@@ -12,6 +12,7 @@
   "hotencoded_events_dirname" : "sepsis_hotencoded_{}/",
 
   "features_types_file_name" : "features_types.pkl",
+  "values_for_mixed_in_patient_file_name" : "mixed_features_values.pkl",
 
   "date_pattern" : "%Y-%m-%d",
   "datetime_pattern" : "%Y-%m-%d %H:%M:%S"
