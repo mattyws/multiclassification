@@ -49,12 +49,19 @@ if not os.path.exists(parameters['mimic_data_path'] + parameters['features_types
             #     features_types[column] = set()
             # features_types[column].add(events[column].dtype)
         i += 1
-    pp.pprint(features_types)
-    pp.pprint(values_for_mixed_in_patient)
     with open(parameters['mimic_data_path'] + parameters['features_types_file_name'], 'wb') as file:
         pickle.dump(features_types, file, pickle.HIGHEST_PROTOCOL)
     with open(parameters['mimic_data_path'] + parameters['values_for_mixed_in_patient_file_name'], 'wb') as file:
         pickle.dump(values_for_mixed_in_patient, file, pickle.HIGHEST_PROTOCOL)
-    exit()
 else:
-    features_types = pickle.load(parameters['mimic_data_path'] + parameters['features_types_file_name'])
+    with open(parameters['mimic_data_path'] + parameters['features_types_file_name'], 'rb') as file:
+        features_types = pickle.load(file)
+    with open(parameters['mimic_data_path'] + parameters['values_for_mixed_in_patient_file_name'], 'rb') as file:
+        values_for_mixed_in_patient = pickle.load(file)
+
+# pp.pprint(features_types)
+formated_values = pp.pformat(values_for_mixed_in_patient)
+file = open('aux', 'w')
+file.write(formated_values)
+file.close()
+print(len(values_for_mixed_in_patient.keys()), values_for_mixed_in_patient.keys())

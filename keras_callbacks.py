@@ -41,22 +41,18 @@ class Metrics(Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         # 5.4.1 For each validation batch
-        for batch_index in range(0, len(self.val_data)):
-            # 5.4.1.1 Get the batch target values
-            temp_targ = self.val_data[batch_index][1]
-            # 5.4.1.2 Get the batch prediction values
-            temp_predict = self.model.predict_classes(self.val_data[batch_index][0]).flatten()
-            # 5.4.1.3 Append them to the corresponding output objects
-            if(batch_index == 0):
-                val_targ = temp_targ
-                val_predict = temp_predict
-            else:
-                val_targ = np.vstack((val_targ, temp_targ))
-                val_predict = np.vstack((val_predict, temp_predict))
+        predicted = []
+        trueClasses = []
+        for i in range(len(self.val_data)):
+            data = self.val_data[i]
+            r = self.model.predict_classes(data[0])
+            r = r.flatten()
+            predicted.extend(r)
+            trueClasses.extend(data[1])
 
-        val_f1 = round(f1_score(val_targ, val_predict), 4)
-        val_recall = round(recall_score(val_targ, val_predict), 4)
-        val_precis = round(precision_score(val_targ, val_predict), 4)
+        val_f1 = round(f1_score(trueClasses, predicted), 4)
+        val_recall = round(recall_score(trueClasses, predicted), 4)
+        val_precis = round(precision_score(trueClasses, predicted), 4)
 
         self.val_f1s.append(val_f1)
         self.val_recalls.append(val_recall)

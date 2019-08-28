@@ -67,16 +67,16 @@ class KerasGeneratorAdapter(ModelAdapter):
         self.model.save(filename)
 
     def predict_generator(self, generator):
-        result = []
-        testClasses = []
+        predicted = []
+        trueClasses = []
         for i in range(len(generator)):
             sys.stderr.write('\rdone {0:%}'.format(i / len(generator)))
             data = generator[i]
             r = self.predict(data[0])
             r = r.flatten()
-            result.extend(r)
-            testClasses.extend(data[1])
-        return testClasses, result
+            predicted.extend(r)
+            trueClasses.extend(data[1])
+        return trueClasses, predicted
 
 
 class KerasAutoencoderAdapter(ModelAdapter):
