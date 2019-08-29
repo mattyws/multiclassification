@@ -59,6 +59,24 @@ else:
     with open(parameters['mimic_data_path'] + parameters['values_for_mixed_in_patient_file_name'], 'rb') as file:
         values_for_mixed_in_patient = pickle.load(file)
 
+features_to_process = dict()
+for key in features_types.keys():
+    if len(features_types[key]) > 1:
+        features_to_process[key] = features_types[key]
+
+i = 0
+for icustay in dataset['icustay_id']:
+    sys.stderr.write('\rdone {0:%}'.format(i / len(dataset)))
+    if not os.path.exists(patient_events_path + "{}.csv".format(icustay)):
+        continue
+    events = pd.read_csv(patient_events_path + "{}.csv".format(icustay))
+    for feature in features_to_process.keys():
+        if feature in events.columns:
+
+    i+= 1
+
+
+
 # pp.pprint(features_types)
 formated_values = pp.pformat(values_for_mixed_in_patient)
 file = open('aux', 'w')
