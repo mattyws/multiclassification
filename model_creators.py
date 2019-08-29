@@ -82,7 +82,10 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
                 model.add(layer)
                 if self.use_dropout:
                     model.add(Dropout(self.dropout))
-        model.add(self.__create_recurrent_layer(self.outputUnits[-1], self.layersActivations[-1], False))
+            model.add(self.__create_recurrent_layer(self.outputUnits[-1], self.layersActivations[-1], False))
+        else:
+            model.add(self.__create_recurrent_layer(self.outputUnits[-1], self.layersActivations[-1], False
+                                                    , inputShape=self.inputShape))
         if self.use_dropout:
             model.add(Dropout(self.dropout))
         model.add(Dense(self.numOutputNeurons, activation=self.networkActivation))
