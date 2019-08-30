@@ -23,6 +23,7 @@ patient_events_path = parameters['mimic_data_path'] + "sepsis_separated_features
 
 features_frequency = dict()
 i = 0
+print("====== Getting frequencies =====")
 for icustay in dataset['icustay_id']:
     sys.stderr.write('\rdone {0:%}'.format(i / len(dataset)))
     if not os.path.exists(patient_events_path + "{}.csv".format(icustay)):
@@ -45,6 +46,7 @@ new_events_path = parameters['mimic_data_path'] + parameters['features_low_frequ
 if not os.path.exists(new_events_path):
     os.mkdir(new_events_path)
 
+print("====== Removing low frequency features =====")
 for icustay in dataset['icustay_id']:
     sys.stderr.write('\rdone {0:%}'.format(i / len(dataset)))
     if not os.path.exists(patient_events_path + "{}.csv".format(icustay)):

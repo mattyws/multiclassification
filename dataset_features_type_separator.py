@@ -21,6 +21,7 @@ dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['insight_datase
 patient_events_path = parameters['mimic_data_path'] + "sepsis_raw_merged/"
 
 if not os.path.exists(parameters['mimic_data_path'] + parameters['features_types_file_name']):
+    print("====== Getting types =====")
     features_types = dict()
     values_for_mixed_in_patient = dict()
     i = 0
@@ -69,6 +70,7 @@ for key in features_types.keys():
         features_to_process[key] = features_types[key]
 
 i = 0
+print("====== Processing events =====")
 new_events_path = parameters['mimic_data_path'] + parameters['separated_features_types_dirname']
 if not os.path.exists(new_events_path):
     os.mkdir(new_events_path)
@@ -91,6 +93,4 @@ for icustay in dataset['icustay_id']:
     events = events.drop(columns=features_to_drop)
     events = events.sort_index(axis=1)
     events.to_csv(new_events_path + "{}.csv".format(icustay))
-    if i == 10:
-        exit()
     i+= 1
