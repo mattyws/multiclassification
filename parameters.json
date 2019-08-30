@@ -15,6 +15,7 @@
 
   "features_types_file_name" : "features_types.pkl",
   "values_for_mixed_in_patient_file_name" : "mixed_features_values.pkl",
+  "features_frequency_file_name" : "features_frequency.pkl",
 
   "date_pattern" : "%Y-%m-%d",
   "datetime_pattern" : "%Y-%m-%d %H:%M:%S"

@@ -70,13 +70,13 @@ if parameters is None:
     exit(1)
 
 mimic_data_path = parameters['mimic_data_path']
-features_types = ['labevents', 'chartevents']
+features_types = ['raw_merged']
 for feature_type in features_types:
     new_events_files_path = mimic_data_path + parameters["hotencoded_events_dirname"].format(feature_type)
     if not os.path.exists(new_events_files_path):
         os.mkdir(new_events_files_path)
 
-dataset_csv = pd.read_csv(parameters['dataset_file_name'])
+dataset_csv = pd.read_csv(parameters["mimic_data_path"] + parameters['dataset_file_name'])
 # Using as arg only the icustay_id, bc of fixating the others parameters
 total_files = len(dataset_csv) * len(features_types)
 results = []
