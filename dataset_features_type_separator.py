@@ -17,7 +17,7 @@ pd.set_option('display.max_columns', 3)
 parameters = functions.load_parameters_file()
 pp = pprint.PrettyPrinter(indent=4)
 
-dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'])
+dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
 patient_events_path = parameters['mimic_data_path'] + "sepsis_raw_merged/"
 
 if not os.path.exists(parameters['mimic_data_path'] + parameters['features_types_file_name']):
