@@ -1,6 +1,5 @@
 """
 Separate features with numerical and categorical values
-# TODO: Multiprocessing
 """
 import os
 import pickle
