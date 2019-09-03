@@ -37,8 +37,8 @@ def hot_encoding_nominal_features(icustay_ids, feature_type, events_files_path="
                 events = events.drop(columns=['Unnamed: 0'])
             nominal_events.update(events.columns)
         if manager_queue is not None:
-            manager_queue.put(icustay_id)
-    return feature_type, nominal_events
+            manager_queue.put(feature_type, nominal_events)
+    # return feature_type, nominal_events
 
 def create_missing_features(icustay_ids, feature_type, all_features, new_events_files_path, are_nominal, manager_queue=None):
     new_events_files_path = new_events_files_path.format(feature_type)
@@ -80,7 +80,7 @@ dataset_csv = pd.read_csv(parameters["mimic_data_path"] + parameters['dataset_fi
 # Using as arg only the icustay_id, bc of fixating the others parameters
 total_files = len(dataset_csv) * len(features_types)
 results = []
-with mp.Pool(processes=6) as pool:
+with mp.Pool(processes=4) as pool:
     manager = mp.Manager()
     queue = manager.Queue()
     # Generate data to be used by the processes
@@ -91,27 +91,43 @@ with mp.Pool(processes=6) as pool:
                                                     events_files_path=mimic_data_path + parameters["raw_events_dirname"],
                                                     new_events_files_path=mimic_data_path + parameters["hotencoded_events_dirname"],
                                                     manager_queue=queue)
+
     print("===== Hot encoding nominal features =====")
+    consumed = 0
     # Using starmap to pass the tuple as separated parameters to the functions
     map_obj = pool.starmap_async(partial_hot_encoding_nominal_features, args)
-    consumed = 0
+    features_after_binarized = dict()
     while not map_obj.ready():
         for _ in range(queue.qsize()):
-            queue.get()
+            result = queue.get()
+            if result[0] not in features_after_binarized.keys():
+                features_after_binarized[result[0]] = set()
+            features_after_binarized[result[0]].update(result[1])
             consumed += 1
         sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-    results = map_obj.get()
+    # results = map_obj.get()
 
-    print("====== Joining features to get all features =====")
-    features_after_binarized = dict()
-    consumed = 0
-    total_results = len(results)
-    for result in results:
-        if result[0] not in features_after_binarized.keys():
-            features_after_binarized[result[0]] = set()
-        features_after_binarized[result[0]].update(result[1])
-        sys.stderr.write('\rdone {0:%}'.format(consumed / total_results))
-        consumed += 1
+    # print("===== Hot encoding nominal features =====")
+    # consumed = 0
+    # # Using starmap to pass the tuple as separated parameters to the functions
+    # map_obj = pool.starmap_async(partial_hot_encoding_nominal_features, args)
+    # while not map_obj.ready():
+    #     for _ in range(queue.qsize()):
+    #         queue.get()
+    #         consumed += 1
+    #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+    # results = map_obj.get()
+    #
+    # print("====== Joining features to get all features =====")
+    # consumed = 0
+    # features_after_binarized = dict()
+    # total_results = len(results)
+    # for result in results:
+    #     if result[0] not in features_after_binarized.keys():
+    #         features_after_binarized[result[0]] = set()
+    #     features_after_binarized[result[0]].update(result[1])
+    #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_results))
+    #     consumed += 1
 
     # Removing nominal features in raw form if they exists (somehow that happens)
     print("====== Removing hot encoded raw features from set of all features ======")
