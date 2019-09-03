@@ -122,7 +122,7 @@ with mp.Pool(processes=6) as pool:
         for feature in features_after_binarized[key]:
             if len(feature.split('_')) >= 2:
                 are_nominal[key].add(feature.split('_')[0])
-        print(are_nominal[key])
+    print(are_nominal[key])
     for key in are_nominal.keys():
         for feature in are_nominal[key]:
             features_after_binarized[key].discard(feature)
