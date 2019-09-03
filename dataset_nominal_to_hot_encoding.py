@@ -1,5 +1,6 @@
 """
 Creates the binary columns for nominal data, adding the columns that doesn't appear at each patients events
+# TODO: save features names in a file - for each patient/ or the final feature set
 """
 import csv
 import os
