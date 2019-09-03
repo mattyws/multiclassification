@@ -29,13 +29,13 @@ def hot_encoding_nominal_features(icustay_ids, feature_type, events_files_path="
                 events = events.set_index(['Unnamed: 0'])
                 events = events.sort_index()
             events = pd.get_dummies(events, dummy_na=False)
-            nominal_events.update(events.columns)
+            nominal_events = set(events.columns)
             events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
         elif os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
             events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
             if 'Unnamed: 0' in events.columns:
                 events = events.drop(columns=['Unnamed: 0'])
-            nominal_events.update(events.columns)
+            nominal_events = set(events.columns)
         if manager_queue is not None:
             manager_queue.put(feature_type, nominal_events)
     # return feature_type, nominal_events
