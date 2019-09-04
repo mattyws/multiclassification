@@ -1,7 +1,7 @@
 """
 Remove features that have a low frequency of occurrence in patients.
 """
-
+import csv
 import os
 import pickle
 import pprint
@@ -41,7 +41,7 @@ def remove_low_frequency_features(icustays, patient_events_path=None, new_events
         features_to_remove_from_patient = list(features_to_remove.intersection(features_in_patient))
         events = events.drop(columns=features_to_remove_from_patient)
         events = events.sort_index(axis=1)
-        events.to_csv(new_events_path + "{}.csv".format(icustay))
+        events.to_csv(new_events_path + "{}.csv".format(icustay), index=False, quoting=csv.QUOTE_NONNUMERIC)
 
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 3)
