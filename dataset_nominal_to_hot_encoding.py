@@ -17,30 +17,54 @@ import sys
 from pandas._libs import json
 
 
-def hot_encoding_nominal_features(icustay_ids, feature_type, events_files_path="", new_events_files_path="", manager_queue=None):
+def hot_encoding_nominal_features(icustay_ids, feature_type, events_files_path="", new_events_files_path="",
+                                  manager_queue=None, patients_features_path=None):
     nominal_events = set()
     events_files_path = events_files_path.format(feature_type)
     new_events_files_path = new_events_files_path.format(feature_type)
+    patients_features_path = patients_features_path.format(feature_type)
     for icustay_id in icustay_ids:
-        if os.path.exists(events_files_path + '{}.csv'.format(icustay_id)) and \
-                not os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
-            # Get events and change nominal to binary
-            events = pd.read_csv(events_files_path + '{}.csv'.format(icustay_id))
-            if 'Unnamed: 0' in events.columns:
-                events.loc[:, 'Unnamed: 0'] = pd.to_datetime(events['Unnamed: 0'], format=parameters['datetime_pattern'])
-                events = events.set_index(['Unnamed: 0'])
-                events = events.sort_index()
-            events = pd.get_dummies(events, dummy_na=False)
-            nominal_events = set(events.columns)
-            events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
-        elif os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
-            events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
-            if 'Unnamed: 0' in events.columns:
-                events = events.drop(columns=['Unnamed: 0'])
-            nominal_events = set(events.columns)
+        if not os.path.exists(patients_features_path + "{}.pkl".format(icustay_id)):
+            if os.path.exists(events_files_path + '{}.csv'.format(icustay_id)) and \
+                    not os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
+                # Get events and change nominal to binary
+                events = pd.read_csv(events_files_path + '{}.csv'.format(icustay_id))
+                if 'Unnamed: 0' in events.columns:
+                    events.loc[:, 'Unnamed: 0'] = pd.to_datetime(events['Unnamed: 0'], format=parameters['datetime_pattern'])
+                    events = events.set_index(['Unnamed: 0'])
+                    events = events.sort_index()
+                events = pd.get_dummies(events, dummy_na=False)
+                nominal_events = set(events.columns)
+                events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
+            elif os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
+                events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
+                if 'Unnamed: 0' in events.columns:
+                    events = events.drop(columns=['Unnamed: 0'])
+                nominal_events = set(events.columns)
+            with open(patients_features_path + "{}.pkl".format(icustay_id), 'wb') as file:
+                pickle.dump(nominal_events, file)
         if manager_queue is not None:
-            manager_queue.put(feature_type, nominal_events)
+            manager_queue.put(feature_type, icustay_id)
     # return feature_type, nominal_events
+
+def merge_patients_features(icustay_ids, feature_type, patients_features_path=None):
+    merged_features = set()
+    patients_features_path = patients_features_path.format(feature_type)
+    for icustay_id in icustay_ids:
+        if not os.path.exists(patients_features_path + "{}.pkl".format(icustay_id)):
+            continue
+        with open(patients_features_path + "{}.pkl".format(icustay_id), 'rb') as file:
+            patient_features = pickle.load(file)
+        if patient_features is not None:
+            merged_features = merge_sets(merged_features, patient_features)
+    return merged_features
+
+
+def merge_sets(*argv):
+    result_set = set()
+    for arg in argv:
+        result_set.update(arg)
+    return result_set
 
 def create_missing_features(icustay_ids, feature_type, all_features, new_events_files_path, are_nominal, manager_queue=None):
     new_events_files_path = new_events_files_path.format(feature_type)
@@ -77,6 +101,9 @@ for feature_type in features_types:
     new_events_files_path = mimic_data_path + parameters["hotencoded_events_dirname"].format(feature_type)
     if not os.path.exists(new_events_files_path):
         os.mkdir(new_events_files_path)
+    patients_features_path = mimic_data_path + parameters['patients_features_dirname'].format(feature_type)
+    if not os.path.exists(patients_features_path):
+        os.mkdir(patients_features_path)
 
 dataset_csv = pd.read_csv(parameters["mimic_data_path"] + parameters['dataset_file_name'])
 # Using as arg only the icustay_id, bc of fixating the others parameters
@@ -93,6 +120,7 @@ with mp.Pool(processes=4) as pool:
         partial_hot_encoding_nominal_features = partial(hot_encoding_nominal_features,
                                                         events_files_path=mimic_data_path + parameters["raw_events_dirname"],
                                                         new_events_files_path=mimic_data_path + parameters["hotencoded_events_dirname"],
+                                                        patients_features_path=mimic_data_path + parameters["patients_features_dirname"],
                                                         manager_queue=queue)
 
         print("===== Hot encoding nominal features =====")
@@ -103,11 +131,17 @@ with mp.Pool(processes=4) as pool:
         while not map_obj.ready():
             for _ in range(queue.qsize()):
                 result = queue.get()
-                if result[0] not in features_after_binarized.keys():
-                    features_after_binarized[result[0]] = set()
-                features_after_binarized[result[0]].update(result[1])
+                # if result[0] not in features_after_binarized.keys():
+                #     features_after_binarized[result[0]] = set()
+                # features_after_binarized[result[0]].update(result[1])
                 consumed += 1
             sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+
+        print("===== Merging sets =====")
+        for feature_type in features_types:
+            patients_features_path = mimic_data_path + parameters['patients_features_dirname'].format(feature_type)
+            features_after_binarized[feature_type] = merge_patients_features(dataset_csv['icustay_id'], feature_type,
+                                                                             patients_features_path=patients_features_path)
 
         # Saving features_after_binarized
         with open(mimic_data_path + parameters['features_after_binarized_file_name'], 'wb') as file:
