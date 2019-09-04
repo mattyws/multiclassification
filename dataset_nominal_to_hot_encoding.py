@@ -50,7 +50,9 @@ def hot_encoding_nominal_features(icustay_ids, feature_type, events_files_path="
 def merge_patients_features(icustay_ids, feature_type, patients_features_path=None):
     merged_features = set()
     patients_features_path = patients_features_path.format(feature_type)
+    consumed = 0
     for icustay_id in icustay_ids:
+        sys.stderr.write('\rdone {0:%}'.format(consumed / len(icustay_ids)))
         if not os.path.exists(patients_features_path + "{}.pkl".format(icustay_id)):
             continue
         with open(patients_features_path + "{}.pkl".format(icustay_id), 'rb') as file:
