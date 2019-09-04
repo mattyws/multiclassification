@@ -4,6 +4,7 @@ Creates the binary columns for nominal data, adding the columns that doesn't app
 """
 import csv
 import os
+import pickle
 from functools import partial
 from itertools import product
 
@@ -84,28 +85,36 @@ results = []
 with mp.Pool(processes=4) as pool:
     manager = mp.Manager()
     queue = manager.Queue()
-    # Generate data to be used by the processes
-    args = numpy.array_split(dataset_csv['icustay_id'], 10)
-    args = product(args, features_types)
-    # Creating a partial maintaining some arguments with fixed values
-    partial_hot_encoding_nominal_features = partial(hot_encoding_nominal_features,
-                                                    events_files_path=mimic_data_path + parameters["raw_events_dirname"],
-                                                    new_events_files_path=mimic_data_path + parameters["hotencoded_events_dirname"],
-                                                    manager_queue=queue)
+    if not os.path.exists(mimic_data_path + parameters['features_after_binarized_file_name']):
+        # Generate data to be used by the processes
+        args = numpy.array_split(dataset_csv['icustay_id'], 10)
+        args = product(args, features_types)
+        # Creating a partial maintaining some arguments with fixed values
+        partial_hot_encoding_nominal_features = partial(hot_encoding_nominal_features,
+                                                        events_files_path=mimic_data_path + parameters["raw_events_dirname"],
+                                                        new_events_files_path=mimic_data_path + parameters["hotencoded_events_dirname"],
+                                                        manager_queue=queue)
 
-    print("===== Hot encoding nominal features =====")
-    consumed = 0
-    # Using starmap to pass the tuple as separated parameters to the functions
-    map_obj = pool.starmap_async(partial_hot_encoding_nominal_features, args)
-    features_after_binarized = dict()
-    while not map_obj.ready():
-        for _ in range(queue.qsize()):
-            result = queue.get()
-            if result[0] not in features_after_binarized.keys():
-                features_after_binarized[result[0]] = set()
-            features_after_binarized[result[0]].update(result[1])
-            consumed += 1
-        sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+        print("===== Hot encoding nominal features =====")
+        consumed = 0
+        # Using starmap to pass the tuple as separated parameters to the functions
+        map_obj = pool.starmap_async(partial_hot_encoding_nominal_features, args)
+        features_after_binarized = dict()
+        while not map_obj.ready():
+            for _ in range(queue.qsize()):
+                result = queue.get()
+                if result[0] not in features_after_binarized.keys():
+                    features_after_binarized[result[0]] = set()
+                features_after_binarized[result[0]].update(result[1])
+                consumed += 1
+            sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+
+        # Saving features_after_binarized
+        with open(mimic_data_path + parameters['features_after_binarized_file_name'], 'wb') as file:
+            pickle.dump(features_after_binarized, file)
+    else:
+        with open(mimic_data_path + parameters['features_after_binarized_file_name'], 'rb') as file:
+            features_after_binarized = pickle.load(file)
     # results = map_obj.get()
 
     # print("===== Hot encoding nominal features =====")
