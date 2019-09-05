@@ -20,5 +20,7 @@
   "features_frequency_file_name" : "features_frequency.pkl",
 
   "date_pattern" : "%Y-%m-%d",
-  "datetime_pattern" : "%Y-%m-%d %H:%M:%S"
+  "datetime_pattern" : "%Y-%m-%d %H:%M:%S",
+
+  "notes_tokens_features_file_name": "notes_tokens_features.pkl"
 }
