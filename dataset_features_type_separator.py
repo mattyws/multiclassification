@@ -60,6 +60,7 @@ def split_features(icustays, features_to_process=None, patient_events_path=None,
                 if events[feature + '_categorical'].dropna().empty:
                     features_to_drop.append(feature + '_categorical')
         events = events.drop(columns=features_to_drop)
+        print(events.columns)
         events = events.sort_index(axis=1)
         events.to_csv(new_events_path + "{}.csv".format(icustay), index=False, quoting=csv.QUOTE_NONNUMERIC)
 
