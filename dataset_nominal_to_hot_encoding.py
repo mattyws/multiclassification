@@ -88,8 +88,6 @@ def create_missing_features(icustay_ids, feature_type, all_features, events_file
             events = events.drop(columns=are_nominal[feature_type], errors='ignore')
             events = events.sort_index(axis=1)
             events.to_csv(new_events_file_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
-        else:
-            print(icustay_id)
         if manager_queue is not None:
             manager_queue.put(icustay_id)
 
@@ -179,7 +177,7 @@ with mp.Pool(processes=4) as pool:
     args = numpy.array_split(dataset_csv['icustay_id'], 10)
     args = product(args, features_types)
     partial_create_missing_features = partial(create_missing_features, all_features=features_after_binarized,
-                                              events_files_path=mimic_data_path + parameters["hotencoded_events_dirname"],
+                                              events_file_path=mimic_data_path + parameters["hotencoded_events_dirname"],
                                               new_events_files_path=mimic_data_path + parameters["all_features_dirname"],
                                               are_nominal=are_nominal,
                                               manager_queue=queue)
