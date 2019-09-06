@@ -178,7 +178,7 @@ with mp.Pool(processes=4) as pool:
     args = product(args, features_types)
     partial_create_missing_features = partial(create_missing_features, all_features=features_after_binarized,
                                               events_file_path=mimic_data_path + parameters["hotencoded_events_dirname"],
-                                              new_events_files_path=mimic_data_path + parameters["all_features_dirname"],
+                                              new_events_file_path=mimic_data_path + parameters["all_features_dirname"],
                                               are_nominal=are_nominal,
                                               manager_queue=queue)
     print("===== Filling missing features =====")
