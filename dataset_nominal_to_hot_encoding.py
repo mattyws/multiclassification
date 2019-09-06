@@ -69,7 +69,8 @@ def merge_sets(*argv):
         result_set.update(arg)
     return result_set
 
-def create_missing_features(icustay_ids, feature_type, all_features, events_file_path, new_events_file_path, are_nominal, manager_queue=None):
+def create_missing_features(icustay_ids, feature_type, all_features, events_file_path, new_events_file_path,
+                            are_nominal, manager_queue=None):
     events_file_path = events_file_path.format(feature_type)
     new_events_file_path = new_events_file_path.format(feature_type)
     for icustay_id in icustay_ids:
@@ -87,6 +88,8 @@ def create_missing_features(icustay_ids, feature_type, all_features, events_file
             events = events.drop(columns=are_nominal[feature_type], errors='ignore')
             events = events.sort_index(axis=1)
             events.to_csv(new_events_file_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
+        else:
+            print(icustay_id)
         if manager_queue is not None:
             manager_queue.put(icustay_id)
 
@@ -157,29 +160,6 @@ with mp.Pool(processes=4) as pool:
     else:
         with open(mimic_data_path + parameters['features_after_binarized_file_name'], 'rb') as file:
             features_after_binarized = pickle.load(file)
-    # results = map_obj.get()
-
-    # print("===== Hot encoding nominal features =====")
-    # consumed = 0
-    # # Using starmap to pass the tuple as separated parameters to the functions
-    # map_obj = pool.starmap_async(partial_hot_encoding_nominal_features, args)
-    # while not map_obj.ready():
-    #     for _ in range(queue.qsize()):
-    #         queue.get()
-    #         consumed += 1
-    #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-    # results = map_obj.get()
-    #
-    # print("====== Joining features to get all features =====")
-    # consumed = 0
-    # features_after_binarized = dict()
-    # total_results = len(results)
-    # for result in results:
-    #     if result[0] not in features_after_binarized.keys():
-    #         features_after_binarized[result[0]] = set()
-    #     features_after_binarized[result[0]].update(result[1])
-    #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_results))
-    #     consumed += 1
 
     # Removing nominal features in raw form if they exists (somehow that happens)
     print("====== Removing hot encoded raw features from set of all features ======")
