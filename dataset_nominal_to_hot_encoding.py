@@ -59,6 +59,7 @@ def merge_patients_features(icustay_ids, feature_type, patients_features_path=No
             patient_features = pickle.load(file)
         if patient_features is not None:
             merged_features = merge_sets(merged_features, patient_features)
+        consumed += 1
     return merged_features
 
 
@@ -68,11 +69,13 @@ def merge_sets(*argv):
         result_set.update(arg)
     return result_set
 
-def create_missing_features(icustay_ids, feature_type, all_features, new_events_files_path, are_nominal, manager_queue=None):
-    new_events_files_path = new_events_files_path.format(feature_type)
+def create_missing_features(icustay_ids, feature_type, all_features, events_file_path, new_events_file_path, are_nominal, manager_queue=None):
+    events_file_path = events_file_path.format(feature_type)
+    new_events_file_path = new_events_file_path.format(feature_type)
     for icustay_id in icustay_ids:
-        if os.path.exists(new_events_files_path + '{}.csv'.format(icustay_id)):
-            events = pd.read_csv(new_events_files_path + '{}.csv'.format(icustay_id))
+        if os.path.exists(events_file_path + '{}.csv'.format(icustay_id)) \
+            and not os.path.exists(new_events_file_path + "{}.csv".format(icustay_id)):
+            events = pd.read_csv(events_file_path + '{}.csv'.format(icustay_id))
             if 'Unnamed: 0' in events.columns:
                 events = events.set_index(['Unnamed: 0'])
             # events = events.fillna(0)
@@ -83,7 +86,7 @@ def create_missing_features(icustay_ids, feature_type, all_features, new_events_
                     events[itemid] = np.nan
             events = events.drop(columns=are_nominal[feature_type], errors='ignore')
             events = events.sort_index(axis=1)
-            events.to_csv(new_events_files_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
+            events.to_csv(new_events_file_path + '{}.csv'.format(icustay_id), quoting=csv.QUOTE_NONNUMERIC)
         if manager_queue is not None:
             manager_queue.put(icustay_id)
 
@@ -100,9 +103,12 @@ if parameters is None:
 mimic_data_path = parameters['mimic_data_path']
 features_types = ['raw_merged']
 for feature_type in features_types:
-    new_events_files_path = mimic_data_path + parameters["hotencoded_events_dirname"].format(feature_type)
-    if not os.path.exists(new_events_files_path):
-        os.mkdir(new_events_files_path)
+    hotencoded_events_files_path = mimic_data_path + parameters["hotencoded_events_dirname"].format(feature_type)
+    if not os.path.exists(hotencoded_events_files_path):
+        os.mkdir(hotencoded_events_files_path)
+    all_features_files_path = mimic_data_path + parameters["all_features_dirname"].format(feature_type)
+    if not os.path.exists(all_features_files_path):
+        os.mkdir(all_features_files_path)
     patients_features_path = mimic_data_path + parameters['patients_features_dirname'].format(feature_type)
     if not os.path.exists(patients_features_path):
         os.mkdir(patients_features_path)
@@ -193,7 +199,8 @@ with mp.Pool(processes=4) as pool:
     args = numpy.array_split(dataset_csv['icustay_id'], 10)
     args = product(args, features_types)
     partial_create_missing_features = partial(create_missing_features, all_features=features_after_binarized,
-                                              new_events_files_path=mimic_data_path + parameters["hotencoded_events_dirname"],
+                                              events_files_path=mimic_data_path + parameters["hotencoded_events_dirname"],
+                                              new_events_files_path=mimic_data_path + parameters["all_features_dirname"],
                                               are_nominal=are_nominal,
                                               manager_queue=queue)
     print("===== Filling missing features =====")

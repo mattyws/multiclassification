@@ -58,7 +58,8 @@ def merge_features_dictionaries(features1, features2):
     merged_features = create_features_dict()
     merged_features['tokens_frequency'] = merge_frequencies(features1['tokens_frequency'], features2['tokens_frequency'])
     merged_features['unique_tokens']  = merge_uniques_tokens(features1['unique_tokens'], features2['unique_tokens'])
-    'total_tokens': 0
+    merged_features['total_tokens'] = merge_total_tokens(features1['total_tokens'], features2['total_tokens'])
+    return merged_features
 
 def get_tokens_features(tokens, tokens_features=None):
     if tokens_features is None:
@@ -98,7 +99,6 @@ with mp.Pool(processes=4) as pool:
     partial_process_notes = partial(process_notes,
                                     manager_queue=queue)
     print("===== Processing events =====")
-    print()
     map_obj = pool.map_async(partial_process_notes, icustays)
     consumed = 0
     while not map_obj.ready():
@@ -110,7 +110,7 @@ with mp.Pool(processes=4) as pool:
     tokens_features = create_features_dict()
     print("===== Merging results =====")
     for result in results:
-
+        tokens_features = merge_features_dictionaries(tokens_features, result)
 
     with open(parameters['mimic_data_path'] + parameters['notes_tokens_features_file_name'], 'wb') as file:
         pickle.dump(tokens_features, file)

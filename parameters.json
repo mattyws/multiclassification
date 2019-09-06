@@ -11,6 +11,7 @@
 
   "raw_events_dirname" : "sepsis_{}/",
   "hotencoded_events_dirname" : "sepsis_hotencoded_{}/",
+  "all_features_dirname" : "sepsis_all_features_{}/",
   "separated_features_types_dirname": "sepsis_separated_features/",
   "features_low_frequency_removed_dirname": "sepsis_low_frequency_removed/",
   "patients_features_dirname" : "{}_features/",
