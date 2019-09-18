@@ -121,8 +121,14 @@ def chartevents_is_error(event):
 def noteevents_is_error(event):
     return event['ISERROR'] == 1
 
+def is_noteevent_category(event, categories):
+    categories = [x.lower() for x in categories]
+    if event['CATEGORY'].lower() in categories:
+        return True
+    return False
 
-def event_is_error(event_label, event):
+
+def event_is_error(event_label, event, noteevent_category_to_delete=None):
     """
     Check if the event passed as parameter is an error
     :param event_label: the table from where this event is
@@ -135,7 +141,10 @@ def event_is_error(event_label, event):
         # Labevents has no error label
         return False
     elif event_label == 'NOTEEVENTS':
-        return noteevents_is_error(event)
+        is_category_to_delete = False
+        if noteevent_category_to_delete is not None:
+            is_category_to_delete = is_noteevent_category(event, noteevent_category_to_delete)
+        return noteevents_is_error(event) or is_category_to_delete
     else:
         raise NotImplemented("Handling error for this table is not implemented yet, exiting.")
 

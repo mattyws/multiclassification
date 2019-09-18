@@ -87,7 +87,15 @@ if not os.path.exists(parameters['mimic_data_path'] + parameters['features_types
                 consumed += 1
             sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset)))
         results = map_obj.get()
-    features_types = {k : v for d in results for k, v in d.items()}
+
+    features_types = dict()
+    for r in results:
+        for k,v in r.items():
+            if k in features_types.keys():
+                features_types[k].update(v)
+            else:
+                features_types[k] = v
+    # features_types = {k : v for d in results for k, v in d.items()}
     with open(parameters['mimic_data_path'] + parameters['features_types_file_name'], 'wb') as file:
         pickle.dump(features_types, file, pickle.HIGHEST_PROTOCOL)
 else:

@@ -13,7 +13,7 @@ import multiprocessing as mp
 
 import nltk
 import sys
-from nltk import WhitespaceTokenizer
+from nltk import WhitespaceTokenizer, RegexpTokenizer
 from nltk.tokenize.api import StringTokenizer
 
 import functions
@@ -70,7 +70,7 @@ def get_tokens_features(tokens, tokens_features=None):
     return tokens_features
 
 def process_notes(icustays, manager_queue=None):
-    tokenizer = WhitespaceTokenizer()
+    tokenizer = RegexpTokenizer(r'\w+')
     tokens_features = create_features_dict()
     for icustay in icustays:
         if manager_queue is not None:

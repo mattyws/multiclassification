@@ -2,6 +2,7 @@
 This script will merge all events that occur at the same hour (taking patient's intime at the icu as the start),
 into one events, using the mean of the values at this window.
 This script will also remove any patient file that doesn't have any events.
+# TODO: merge categorical and numerical values are different
 """
 import os
 from datetime import timedelta

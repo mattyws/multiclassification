@@ -56,7 +56,7 @@ def filter_events(sepsis3_df_split, table_name, mimic_data_path="", manager_queu
             # Check if event was an error.
             # As each table has their error columns, we pass the event label to the check function
             # If is a error, pass this event
-            if functions.event_is_error(table_name, event):
+            if functions.event_is_error(table_name, event, noteevent_category_to_delete=["discharge summary"]):
                 continue
             if event['CHARTTIME'] >= intime and event['CHARTTIME'] <= cut_poe:
                 event_timestamp = event['CHARTTIME']
