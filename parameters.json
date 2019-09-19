@@ -14,6 +14,7 @@
   "separated_features_types_dirname": "sepsis_separated_features/",
   "features_low_frequency_removed_dirname": "sepsis_low_frequency_removed/",
   "patients_features_dirname" : "{}_features/",
+  "tokenized_noteevents_dirname" : "sepsis_tokenized_noteevents/",
 
   "features_after_binarized_file_name" : "features_after_binarized.pkl",
   "features_types_file_name" : "features_types.pkl",
