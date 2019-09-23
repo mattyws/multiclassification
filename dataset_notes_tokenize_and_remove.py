@@ -15,7 +15,7 @@ import re
 def remove_only_special_characters_tokens(tokens):
     new_tokens = []
     for token in tokens:
-        if not re.match(r'^[_\W]+$', token):
+        if not re.match(r'^[\*\*_\W\*\*]+$', token):
             new_tokens.append(token)
         else:
             print(token)
