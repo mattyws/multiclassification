@@ -15,10 +15,8 @@ import re
 def remove_only_special_characters_tokens(tokens):
     new_tokens = []
     for token in tokens:
-        if not re.match(r'^[\*\*_\W\*\*]+$', token):
+        if not re.match(r'^[\W_]+$', token):
             new_tokens.append(token)
-        else:
-            print(token)
     return new_tokens
 
 
@@ -32,20 +30,16 @@ def process_notes(icustays, noteevents_data_path=None, tokenized_events_data_pat
         patient_noteevents = pd.read_csv(noteevents_data_path + "{}.csv".format(icustay))
         patient_tokenized_noteevents = pd.DataFrame([])
         for index, row in patient_noteevents.iterrows():
-            print(row['Note'])
             tokens = tokenizer.tokenize(row['Note'])
             tokens = [word.lower() for word in tokens]
             tokens = remove_only_special_characters_tokens(tokens)
-            print(tokens)
             row['Note'] = tokens
             patient_tokenized_noteevents = patient_tokenized_noteevents.append(row)
-            print(patient_tokenized_noteevents)
         patient_tokenized_noteevents.to_csv(tokenized_events_data_path + "{}.csv".format(icustay))
-        exit()
 
 parameters = functions.load_parameters_file()
 dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
-noteevents_data_path = parameters['mimic_data_path'] + "sepsis_noteevents/"
+noteevents_data_path = parameters['mimic_data_path'] + parameters['noteevents_anonymized_tokens_normalized']
 icustays = dataset['icustay_id'].tolist()
 icustays = numpy.array_split(icustays, 10)
 if not os.path.exists(parameters['mimic_data_path'] + parameters['tokenized_noteevents_dirname']):
@@ -59,8 +53,6 @@ with mp.Pool(processes=4) as pool:
                                     tokenized_events_data_path=parameters['mimic_data_path']
                                                                + parameters['tokenized_noteevents_dirname'],
                                     manager_queue=queue)
-    partial_process_notes(icustays[0])
-    exit()
     print("===== Processing events =====")
     map_obj = pool.map_async(partial_process_notes, icustays)
     consumed = 0

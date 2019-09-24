@@ -6,6 +6,8 @@ import numpy as np
 import itertools
 
 import sys
+
+from gensim.models import Word2Vec
 from keras.models import load_model
 
 
@@ -130,3 +132,36 @@ class SklearnAdapter(ModelAdapter):
 
     def load(self, filename):
         return pickle.load(open(filename, 'rb'))
+
+class Word2VecTrainer(object):
+    """
+    Perform training and save gensim word2vec
+    """
+
+    def __init__(self, min_count=2, size=200, workers=4, window=3, iter=10):
+        self.min_count = min_count
+        self.size = size
+        self.workers = workers
+        self.window = window
+        self.iter = iter
+        self.model = None
+
+    def train(self, corpus, sg=0):
+        self.model = Word2Vec(corpus, min_count=self.min_count, size=self.size, workers=self.workers, window=self.window, iter=self.iter, sg=sg)
+
+    def save(self, filename):
+        self.model.save(filename)
+
+    def get_model(self):
+        return self.model
+
+    def load_model(self, filename):
+        return Word2Vec.load(filename)
+
+    # def load_google_model(self, filename):
+    #     return KeyedVectors.load_word2vec_format(filename, binary=True)
+
+    def retrain(self, model, corpus, sg=0):
+        for i in range(0, self.iter):
+            model.train(corpus, total_examples=model.corpus_count)
+        self.model = model

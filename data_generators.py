@@ -10,49 +10,6 @@ from keras.utils import Sequence
 
 from data_representation import Word2VecEmbeddingCreator
 
-class EmbeddingObjectSaver(object):
-    def __init__(self, path):
-        self.path = path
-        if self.path[-1] != '/':
-            self.path += '/'
-        if not os.path.exists(self.path):
-            os.mkdir(self.path)
-
-    def save(self, embeddingObject):
-        return self.__save_object(embeddingObject)
-
-    def __save_object(self, embeddingObject):
-        fileName = self.path + uuid.uuid4().hex
-        while os.path.exists(fileName):
-            fileName = self.path +  uuid.uuid4().hex
-        fileName = fileName + '.pkl'
-        with open(fileName, 'wb+') as pickleFileHandler:
-            try:
-                pickle.dump(embeddingObject, pickleFileHandler, pickle.HIGHEST_PROTOCOL)
-            except Exception as e:
-                print(e)
-        return fileName
-
-class EmbeddingObjectLoader(object):
-
-    def load(self, filePath):
-        return self.__load(filePath)
-
-    def __load(self, fileName):
-        x = None
-        with open(fileName, 'rb') as pklFileHandler:
-            x = pickle.load(pklFileHandler)
-        return x
-
-class EmbeddingObjectsDelete(object):
-
-    def __init__(self, paths):
-        self.__filesList = paths
-
-    def clean_files(self):
-        for file in self.__filesList:
-            os.remove(file)
-
 class LengthLongitudinalDataGenerator(Sequence):
     def __init__(self, sizes_data_paths, labels, max_batch_size=50, iterForever=False):
         self.max_batch_size = max_batch_size
@@ -304,25 +261,13 @@ class Word2VecTextEmbeddingGenerator(Sequence):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
 
-class ListGenerator(object):
-    def __init__(self, train_docs, train_cats):
-        self.__docs = train_docs
-        self.__labels = train_cats
-        self.train_docs = iter(train_docs)
-        self.train_cats = iter(train_cats)
+class NoteeventsTextDataGenerator(object):
+    def __init__(self, data_paths):
+        self.data_paths = data_paths
 
     def __iter__(self):
-        return self
-
-    def __next__(self):
-        try:
-            x = np.array(next(self.train_docs))
-            y = np.array(next(self.train_cats))
-            return x, y
-        except:
-            self.train_docs = iter(self.__docs)
-            self.train_cats = iter(self.__labels)
-            return self.__next__()
-
-    def next(self):
-        return self.__next__()
+        for path in self.data_paths:
+            noteevents = pd.read_csv(path)
+            noteevents = noteevents['Note']
+            for note in noteevents:
+                yield note

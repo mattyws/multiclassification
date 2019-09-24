@@ -89,7 +89,7 @@ def process_notes(icustays, manager_queue=None):
 
 parameters = functions.load_parameters_file()
 dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
-noteevents_data_path = parameters['mimic_data_path'] + "sepsis_noteevents/"
+noteevents_data_path = parameters['mimic_data_path'] + parameters['noteevents_anonymized_tokens_normalized']
 icustays = dataset['icustay_id'].tolist()
 icustays = numpy.array_split(icustays, 10)
 
