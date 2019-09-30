@@ -2,7 +2,6 @@
 This script will merge all events that occur at the same hour (taking patient's intime at the icu as the start),
 into one events, using the mean of the values at this window.
 This script will also remove any patient file that doesn't have any events.
-# TODO: merge categorical and numerical values are different
 """
 import os
 from datetime import timedelta
@@ -88,7 +87,7 @@ icustay_ids = list(dataset['icustay_id'])
 dataset_for_mp = numpy.array_split(dataset, 10)
 
 
-with mp.Pool(processes=len(dataset_for_mp)) as pool:
+with mp.Pool(processes=4) as pool:
     m = mp.Manager()
     queue = m.Queue()
     partial_normalize_files = partial(process_events, events_path=events_path, new_events_path=new_events_path,
