@@ -21,7 +21,8 @@ import functions
 def fill_missing_values(dataset, events_path, manager_queue=None):
     for index, patient in dataset.iterrows():
         events = pd.read_csv(events_path+'{}.csv'.format(patient['icustay_id']))
-        events = events.fillna(0)
+        events = events.ffill()
+        events = events.bfill()
         events.to_csv(events_path+'{}.csv'.format(patient['icustay_id']), index=False)
         if manager_queue is not None:
             manager_queue.put(index)
@@ -30,7 +31,7 @@ def fill_missing_values(dataset, events_path, manager_queue=None):
 
 
 parameters = functions.load_parameters_file()
-events_path =  parameters['mimic_data_path'] + "sepsis_insight_bucket/"
+events_path =  parameters['mimic_data_path'] + "sepsis_all_features_bucket/"
 
 dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
 

@@ -87,7 +87,7 @@ icustay_ids = list(dataset['icustay_id'])
 dataset_for_mp = numpy.array_split(dataset, 10)
 
 
-with mp.Pool(processes=4) as pool:
+with mp.Pool(processes=6) as pool:
     m = mp.Manager()
     queue = m.Queue()
     partial_normalize_files = partial(process_events, events_path=events_path, new_events_path=new_events_path,
