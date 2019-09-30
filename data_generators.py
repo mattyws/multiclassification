@@ -270,4 +270,4 @@ class NoteeventsTextDataGenerator(object):
             noteevents = pd.read_csv(path)
             noteevents = noteevents['Note']
             for note in noteevents:
-                yield note
+                yield [note]

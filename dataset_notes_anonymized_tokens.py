@@ -44,7 +44,7 @@ def process_notes(icustays, noteevents_data_path=None, new_noteevents_path=None,
                 row['Note'] = row['Note'].replace(token, replacement)
             new_noteevents.append(row.copy())
         new_noteevents = pd.DataFrame(new_noteevents)
-        new_noteevents.to_csv(new_noteevents_path + "{}.csv".format(icustay))
+        new_noteevents.to_csv(new_noteevents_path + "{}.csv".format(icustay), index=False)
 
 
 parameters = functions.load_parameters_file()

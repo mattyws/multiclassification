@@ -208,3 +208,10 @@ def divide_by_events_lenght(data_list, classes, sizes_filename="sizes.pkl", clas
         with open(classes_filename, 'wb') as sizes_handler:
             pickle.dump(labels, sizes_handler)
     return sizes, labels
+
+
+def load_ctakes_parameters_file():
+    if not os.path.exists('ctakes_parameters.json'):
+        raise FileNotFoundError("cTakes parameter file doesn't exists!")
+    parameters = json.load(open('ctakes_parameters.json'))
+    return parameters

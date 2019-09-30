@@ -31,5 +31,9 @@ iter=10
 
 noteevents_iterator = NoteeventsTextDataGenerator(files_paths)
 word2vec_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iter)
-word2vec_trainer.train(noteevents_iterator)
-word2vec_trainer.save(parameters['mimic_data_path'] + parameters['word2vec_model_file_name'])
+if os.path.exists(parameters['mimic_data_path'] + parameters['word2vec_model_file_name']):
+    model = word2vec_trainer.load_model(parameters['mimic_data_path'] + parameters['word2vec_model_file_name'])
+    print(model.wv.vocab)
+else:
+    word2vec_trainer.train(noteevents_iterator)
+    word2vec_trainer.save(parameters['mimic_data_path'] + parameters['word2vec_model_file_name'])

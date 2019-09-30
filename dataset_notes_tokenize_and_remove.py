@@ -35,7 +35,7 @@ def process_notes(icustays, noteevents_data_path=None, tokenized_events_data_pat
             tokens = remove_only_special_characters_tokens(tokens)
             row['Note'] = tokens
             patient_tokenized_noteevents = patient_tokenized_noteevents.append(row)
-        patient_tokenized_noteevents.to_csv(tokenized_events_data_path + "{}.csv".format(icustay))
+        patient_tokenized_noteevents.to_csv(tokenized_events_data_path + "{}.csv".format(icustay), index=False)
 
 parameters = functions.load_parameters_file()
 dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])

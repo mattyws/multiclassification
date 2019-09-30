@@ -44,11 +44,18 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
             for column in bucket_events.columns:
                 if column == 'Unnamed: 0':
                     continue
-                values = bucket_events[column].dropna().tolist()
-                if len(values) != 0:
-                    bucket[column] = sum(values)/len(values)
+                if 'categorical' in column \
+                    or 'categorical' not in column and 'numeric' not in column and len(column.split('_')) >= 3:
+                    if 1 in bucket_events[column].tolist():
+                        bucket[column] = 1
+                    else:
+                        bucket[column] = 0
                 else:
-                    bucket[column] = numpy.nan
+                    values = bucket_events[column].dropna().tolist()
+                    if len(values) != 0:
+                        bucket[column] = sum(values)/len(values)
+                    else:
+                        bucket[column] = numpy.nan
             buckets.append(bucket)
             starttime += timedelta(hours=1)
         buckets = pd.DataFrame(buckets)
@@ -63,8 +70,8 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
 
 
 parameters = functions.load_parameters_file()
-events_path =  parameters['mimic_data_path'] + "sepsis_insight/"
-new_events_path = parameters['mimic_data_path'] + "sepsis_insight_bucket/"
+events_path =  parameters['mimic_data_path'] + "sepsis_all_features_raw_merged/"
+new_events_path = parameters['mimic_data_path'] + "sepsis_all_features_bucket/"
 if not os.path.exists(new_events_path):
     os.mkdir(new_events_path)
 
@@ -100,4 +107,4 @@ with mp.Pool(processes=len(dataset_for_mp)) as pool:
     print(original_len, len(dataset))
     if len(dataset) != original_len:
         print("Removed some data")
-        dataset.to_csv(parameters['mimic_data_path'] + parameters['insight_dataset_file_name'] + '2')
+        dataset.to_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'] + '2')

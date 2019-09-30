@@ -17,6 +17,9 @@
   "patients_features_dirname" : "{}_features/",
   "noteevents_anonymized_tokens_normalized" : "sepsis_anonymized_tokens_normalized/",
   "tokenized_noteevents_dirname" : "sepsis_tokenized_noteevents/",
+  "ctakes_data_path" : "sepsis_noteevents_ctakes/",
+  "ctakes_output_path" : "sepsis_noteevents_ctakes_output/",
+  "noteevents_ctakes_processed_data_path" : "sepsis_noteevents_processed_ctakes/",
 
   "features_after_binarized_file_name" : "features_after_binarized.pkl",
   "features_types_file_name" : "features_types.pkl",
