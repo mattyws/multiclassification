@@ -33,6 +33,8 @@ def fill_missing_values(dataset, events_path=None, new_events_path=None, manager
 parameters = functions.load_parameters_file()
 events_path =  parameters['mimic_data_path'] + "sepsis_all_features_raw_merged/"
 new_events_path = parameters['mimic_data_path'] + "sepsis_all_features_no_missing/"
+if not os.path.exists(new_events_path):
+    os.mkdir(new_events_path)
 
 dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
 
