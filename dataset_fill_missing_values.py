@@ -18,14 +18,14 @@ import sys
 import functions
 
 
-def fill_missing_values(dataset, events_path=None, new_events_path=None, manager_queue=None):
-    for index, patient in dataset.iterrows():
-        events = pd.read_csv(events_path+'{}.csv'.format(patient['icustay_id']))
+def fill_missing_values(icustays, events_path=None, new_events_path=None, manager_queue=None):
+    for icustay in icustays:
+        events = pd.read_csv(events_path+'{}.csv'.format(icustay))
         events = events.ffill()
         events = events.bfill()
-        events.to_csv(new_events_path+'{}.csv'.format(patient['icustay_id']), index=False)
+        events.to_csv(new_events_path+'{}.csv'.format(icustay), index=False)
         if manager_queue is not None:
-            manager_queue.put(index)
+            manager_queue.put(icustay)
 
 
 

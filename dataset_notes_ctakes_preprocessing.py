@@ -3,6 +3,7 @@ import subprocess
 from functools import partial
 from xml.sax.saxutils import escape, quoteattr
 import xml.etree.ElementTree as ET
+import nltk.data
 
 import pandas
 import unicodedata
@@ -35,6 +36,7 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
 
 def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None, merged_results_path=None, manager_queue=None):
     #TODO: get textsem xml token and that have Mention in their text
+    sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
     for icustay in icustayids:
         if manager_queue is not None:
             manager_queue.put(icustay)
@@ -73,6 +75,8 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                     print("--------------------------------------------------")
             # print(words)
             print(text)
+            for sentence in sentence_detector.tokenize(text.strip()):
+                print(sentence)
             exit()
         # data = pandas.DataFrame(data)
         # data.to_csv(merged_results_path + "{}.csv".format(icustay), index=False)
