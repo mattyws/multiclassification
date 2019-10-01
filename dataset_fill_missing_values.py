@@ -20,6 +20,8 @@ import functions
 
 def fill_missing_values(icustays, events_path=None, new_events_path=None, manager_queue=None):
     for icustay in icustays:
+        if os.path.exists(new_events_path+'{}.csv'.format(icustay)):
+            continue
         events = pd.read_csv(events_path+'{}.csv'.format(icustay))
         events = events.ffill()
         events = events.bfill()

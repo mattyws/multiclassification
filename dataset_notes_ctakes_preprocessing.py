@@ -35,7 +35,7 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
                 file.write(escape_invalid_xml_characters(note['Note']))
 
 def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None, merged_results_path=None, manager_queue=None):
-    #TODO: get textsem xml token and that have Mention in their text
+    #TODO: save two files - one csv with CUI's for each text, and other with the tokenized sentences for the word2vec
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
     for icustay in icustayids:
         if manager_queue is not None:
