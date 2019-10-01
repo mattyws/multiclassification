@@ -40,7 +40,7 @@ dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_n
 
 total_files = len(dataset)
 icustay_ids = list(dataset['icustay_id'])
-dataset_for_mp = numpy.array_split(dataset, 10)
+dataset_for_mp = numpy.array_split(icustay_ids, 10)
 
 m = mp.Manager()
 queue = m.Queue()
