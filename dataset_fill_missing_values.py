@@ -18,12 +18,12 @@ import sys
 import functions
 
 
-def fill_missing_values(dataset, events_path, manager_queue=None):
+def fill_missing_values(dataset, events_path=None, new_events_path=None, manager_queue=None):
     for index, patient in dataset.iterrows():
         events = pd.read_csv(events_path+'{}.csv'.format(patient['icustay_id']))
         events = events.ffill()
         events = events.bfill()
-        events.to_csv(events_path+'{}.csv'.format(patient['icustay_id']), index=False)
+        events.to_csv(new_events_path+'{}.csv'.format(patient['icustay_id']), index=False)
         if manager_queue is not None:
             manager_queue.put(index)
 
@@ -31,7 +31,8 @@ def fill_missing_values(dataset, events_path, manager_queue=None):
 
 
 parameters = functions.load_parameters_file()
-events_path =  parameters['mimic_data_path'] + "sepsis_all_features_bucket/"
+events_path =  parameters['mimic_data_path'] + "sepsis_all_features_raw_merged/"
+new_events_path = parameters['mimic_data_path'] + "sepsis_all_features_no_missing/"
 
 dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
 
@@ -41,8 +42,9 @@ dataset_for_mp = numpy.array_split(dataset, 10)
 
 m = mp.Manager()
 queue = m.Queue()
-partial_fill_missing_values = partial(fill_missing_values, events_path=events_path, manager_queue=queue)
-with mp.Pool(processes=len(dataset_for_mp)) as pool:
+partial_fill_missing_values = partial(fill_missing_values, events_path=events_path, new_events_path=new_events_path ,
+                                      manager_queue=queue)
+with mp.Pool(processes=4) as pool:
     map_obj = pool.map_async(partial_fill_missing_values, dataset_for_mp)
     consumed = 0
     while not map_obj.ready():
