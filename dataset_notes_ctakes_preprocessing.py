@@ -2,6 +2,7 @@ import os
 import subprocess
 from functools import partial
 from xml.sax.saxutils import escape, quoteattr
+import xml.etree.ElementTree as ET
 
 import pandas
 import unicodedata
@@ -32,23 +33,49 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
             with open(icustay_path + new_filename, 'w') as file:
                 file.write(escape_invalid_xml_characters(note['Note']))
 
-def merge_ctakes_result_to_csv(icustayids, ctakes_result_path=None, merged_results_path=None, manager_queue=None):
+def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None, merged_results_path=None, manager_queue=None):
+    #TODO: get textsem xml token and that have Mention in their text
     for icustay in icustayids:
         if manager_queue is not None:
             manager_queue.put(icustay)
-        if not os.path.exists(noteevents_path + "{}/".format(icustay)):
+        if not os.path.exists(ctakes_result_path + "{}/".format(icustay)):
+            print("continua")
             continue
-        icustay_path = ctakes_result_path + str(icustay) + '/'
-        files = [icustay_path + x for x in os.listdir(icustay_path)]
+        icustay_xmi_path = ctakes_result_path + str(icustay) + '/'
+        icustay_text_path = texts_path + str(icustay) + '/'
+        xmls = [icustay_xmi_path + x for x in os.listdir(icustay_xmi_path)]
+        texts = [icustay_text_path + x for x in os.listdir(icustay_text_path)]
         data = []
-        for file in files:
-            record = dict()
-            record['timestamp'] = file.split('_')[1]
-            with open(file, 'r') as f:
-                record['umls'] = f.read()
-            data.append(record)
-        data = pandas.DataFrame(data)
-        data.to_csv(merged_results_path + "{}.csv".format(icustay), index=False)
+        for xml, text in zip(xmls, texts):
+            print(xml, text)
+            with open(text) as text_file:
+                text = text_file.read()
+            tree = ET.parse(xml)
+            root = tree.getroot()
+            words = []
+            for child in root.iter('*'):
+                if '{http:///org/apache/ctakes/typesystem/type/textsem.ecore}' in child.tag \
+                        and "Mention" in child.tag:
+                    print("--------------------------------------------------")
+                    word = text[int(child.attrib['begin']):int(child.attrib['end'])]
+                    words.append(word)
+                    # for umls in umls_ref:
+
+                    print(word)
+                    print(child.tag, child.attrib)
+                    umls_concepts = []
+                    for ontology in child.attrib['ontologyConceptArr'].split(' '):
+                        umls_ref = root.find(
+                            '{http:///org/apache/ctakes/typesystem/type/refsem.ecore}UmlsConcept[@{http://www.omg.org/XMI}id="'
+                            + ontology + '"]')
+                        print(umls_ref.attrib)
+                        umls_concepts.append(umls_ref)
+                    print("--------------------------------------------------")
+            # print(words)
+            print(text)
+            exit()
+        # data = pandas.DataFrame(data)
+        # data.to_csv(merged_results_path + "{}.csv".format(icustay), index=False)
 
 parameters = functions.load_parameters_file()
 
@@ -69,35 +96,37 @@ if not os.path.exists(uids_data_path):
 with mp.Pool(processes=4) as pool:
     m = mp.Manager()
     queue = m.Queue()
-    partial_split_data_ctakes = partial(split_data_for_ctakes,
-                                        noteevents_path = noteevents_path,
-                                        ctakes_data_path=ctakes_data_path,
-                                        manager_queue=queue)
-    # TODO : process the fales and put it into a format that can be readable for the ctakes (ID_TIME.txt)
-    print("===== Spliting events into different files =====")
-    map_obj = pool.map_async(partial_split_data_ctakes, icustays)
-    consumed = 0
-    while not map_obj.ready():
-        for _ in range(queue.qsize()):
-            queue.get()
-            consumed += 1
-        sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
-
-    # TODO : execute the command line for the ctakes pipeline
-    ctakes_params = functions.load_ctakes_parameters_file()
-    dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
-    ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
-        .format(ctakes_params['ctakes_path'], dirname + ctakes_data_path, dirname + ctakes_result_data_path,
-                ctakes_params['umls_username'], ctakes_params['umls_password'])
-    print(ctakes_command)
-    process = subprocess.Popen(ctakes_command, shell=True, stdout=subprocess.PIPE)
-    for line in process.stdout:
-        print(line)
-    process.wait()
-    exit()
+    # partial_split_data_ctakes = partial(split_data_for_ctakes,
+    #                                     noteevents_path = noteevents_path,
+    #                                     ctakes_data_path=ctakes_data_path,
+    #                                     manager_queue=queue)
+    # # TODO : process the fales and put it into a format that can be readable for the ctakes (ID_TIME.txt)
+    # print("===== Spliting events into different files =====")
+    # map_obj = pool.map_async(partial_split_data_ctakes, icustays)
+    # consumed = 0
+    # while not map_obj.ready():
+    #     for _ in range(queue.qsize()):
+    #         queue.get()
+    #         consumed += 1
+    #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
+    #
+    # # TODO : execute the command line for the ctakes pipeline
+    # ctakes_params = functions.load_ctakes_parameters_file()
+    # dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
+    # ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
+    #     .format(ctakes_params['ctakes_path'], dirname + ctakes_data_path, dirname + ctakes_result_data_path,
+    #             ctakes_params['umls_username'], ctakes_params['umls_password'])
+    # print(ctakes_command)
+    # process = subprocess.Popen(ctakes_command, shell=True, stdout=subprocess.PIPE)
+    # for line in process.stdout:
+    #     print(line)
+    # process.wait()
     # TODO : merge the files for the same id into a csv with the results for the ctakes
-    partial_merge_results = partial(merge_ctakes_result_to_csv, ctakes_result_path=ctakes_result_data_path,
+    partial_merge_results = partial(merge_ctakes_result_to_csv, texts_path=ctakes_data_path,
+                                    ctakes_result_path=ctakes_result_data_path,
                                     merged_results_path=uids_data_path, manager_queue=queue)
+    partial_merge_results(icustays[0])
+    exit()
     print("===== Merging events into a csv =====")
     map_obj = pool.map_async(partial_merge_results, icustays)
     consumed = 0
