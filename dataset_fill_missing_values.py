@@ -43,6 +43,9 @@ dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_n
 total_files = len(dataset)
 icustay_ids = list(dataset['icustay_id'])
 dataset_for_mp = numpy.array_split(icustay_ids, 10)
+print(total_files)
+print(len(dataset_for_mp))
+print(dataset_for_mp)
 
 with mp.Pool(processes=4) as pool:
     m = mp.Manager()
