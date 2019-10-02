@@ -44,11 +44,11 @@ total_files = len(dataset)
 icustay_ids = list(dataset['icustay_id'])
 dataset_for_mp = numpy.array_split(icustay_ids, 10)
 
-m = mp.Manager()
-queue = m.Queue()
-partial_fill_missing_values = partial(fill_missing_values, events_path=events_path, new_events_path=new_events_path ,
-                                      manager_queue=queue)
 with mp.Pool(processes=4) as pool:
+    m = mp.Manager()
+    queue = m.Queue()
+    partial_fill_missing_values = partial(fill_missing_values, events_path=events_path, new_events_path=new_events_path,
+                                          manager_queue=queue)
     map_obj = pool.map_async(partial_fill_missing_values, dataset_for_mp)
     consumed = 0
     while not map_obj.ready():
