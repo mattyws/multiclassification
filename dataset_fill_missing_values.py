@@ -28,6 +28,7 @@ def fill_missing_values(icustays, events_path=None, new_events_path=None, manage
         events = pd.read_csv(events_path+'{}.csv'.format(icustay))
         events = events.fillna(method='ffill')
         events = events.fillna(method='backfill')
+        events = events.fillna(0)
         events.to_csv(new_events_path+'{}.csv'.format(icustay), index=False)
 
 parameters = functions.load_parameters_file()
