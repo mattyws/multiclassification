@@ -215,3 +215,11 @@ def load_ctakes_parameters_file():
         raise FileNotFoundError("cTakes parameter file doesn't exists!")
     parameters = json.load(open('ctakes_parameters.json'))
     return parameters
+
+
+def remove_only_special_characters_tokens(tokens):
+    new_tokens = []
+    for token in tokens:
+        if not re.match(r'^[\W_]+$', token):
+            new_tokens.append(token)
+    return new_tokens

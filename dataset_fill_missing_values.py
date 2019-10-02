@@ -51,11 +51,11 @@ with mp.Pool(processes=4) as pool:
     queue = m.Queue()
     partial_fill_missing_values = partial(fill_missing_values, events_path=events_path, new_events_path=new_events_path,
                                           manager_queue=queue)
-    # partial_fill_missing_values(dataset_for_mp[0])
-    map_obj = pool.map_async(partial_fill_missing_values, dataset_for_mp)
-    consumed = 0
-    while not map_obj.ready():
-        for _ in range(queue.qsize()):
-            queue.get()
-            consumed += 1
-        sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+    partial_fill_missing_values(list(dataset['icustay_id']))
+    # map_obj = pool.map_async(partial_fill_missing_values, dataset_for_mp)
+    # consumed = 0
+    # while not map_obj.ready():
+    #     for _ in range(queue.qsize()):
+    #         queue.get()
+    #         consumed += 1
+    #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))

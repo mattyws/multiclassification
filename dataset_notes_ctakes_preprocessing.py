@@ -1,15 +1,18 @@
 import os
 import subprocess
 from functools import partial
-from xml.sax.saxutils import escape, quoteattr
+from xml.sax.saxutils import escape, quoteattr, unescape
 import xml.etree.ElementTree as ET
 import nltk.data
 
 import pandas
+import html
 import unicodedata
 import multiprocessing as mp
 import numpy as np
 import sys
+
+from nltk import WhitespaceTokenizer
 
 import functions
 
@@ -37,6 +40,7 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
 def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None, merged_results_path=None, manager_queue=None):
     #TODO: save two files - one csv with CUI's for each text, and other with the tokenized sentences for the word2vec
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
+    tokenizer = WhitespaceTokenizer()
     for icustay in icustayids:
         if manager_queue is not None:
             manager_queue.put(icustay)
@@ -49,34 +53,61 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         texts = [icustay_text_path + x for x in os.listdir(icustay_text_path)]
         data = []
         for xml, text in zip(xmls, texts):
+            noteevent = dict()
+            words = dict()
             print(xml, text)
+            # Get the original text, we could got it from the xml result file,
+            # but I choose not to just to not make a operation on the xml
             with open(text) as text_file:
                 text = text_file.read()
             tree = ET.parse(xml)
             root = tree.getroot()
-            words = []
+            # Getting the words that reference a medical concept at the text, and its CUI
             for child in root.iter('*'):
+                # The words are marked with the textsem tag and the medical procedures, medication etc have Mention
+                # in their names
                 if '{http:///org/apache/ctakes/typesystem/type/textsem.ecore}' in child.tag \
                         and "Mention" in child.tag:
                     print("--------------------------------------------------")
-                    word = text[int(child.attrib['begin']):int(child.attrib['end'])]
-                    words.append(word)
-                    # for umls in umls_ref:
-
+                    # Get the word marked by this tag
+                    word = text[int(child.attrib['begin']):int(child.attrib['end'])].lower()
+                    if word not in words.keys():
+                        words[word] = []
+                    word_attrib = dict()
+                    word_attrib['begin'] = int(child.attrib['begin'])
+                    word_attrib['end'] = int(child.attrib['end'])
+                    word_attrib['word'] = word
+                    word_attrib['cuis'] = set()
                     print(word)
                     print(child.tag, child.attrib)
-                    umls_concepts = []
+                    # Now go after their CUIs and add it to the set at the words dictionary
                     for ontology in child.attrib['ontologyConceptArr'].split(' '):
                         umls_ref = root.find(
                             '{http:///org/apache/ctakes/typesystem/type/refsem.ecore}UmlsConcept[@{http://www.omg.org/XMI}id="'
                             + ontology + '"]')
+                        word_attrib['cuis'].add(umls_ref.attrib['cui'])
                         print(umls_ref.attrib)
-                        umls_concepts.append(umls_ref)
                     print("--------------------------------------------------")
+                    words[word].append(word_attrib)
             # print(words)
             print(text)
-            for sentence in sentence_detector.tokenize(text.strip()):
-                print(sentence)
+            begin = 0
+            end = 0
+            for sentence in sentence_detector.tokenize(text.strip().lower()):
+                sentence = sentence.strip()
+                print("=====")
+                end += len(sentence)
+                sentence_references = []
+                for word in words.keys():
+                    if word in sentence:
+                        for word_attrib in words[word]:
+                            if word_attrib['begin'] >= begin and word_attrib['begin'] <= end:
+                                sentence_references.append(word_attrib)
+                print(html.unescape(sentence).replace('\n', ' '))
+                print(begin, end, len(sentence))
+                print(sentence_references)
+                print("=====")
+                begin = end
             exit()
         # data = pandas.DataFrame(data)
         # data.to_csv(merged_results_path + "{}.csv".format(icustay), index=False)

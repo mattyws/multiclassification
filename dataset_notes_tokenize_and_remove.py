@@ -9,18 +9,11 @@ import sys
 from nltk import WhitespaceTokenizer
 
 import functions
-import re
+
+from functions import remove_only_special_characters_tokens
 
 
-def remove_only_special_characters_tokens(tokens):
-    new_tokens = []
-    for token in tokens:
-        if not re.match(r'^[\W_]+$', token):
-            new_tokens.append(token)
-    return new_tokens
-
-
-def process_notes(icustays, noteevents_data_path=None, tokenized_events_data_path=None, manager_queue=None):
+ def process_notes(icustays, noteevents_data_path=None, tokenized_events_data_path=None, manager_queue=None):
     tokenizer = WhitespaceTokenizer()
     for icustay in icustays:
         if manager_queue is not None:
