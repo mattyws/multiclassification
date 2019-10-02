@@ -1,3 +1,4 @@
+import itertools
 import os
 import subprocess
 from functools import partial
@@ -88,26 +89,104 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                         word_attrib['cuis'].add(umls_ref.attrib['cui'])
                         print(umls_ref.attrib)
                     print("--------------------------------------------------")
+                    word_attrib['cuis'] = list(word_attrib['cuis'])
                     words[word].append(word_attrib)
             # print(words)
             print(text)
             begin = 0
             end = 0
-            for sentence in sentence_detector.tokenize(text.strip().lower()):
-                sentence = sentence.strip()
+            icustay_sentences = []
+            text = text.strip().lower()
+            for sentence in sentence_detector.tokenize(text):
+                # sentence = sentence.strip()
+                begin = text.index(sentence)
+                end = begin + len(sentence)
                 print("=====")
-                end += len(sentence)
-                sentence_references = []
+                # end += len(sentence)
+                words_references = []
                 for word in words.keys():
                     if word in sentence:
                         for word_attrib in words[word]:
                             if word_attrib['begin'] >= begin and word_attrib['begin'] <= end:
-                                sentence_references.append(word_attrib)
+                                words_references.append(word_attrib)
                 print(html.unescape(sentence).replace('\n', ' '))
                 print(begin, end, len(sentence))
-                print(sentence_references)
+                print(words_references)
+                print("Updating references")
+                for reference in words_references:
+                    reference['begin'] -= begin
+                    reference['end'] -= begin
+                    print(sentence[reference['begin']:reference['end']])
+                print(words_references)
+                # Look for multi word expressions
+                multiwords_references = []
+                already_added_references = []
+                for word_reference in words_references:
+                    expression_reference = []
+                    # If it has a space is a multiword expression
+                    if len(word_reference['word'].split(' ')) > 1:
+                        # Check if it is not already added, if it is, ignore
+                        # This is done because multiwords expressions can have a size higher than two
+                        is_added = False
+                        for added_reference in already_added_references:
+                            if added_reference['begin'] == word_reference['begin'] \
+                                    and added_reference['end'] == word_reference['end']:
+                                is_added = True
+                        if is_added:
+                            continue
+                        print('$$$')
+                        print(word_reference['word'])
+                        expression_reference.append(word_reference)
+                        # Looking if a word in this expression has a CUI of its own
+                        for word_reference2 in words_references:
+                            if word_reference2['word'] != word_reference['word'] \
+                                    and word_reference2['begin'] >= word_reference['begin'] \
+                                    and word_reference2['end'] <= word_reference['end']:
+                                expression_reference.append(word_reference2)
+                                print(word_reference2['word'])
+                        if len(expression_reference) > 1:
+                            for reference in expression_reference:
+                                already_added_references.append(reference)
+                            multiwords_references.append(expression_reference)
+                # Getting words that were not multiwords or part of it
+                not_multiwords = []
+                for word_reference in words_references:
+                    is_not_multiword = True
+                    for added_reference in already_added_references:
+                        if added_reference['word'] == word_reference['word'] \
+                            and added_reference['begin'] == word_reference['begin']:
+                            is_not_multiword = False
+                    if is_not_multiword:
+                        not_multiwords.append(word_reference)
+                print(not_multiwords)
+                print("#######")
+                for reference in multiwords_references:
+                    print(reference)
+                print("******************************")
+                # print(sentence)
+                # TODO: create new sentences - the error is in the substitution algorithm
+                for reference in list(itertools.product(*multiwords_references)):
+                    reference = list(reference)
+                    reference.extend(not_multiwords)
+                    new_sentence = sentence
+                    for index in range(len(reference)):
+                        sentence_len = len(new_sentence)
+                        new_sentence = new_sentence[0:reference[index]['begin']] + reference[index]['cuis'][0] + new_sentence[reference[index]['end']:len(new_sentence)]
+                        print(new_sentence)
+                        len_diff = len(new_sentence) - sentence_len
+                        for item2 in reference:
+                            if item2['begin'] > reference[index]['begin']:
+                                item2['begin'] += len_diff
+                                item2['end'] += len_diff
+                        print(reference)
+                    print(sentence)
+                    print(new_sentence)
+                        # new_sentence = new_sentence.replace()
+                    # print(reference)
+                # Now replace the CUIs in text and duplicate the sentence if is the case
+
                 print("=====")
-                begin = end
+                # begin = end
             exit()
         # data = pandas.DataFrame(data)
         # data.to_csv(merged_results_path + "{}.csv".format(icustay), index=False)
