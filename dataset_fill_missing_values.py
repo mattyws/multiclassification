@@ -20,17 +20,15 @@ import functions
 
 def fill_missing_values(icustays, events_path=None, new_events_path=None, manager_queue=None):
     for icustay in icustays:
-        if os.path.exists(new_events_path+'{}.csv'.format(icustay)):
-            continue
-        events = pd.read_csv(events_path+'{}.csv'.format(icustay))
-        events = events.ffill()
-        events = events.bfill()
-        events.to_csv(new_events_path+'{}.csv'.format(icustay), index=False)
         if manager_queue is not None:
             manager_queue.put(icustay)
-
-
-
+        if os.path.exists(new_events_path+'{}.csv'.format(icustay)):
+            print("{} already done".format(icustay))
+            continue
+        events = pd.read_csv(events_path+'{}.csv'.format(icustay))
+        events = events.fillna(method='ffill')
+        events = events.fillna(method='backfill')
+        events.to_csv(new_events_path+'{}.csv'.format(icustay), index=False)
 
 parameters = functions.load_parameters_file()
 events_path =  parameters['mimic_data_path'] + "sepsis_all_features_raw_merged/"
@@ -52,6 +50,7 @@ with mp.Pool(processes=4) as pool:
     queue = m.Queue()
     partial_fill_missing_values = partial(fill_missing_values, events_path=events_path, new_events_path=new_events_path,
                                           manager_queue=queue)
+    # partial_fill_missing_values(dataset_for_mp[0])
     map_obj = pool.map_async(partial_fill_missing_values, dataset_for_mp)
     consumed = 0
     while not map_obj.ready():
