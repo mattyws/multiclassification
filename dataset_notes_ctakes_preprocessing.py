@@ -1,3 +1,4 @@
+import copy
 import itertools
 import os
 import subprocess
@@ -162,27 +163,42 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 print("#######")
                 for reference in multiwords_references:
                     print(reference)
-                print("******************************")
                 # print(sentence)
                 # TODO: create new sentences - the error is in the substitution algorithm
                 for reference in list(itertools.product(*multiwords_references)):
+                    print("******************************")
                     reference = list(reference)
                     reference.extend(not_multiwords)
-                    new_sentence = sentence
-                    for index in range(len(reference)):
-                        sentence_len = len(new_sentence)
-                        new_sentence = new_sentence[0:reference[index]['begin']] + reference[index]['cuis'][0] + new_sentence[reference[index]['end']:len(new_sentence)]
+                    # First, copy the object with each of its CUI, if it have more than one CUI
+                    new_reference = []
+                    for item in reference:
+                        cui_object_list = []
+                        for cui in item['cuis']:
+                            cui_object = copy.deepcopy(item)
+                            cui_object['cui'] = cui
+                            cui_object_list.append(cui_object)
+                        new_reference.append(cui_object_list)
+                    for item in list(itertools.product(*new_reference)):
+                        print("!!!!!!!!!!!!")
+                        copied_reference = copy.deepcopy(item)
+                        print(copied_reference)
+                        new_sentence = copy.copy(sentence)
+                        for index in range(len(copied_reference)):
+                            sentence_len = len(new_sentence)
+                            new_sentence = new_sentence[0:copied_reference[index]['begin']] \
+                                           + copied_reference[index]['cui'] \
+                                           + new_sentence[copied_reference[index]['end']:len(new_sentence)]
+                            print(new_sentence)
+                            len_diff = len(new_sentence) - sentence_len
+                            for item2 in copied_reference:
+                                if item2['begin'] > copied_reference[index]['begin']:
+                                    print(item2['word'], len_diff)
+                                    item2['begin'] += len_diff
+                                    item2['end'] += len_diff
+                            print(copied_reference)
+                        print(sentence)
                         print(new_sentence)
-                        len_diff = len(new_sentence) - sentence_len
-                        for item2 in reference:
-                            if item2['begin'] > reference[index]['begin']:
-                                item2['begin'] += len_diff
-                                item2['end'] += len_diff
-                        print(reference)
-                    print(sentence)
-                    print(new_sentence)
-                        # new_sentence = new_sentence.replace()
-                    # print(reference)
+                    print("@!@@@@@@@@@@@@!@!@!@!@!@!@!!@!@!@!")
                 # Now replace the CUIs in text and duplicate the sentence if is the case
 
                 print("=====")
