@@ -69,8 +69,8 @@ def get_word_cuis_from_xml(root, text):
                 print(umls_ref.attrib)
             print("--------------------------------------------------")
             word_attrib['cuis'] = list(word_attrib['cuis'])
-            words[word].append(word_attrib)
-            cuis.append(word_attrib)
+            words[word].append(copy.deepcopy(word_attrib))
+            cuis.append(copy.deepcopy(word_attrib))
     return words, cuis
 
 def get_references_from_sentence(words, sentence, begin, end):
@@ -79,7 +79,7 @@ def get_references_from_sentence(words, sentence, begin, end):
         if word in sentence:
             for word_attrib in words[word]:
                 if word_attrib['begin'] >= begin and word_attrib['begin'] <= end:
-                    words_references.append(word_attrib)
+                    words_references.append(copy.deepcopy(word_attrib))
     return words_references
 
 def get_multiwords_references(words_references):
@@ -98,20 +98,17 @@ def get_multiwords_references(words_references):
                     is_added = True
             if is_added:
                 continue
-            print('$$$')
-            print(word_reference['word'])
             expression_reference.append(word_reference)
             # Looking if a word in this expression has a CUI of its own
             for word_reference2 in words_references:
                 if word_reference2['word'] != word_reference['word'] \
                         and word_reference2['begin'] >= word_reference['begin'] \
                         and word_reference2['end'] <= word_reference['end']:
-                    expression_reference.append(word_reference2)
-                    print(word_reference2['word'])
+                    expression_reference.append(copy.deepcopy(word_reference2))
             if len(expression_reference) > 1:
                 for reference in expression_reference:
-                    already_added_references.append(reference)
-                multiwords_references.append(expression_reference)
+                    already_added_references.append(copy.deepcopy(reference))
+                multiwords_references.append(copy.deepcopy(expression_reference))
     return multiwords_references, already_added_references
 
 def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None,
@@ -135,7 +132,6 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
             text_cuis = dict()
             text_cuis['timestamp'] = text.split('/')[-1].split('_')[1]
             text_sentences = []
-            print(xml, text)
             # Get the original text, we could got it from the xml result file,
             # but I choose not to just to not make a operation on the xml
             with open(text) as text_file:
@@ -144,7 +140,6 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
             root = tree.getroot()
             # Getting the words that reference a medical concept at the text, and its CUI
             words, text_cuis['cuis'] = get_word_cuis_from_xml(root, text)
-            print(text)
             text = text.strip().lower()
             for sentence in sentence_detector.tokenize(text):
                 # sentence = sentence.strip()
@@ -155,14 +150,14 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 words_references = get_references_from_sentence(words, sentence, begin, end)
                 #Creating a copy just to not change the original reference
                 words_references = copy.deepcopy(words_references)
-                print(html.unescape(sentence).replace('\n', ' '))
-                print(begin, end, len(sentence))
-                print(words_references)
-                print("Updating references")
+                # print(html.unescape(sentence).replace('\n', ' '))
+                # print(begin, end, len(sentence))
+                # print(words_references)
+                # print("Updating references")
                 for reference in words_references:
                     reference['begin'] -= begin
                     reference['end'] -= begin
-                print(words_references)
+                # print(words_references)
                 # Look for multi word expressions
                 multiwords_references, already_added_references = get_multiwords_references(words_references)
                 # Getting words that were not multiwords or part of it
@@ -174,11 +169,11 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                             and added_reference['begin'] == word_reference['begin']:
                             is_not_multiword = False
                     if is_not_multiword:
-                        not_multiwords.append(word_reference)
-                print(not_multiwords)
-                print("#######")
-                for reference in multiwords_references:
-                    print(reference)
+                        not_multiwords.append(copy.deepcopy(word_reference))
+                # print(not_multiwords)
+                # print("#######")
+                # for reference in multiwords_references:
+                #     print(reference)
                 # print(sentence)
                 for reference in list(itertools.product(*multiwords_references)):
                     print("******************************")
