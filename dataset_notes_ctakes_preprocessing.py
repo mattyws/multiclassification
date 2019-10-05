@@ -162,7 +162,6 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 words_references = get_references_from_sentence(words, sentence, begin, end)
                 #Creating a copy just to not change the original reference
                 words_references = copy.deepcopy(words_references)
-                exit()
                 # print(html.unescape(sentence).replace('\n', ' '))
                 # print(begin, end, len(sentence))
                 # print(words_references)
