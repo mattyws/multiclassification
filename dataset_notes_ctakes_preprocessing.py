@@ -148,8 +148,11 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 print("=====")
                 # end += len(sentence)
                 words_references = get_references_from_sentence(words, sentence, begin, end)
+                print(words_references)
                 #Creating a copy just to not change the original reference
                 words_references = copy.deepcopy(words_references)
+                print(words_references)
+                exit()
                 # print(html.unescape(sentence).replace('\n', ' '))
                 # print(begin, end, len(sentence))
                 # print(words_references)
