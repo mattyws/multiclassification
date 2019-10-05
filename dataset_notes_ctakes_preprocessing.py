@@ -39,6 +39,81 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
             with open(icustay_path + new_filename, 'w') as file:
                 file.write(escape_invalid_xml_characters(note['Note']))
 
+def get_word_cuis_from_xml(root, text):
+    words = dict()
+    cuis = []
+    # Getting the words that reference a medical concept at the text, and its CUI
+    for child in root.iter('*'):
+        # The words are marked with the textsem tag and the medical procedures, medication etc have Mention
+        # in their names
+        if '{http:///org/apache/ctakes/typesystem/type/textsem.ecore}' in child.tag \
+                and "Mention" in child.tag:
+            print("--------------------------------------------------")
+            # Get the word marked by this tag
+            word = text[int(child.attrib['begin']):int(child.attrib['end'])].lower()
+            if word not in words.keys():
+                words[word] = []
+            word_attrib = dict()
+            word_attrib['begin'] = int(child.attrib['begin'])
+            word_attrib['end'] = int(child.attrib['end'])
+            word_attrib['word'] = word
+            word_attrib['cuis'] = set()
+            print(word)
+            print(child.tag, child.attrib)
+            # Now go after their CUIs and add it to the set at the words dictionary
+            for ontology in child.attrib['ontologyConceptArr'].split(' '):
+                umls_ref = root.find(
+                    '{http:///org/apache/ctakes/typesystem/type/refsem.ecore}UmlsConcept[@{http://www.omg.org/XMI}id="'
+                    + ontology + '"]')
+                word_attrib['cuis'].add(umls_ref.attrib['cui'])
+                print(umls_ref.attrib)
+            print("--------------------------------------------------")
+            word_attrib['cuis'] = list(word_attrib['cuis'])
+            words[word].append(word_attrib)
+            cuis.append(word_attrib)
+    return words, cuis
+
+def get_references_from_sentence(words, sentence, begin, end):
+    words_references = []
+    for word in words.keys():
+        if word in sentence:
+            for word_attrib in words[word]:
+                if word_attrib['begin'] >= begin and word_attrib['begin'] <= end:
+                    words_references.append(word_attrib)
+    return words_references
+
+def get_multiwords_references(words_references):
+    multiwords_references = []
+    already_added_references = []
+    for word_reference in words_references:
+        expression_reference = []
+        # If it has a space is a multiword expression
+        if len(word_reference['word'].split(' ')) > 1:
+            # Check if it is not already added, if it is, ignore
+            # This is done because multiwords expressions can have a size higher than two
+            is_added = False
+            for added_reference in already_added_references:
+                if added_reference['begin'] == word_reference['begin'] \
+                        and added_reference['end'] == word_reference['end']:
+                    is_added = True
+            if is_added:
+                continue
+            print('$$$')
+            print(word_reference['word'])
+            expression_reference.append(word_reference)
+            # Looking if a word in this expression has a CUI of its own
+            for word_reference2 in words_references:
+                if word_reference2['word'] != word_reference['word'] \
+                        and word_reference2['begin'] >= word_reference['begin'] \
+                        and word_reference2['end'] <= word_reference['end']:
+                    expression_reference.append(word_reference2)
+                    print(word_reference2['word'])
+            if len(expression_reference) > 1:
+                for reference in expression_reference:
+                    already_added_references.append(reference)
+                multiwords_references.append(expression_reference)
+    return multiwords_references, already_added_references
+
 def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None, merged_results_path=None, manager_queue=None):
     #TODO: save two files - one csv with CUI's for each text, and other with the tokenized sentences for the word2vec
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
@@ -53,10 +128,12 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         icustay_text_path = texts_path + str(icustay) + '/'
         xmls = [icustay_xmi_path + x for x in os.listdir(icustay_xmi_path)]
         texts = [icustay_text_path + x for x in os.listdir(icustay_text_path)]
-        data = []
+        icu_cuis = []
+        icustay_sentences = []
         for xml, text in zip(xmls, texts):
-            noteevent = dict()
-            words = dict()
+            text_cuis = dict()
+            text_cuis['timestamp'] = text.split('_')[1]
+            text_sentences = []
             print(xml, text)
             # Get the original text, we could got it from the xml result file,
             # but I choose not to just to not make a operation on the xml
@@ -65,38 +142,8 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
             tree = ET.parse(xml)
             root = tree.getroot()
             # Getting the words that reference a medical concept at the text, and its CUI
-            for child in root.iter('*'):
-                # The words are marked with the textsem tag and the medical procedures, medication etc have Mention
-                # in their names
-                if '{http:///org/apache/ctakes/typesystem/type/textsem.ecore}' in child.tag \
-                        and "Mention" in child.tag:
-                    print("--------------------------------------------------")
-                    # Get the word marked by this tag
-                    word = text[int(child.attrib['begin']):int(child.attrib['end'])].lower()
-                    if word not in words.keys():
-                        words[word] = []
-                    word_attrib = dict()
-                    word_attrib['begin'] = int(child.attrib['begin'])
-                    word_attrib['end'] = int(child.attrib['end'])
-                    word_attrib['word'] = word
-                    word_attrib['cuis'] = set()
-                    print(word)
-                    print(child.tag, child.attrib)
-                    # Now go after their CUIs and add it to the set at the words dictionary
-                    for ontology in child.attrib['ontologyConceptArr'].split(' '):
-                        umls_ref = root.find(
-                            '{http:///org/apache/ctakes/typesystem/type/refsem.ecore}UmlsConcept[@{http://www.omg.org/XMI}id="'
-                            + ontology + '"]')
-                        word_attrib['cuis'].add(umls_ref.attrib['cui'])
-                        print(umls_ref.attrib)
-                    print("--------------------------------------------------")
-                    word_attrib['cuis'] = list(word_attrib['cuis'])
-                    words[word].append(word_attrib)
-            # print(words)
+            words, text_cuis['cuis'] = get_word_cuis_from_xml(root, text)
             print(text)
-            begin = 0
-            end = 0
-            icustay_sentences = []
             text = text.strip().lower()
             for sentence in sentence_detector.tokenize(text):
                 # sentence = sentence.strip()
@@ -104,12 +151,9 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 end = begin + len(sentence)
                 print("=====")
                 # end += len(sentence)
-                words_references = []
-                for word in words.keys():
-                    if word in sentence:
-                        for word_attrib in words[word]:
-                            if word_attrib['begin'] >= begin and word_attrib['begin'] <= end:
-                                words_references.append(word_attrib)
+                words_references = get_references_from_sentence(words, sentence, begin, end)
+                #Creating a copy just to not change the original reference
+                words_references = copy.deepcopy(words_references)
                 print(html.unescape(sentence).replace('\n', ' '))
                 print(begin, end, len(sentence))
                 print(words_references)
@@ -117,38 +161,9 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 for reference in words_references:
                     reference['begin'] -= begin
                     reference['end'] -= begin
-                    print(sentence[reference['begin']:reference['end']])
                 print(words_references)
                 # Look for multi word expressions
-                multiwords_references = []
-                already_added_references = []
-                for word_reference in words_references:
-                    expression_reference = []
-                    # If it has a space is a multiword expression
-                    if len(word_reference['word'].split(' ')) > 1:
-                        # Check if it is not already added, if it is, ignore
-                        # This is done because multiwords expressions can have a size higher than two
-                        is_added = False
-                        for added_reference in already_added_references:
-                            if added_reference['begin'] == word_reference['begin'] \
-                                    and added_reference['end'] == word_reference['end']:
-                                is_added = True
-                        if is_added:
-                            continue
-                        print('$$$')
-                        print(word_reference['word'])
-                        expression_reference.append(word_reference)
-                        # Looking if a word in this expression has a CUI of its own
-                        for word_reference2 in words_references:
-                            if word_reference2['word'] != word_reference['word'] \
-                                    and word_reference2['begin'] >= word_reference['begin'] \
-                                    and word_reference2['end'] <= word_reference['end']:
-                                expression_reference.append(word_reference2)
-                                print(word_reference2['word'])
-                        if len(expression_reference) > 1:
-                            for reference in expression_reference:
-                                already_added_references.append(reference)
-                            multiwords_references.append(expression_reference)
+                multiwords_references, already_added_references = get_multiwords_references(words_references)
                 # Getting words that were not multiwords or part of it
                 not_multiwords = []
                 for word_reference in words_references:
@@ -164,7 +179,6 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 for reference in multiwords_references:
                     print(reference)
                 # print(sentence)
-                # TODO: create new sentences - the error is in the substitution algorithm
                 for reference in list(itertools.product(*multiwords_references)):
                     print("******************************")
                     reference = list(reference)
@@ -198,12 +212,33 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                             print(copied_reference)
                         print(sentence)
                         print(new_sentence)
+                        text_sentences.append(new_sentence)
                     print("@!@@@@@@@@@@@@!@!@!@!@!@!@!!@!@!@!")
                 # Now replace the CUIs in text and duplicate the sentence if is the case
 
                 print("=====")
                 # begin = end
-            exit()
+            icustay_sentences.append(text_sentences)
+            icu_cuis.append(text_cuis)
+        for text_cuis in icu_cuis:
+            print("====")
+            print(text_cuis['cuis'])
+            text_cuis['cuis'] = sorted(text_cuis['cuis'], key=lambda i: i['begin'])
+            cuis = []
+            for attrib in text_cuis['cuis']:
+                for cui in attrib['cuis']:
+                    cuis.append(cui)
+            text_cuis['cuis'] = cuis
+            print(text_cuis['cuis'])
+        icu_cuis = pandas.DataFrame(icu_cuis)
+        icu_cuis['timestamp'] = pandas.to_datetime(icu_cuis['timestamp'], format=parameters['datetime_pattern'])
+        icu_cuis = icu_cuis.sort_values(by=['timestamp'])
+        icu_cuis.to_csv(merged_results_path + '{}.csv'.format(icustay), index=False)
+        with open(texts_path + '{}.txt'.format(icustay), 'wb') as file:
+            for sentence in icustay_sentences:
+                file.write(sentence + '\n')
+        exit()
+
         # data = pandas.DataFrame(data)
         # data.to_csv(merged_results_path + "{}.csv".format(icustay), index=False)
 
@@ -240,7 +275,6 @@ with mp.Pool(processes=4) as pool:
     #         consumed += 1
     #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
     #
-    # # TODO : execute the command line for the ctakes pipeline
     # ctakes_params = functions.load_ctakes_parameters_file()
     # dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
     # ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
@@ -251,7 +285,6 @@ with mp.Pool(processes=4) as pool:
     # for line in process.stdout:
     #     print(line)
     # process.wait()
-    # TODO : merge the files for the same id into a csv with the results for the ctakes
     partial_merge_results = partial(merge_ctakes_result_to_csv, texts_path=ctakes_data_path,
                                     ctakes_result_path=ctakes_result_data_path,
                                     merged_results_path=uids_data_path, manager_queue=queue)
