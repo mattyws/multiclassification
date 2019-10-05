@@ -213,6 +213,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 # Now replace the CUIs in text and duplicate the sentence if is the case
 
                 print("=====")
+                exit()
                 # begin = end
             icustay_sentences.extend(text_sentences)
             icu_cuis.append(text_cuis)
