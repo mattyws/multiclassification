@@ -218,7 +218,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
 
                 print("=====")
                 # begin = end
-            icustay_sentences.append(text_sentences)
+            icustay_sentences.extend(text_sentences)
             icu_cuis.append(text_cuis)
         for text_cuis in icu_cuis:
             print("====")
