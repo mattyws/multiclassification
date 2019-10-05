@@ -177,10 +177,10 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 # print(sentence)
                 for reference in list(itertools.product(*multiwords_references)):
                     print("******************************")
-                    print(reference)
-                    exit()
                     reference = list(reference)
                     reference.extend(not_multiwords)
+                    print(reference)
+                    exit()
                     # First, copy the object with each of its CUI, if it have more than one CUI
                     new_reference = []
                     for item in reference:
