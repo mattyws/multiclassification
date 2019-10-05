@@ -52,8 +52,6 @@ def get_word_cuis_from_xml(root, text):
             print("--------------------------------------------------")
             # Get the word marked by this tag
             word = text[int(child.attrib['begin']):int(child.attrib['end'])].lower()
-            if word not in words.keys():
-                words[word] = []
             word_attrib = dict()
             word_attrib['begin'] = int(child.attrib['begin'])
             word_attrib['end'] = int(child.attrib['end'])
@@ -70,7 +68,18 @@ def get_word_cuis_from_xml(root, text):
                 print(umls_ref.attrib)
             print("--------------------------------------------------")
             word_attrib['cuis'] = list(word_attrib['cuis'])
-            words[word].append(copy.deepcopy(word_attrib))
+            if word not in words.keys():
+                words[word] = []
+                words[word].append(copy.deepcopy(word_attrib))
+            else:
+                # Check if it is the same word, but with a different xml tag
+                is_added = False
+                for attrib_added in words[word]:
+                    if word_attrib['begin'] == attrib_added['begin']:
+                        is_added = True
+                        attrib_added['cuis'].extend(word_attrib['cuis'])
+                if not is_added:
+                    words[word].append(copy.deepcopy(word_attrib))
             cuis.append(copy.deepcopy(word_attrib))
     return words, cuis
 
