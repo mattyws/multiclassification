@@ -114,7 +114,8 @@ def get_multiwords_references(words_references):
                 multiwords_references.append(expression_reference)
     return multiwords_references, already_added_references
 
-def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None, merged_results_path=None, manager_queue=None):
+def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None,
+                               sentences_data_path=None, merged_results_path=None, manager_queue=None):
     #TODO: save two files - one csv with CUI's for each text, and other with the tokenized sentences for the word2vec
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
     tokenizer = WhitespaceTokenizer()
@@ -234,7 +235,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         icu_cuis['timestamp'] = pandas.to_datetime(icu_cuis['timestamp'], format=parameters['datetime_pattern'])
         icu_cuis = icu_cuis.sort_values(by=['timestamp'])
         icu_cuis.to_csv(merged_results_path + '{}.csv'.format(icustay), index=False)
-        with open(texts_path + '{}.txt'.format(icustay), 'w') as file:
+        with open(sentences_data_path + '{}.txt'.format(icustay), 'w') as file:
             for sentence in icustay_sentences:
                 file.write(sentence + '\n')
         exit()
@@ -251,12 +252,15 @@ icustays = np.array_split(icustays, 10)
 ctakes_data_path = parameters['mimic_data_path'] + parameters['ctakes_data_path']
 ctakes_result_data_path = parameters['mimic_data_path'] + parameters['ctakes_output_path']
 uids_data_path = parameters['mimic_data_path'] + parameters['noteevents_ctakes_processed_data_path']
+sentences_data_path = parameters['mimic_data_path'] + parameters['noteevents_cuis_normalized_sentences']
 if not os.path.exists(ctakes_data_path):
     os.mkdir(ctakes_data_path)
 if not os.path.exists(ctakes_result_data_path):
     os.mkdir(ctakes_result_data_path)
 if not os.path.exists(uids_data_path):
     os.mkdir(uids_data_path)
+if not os.path.exists(sentences_data_path):
+    os.mkdir(sentences_data_path)
 
 with mp.Pool(processes=4) as pool:
     m = mp.Manager()
@@ -287,6 +291,7 @@ with mp.Pool(processes=4) as pool:
     # process.wait()
     partial_merge_results = partial(merge_ctakes_result_to_csv, texts_path=ctakes_data_path,
                                     ctakes_result_path=ctakes_result_data_path,
+                                    sentences_data_path=sentences_data_path,
                                     merged_results_path=uids_data_path, manager_queue=queue)
     partial_merge_results(icustays[0])
     exit()

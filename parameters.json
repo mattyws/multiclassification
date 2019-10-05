@@ -20,6 +20,7 @@
   "ctakes_data_path" : "sepsis_noteevents_ctakes/",
   "ctakes_output_path" : "sepsis_noteevents_ctakes_output/",
   "noteevents_ctakes_processed_data_path" : "sepsis_noteevents_processed_ctakes/",
+  "noteevents_cuis_normalized_sentences" : "sepsis_noteevents_sentences/",
 
   "features_after_binarized_file_name" : "features_after_binarized.pkl",
   "features_types_file_name" : "features_types.pkl",
