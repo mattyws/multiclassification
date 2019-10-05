@@ -132,7 +132,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         icustay_sentences = []
         for xml, text in zip(xmls, texts):
             text_cuis = dict()
-            text_cuis['timestamp'] = text.split('_')[1]
+            text_cuis['timestamp'] = text.split('/')[-1].split('_')[1]
             text_sentences = []
             print(xml, text)
             # Get the original text, we could got it from the xml result file,
