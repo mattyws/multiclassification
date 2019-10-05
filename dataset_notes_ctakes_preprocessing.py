@@ -234,7 +234,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         icu_cuis['timestamp'] = pandas.to_datetime(icu_cuis['timestamp'], format=parameters['datetime_pattern'])
         icu_cuis = icu_cuis.sort_values(by=['timestamp'])
         icu_cuis.to_csv(merged_results_path + '{}.csv'.format(icustay), index=False)
-        with open(texts_path + '{}.txt'.format(icustay), 'wb') as file:
+        with open(texts_path + '{}.txt'.format(icustay), 'w') as file:
             for sentence in icustay_sentences:
                 file.write(sentence + '\n')
         exit()
