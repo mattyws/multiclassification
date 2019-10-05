@@ -43,6 +43,7 @@ def get_word_cuis_from_xml(root, text):
     words = dict()
     cuis = []
     # Getting the words that reference a medical concept at the text, and its CUI
+    # TODO: a word can be identified as a medication or a procedure, change it to compress all the information in one attrib, using begin an end
     for child in root.iter('*'):
         # The words are marked with the textsem tag and the medical procedures, medication etc have Mention
         # in their names
