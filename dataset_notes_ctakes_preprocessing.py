@@ -294,7 +294,7 @@ with mp.Pool(processes=4) as pool:
     #         consumed += 1
     #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
     #
-    # ctakes_params = functions.load_ctakes_parameters_file()
+    ctakes_params = functions.load_ctakes_parameters_file()
     # dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
     # ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
     #     .format(ctakes_params['ctakes_path'], dirname + ctakes_data_path, dirname + ctakes_result_data_path,

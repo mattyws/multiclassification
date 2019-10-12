@@ -30,7 +30,7 @@ def get_features_frequency(icustays, patient_events_path=None, manager_queue=Non
     return features_frequency
 
 def remove_low_frequency_features(icustays, patient_events_path=None, new_events_path = None,
-                                  features_to_remove=None, manager_queue=None):
+                                  features_to_remove=None, manager_queue=None, features_to_remove_from_patient=None):
     for icustay in icustays:
         if manager_queue is not None:
             manager_queue.put(icustay)
@@ -38,15 +38,17 @@ def remove_low_frequency_features(icustays, patient_events_path=None, new_events
                 or os.path.exists(new_events_path + "{}.csv".format(icustay)):
             continue
         events = pd.read_csv(patient_events_path + "{}.csv".format(icustay))
-        features_to_remove_from_patient = list()
-        for column in events.columns:
-            if 'numerical' in column or 'categorical' in column:
-                column_feature = '_'.join(column.split('_')[:3])
-            else:
-                column_feature = '_'.join(column.split('_')[:2])
-            for feature in features_to_remove:
-                if feature == column_feature:
-                    features_to_remove_from_patient.append(column)
+        if features_to_remove_from_patient is None:
+            features_to_remove_from_patient = list()
+            for column in events.columns:
+                if 'numerical' in column or 'categorical' in column:
+                    column_feature = '_'.join(column.split('_')[:3])
+                else:
+                    column_feature = '_'.join(column.split('_')[:2])
+                for feature in features_to_remove:
+                    if feature == column_feature:
+                        features_to_remove_from_patient.append(column)
+            return features_to_remove_from_patient
         # features_in_patient = set(events.columns)
         # features_to_remove_from_patient = list(features_to_remove.intersection(features_in_patient))
         events = events.drop(columns=features_to_remove_from_patient)
@@ -125,6 +127,9 @@ with mp.Pool(processes=6) as pool:
                                                     new_events_path=new_events_path,
                                                     features_to_remove=features_to_remove,
                                                     manager_queue=queue)
+    features_to_remove_from_patient = partial_remove_low_frequency_features(icustays[0])
+    partial_remove_low_frequency_features = partial(partial_remove_low_frequency_features,
+                                                    features_to_remove_from_patient=features_to_remove_from_patient)
     map_obj = pool.map_async(partial_remove_low_frequency_features, icustays)
     consumed = 0
     while not map_obj.ready():
