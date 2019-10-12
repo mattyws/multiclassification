@@ -49,7 +49,6 @@ def remove_low_frequency_features(icustays, patient_events_path=None, new_events
                     features_to_remove_from_patient.append(column)
         # features_in_patient = set(events.columns)
         # features_to_remove_from_patient = list(features_to_remove.intersection(features_in_patient))
-        print(features_to_remove_from_patient)
         events = events.drop(columns=features_to_remove_from_patient)
         events = events.sort_index(axis=1)
         events.to_csv(new_events_path + "{}.csv".format(icustay), index=False, quoting=csv.QUOTE_NONNUMERIC)
@@ -113,7 +112,6 @@ for feature in features_frequency.keys():
 pp.pprint(frequency_bins)
 features_to_remove = list(features_to_remove)
 features_to_remove.sort()
-print(features_to_remove)
 i = 0
 new_events_path = parameters['mimic_data_path'] + parameters['features_low_frequency_removed_dirname']
 if not os.path.exists(new_events_path):
@@ -127,8 +125,7 @@ with mp.Pool(processes=6) as pool:
                                                     new_events_path=new_events_path,
                                                     features_to_remove=features_to_remove,
                                                     manager_queue=queue)
-    # map_obj = pool.map_async(partial_remove_low_frequency_features, icustays)
-    partial_remove_low_frequency_features(icustays[0])
+    map_obj = pool.map_async(partial_remove_low_frequency_features, icustays)
     consumed = 0
     while not map_obj.ready():
         for _ in range(queue.qsize()):
