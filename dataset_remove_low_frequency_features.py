@@ -111,8 +111,9 @@ for feature in features_frequency.keys():
     if bin == 0:
         features_to_remove.add(feature)
 pp.pprint(frequency_bins)
-print(features_to_remove)
 features_to_remove = list(features_to_remove)
+features_to_remove.sort()
+print(features_to_remove)
 i = 0
 new_events_path = parameters['mimic_data_path'] + parameters['features_low_frequency_removed_dirname']
 if not os.path.exists(new_events_path):
