@@ -55,6 +55,18 @@ patient_events_path = parameters['mimic_data_path'] + "sepsis_raw_merged/"
 icustays = np.array_split(dataset['icustay_id'], 10)
 m = mp.Manager()
 queue = m.Queue()
+
+
+def merge_results(results):
+    final_dict = dict()
+    for result in results:
+        for key in result:
+            if key not in final_dict.keys():
+                final_dict[key] = 0
+            final_dict[key] += result[key]
+    return final_dict
+
+
 if not os.path.exists(parameters['mimic_data_path'] + parameters['features_frequency_file_name']):
     print("====== Getting frequencies =====")
     with mp.Pool(processes=6) as pool:
@@ -69,7 +81,9 @@ if not os.path.exists(parameters['mimic_data_path'] + parameters['features_frequ
                 consumed += 1
             sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset)))
         results = map_obj.get()
-    features_frequency = {k : v for d in results for k, v in d.items()}
+    features_frequency = merge_results(results)
+
+
     with open(parameters['mimic_data_path'] + parameters['features_frequency_file_name'], 'wb') as file:
         pickle.dump(features_frequency, file)
 else:
