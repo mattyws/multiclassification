@@ -38,8 +38,18 @@ def remove_low_frequency_features(icustays, patient_events_path=None, new_events
                 or os.path.exists(new_events_path + "{}.csv".format(icustay)):
             continue
         events = pd.read_csv(patient_events_path + "{}.csv".format(icustay))
-        features_in_patient = set(events.columns)
-        features_to_remove_from_patient = list(features_to_remove.intersection(features_in_patient))
+        features_to_remove_from_patient = list()
+        for column in events.columns:
+            if 'numerical' in column or 'categorical' in column:
+                column_feature = '_'.join(column.split('_')[:3])
+            else:
+                column_feature = '_'.join(column.split('_')[:2])
+            for feature in features_to_remove:
+                if feature == column_feature:
+                    features_to_remove_from_patient.append(column)
+        # features_in_patient = set(events.columns)
+        # features_to_remove_from_patient = list(features_to_remove.intersection(features_in_patient))
+        print(features_to_remove_from_patient)
         events = events.drop(columns=features_to_remove_from_patient)
         events = events.sort_index(axis=1)
         events.to_csv(new_events_path + "{}.csv".format(icustay), index=False, quoting=csv.QUOTE_NONNUMERIC)
@@ -92,20 +102,17 @@ else:
 
 index = lambda x, l: floor((x/l) * 10)
 frequency_bins = dict()
+features_to_remove = set()
 for feature in features_frequency.keys():
     bin = index(features_frequency[feature], len(dataset))
     if bin not in frequency_bins.keys():
         frequency_bins[bin] = 0
     frequency_bins[bin] += 1
-pp.pprint(frequency_bins)
-exit()
-
-
-features_to_remove = set()
-for feature in features_frequency.keys():
-    if features_frequency[feature] < 10:
+    if bin == 0:
         features_to_remove.add(feature)
-
+pp.pprint(frequency_bins)
+print(features_to_remove)
+features_to_remove = list(features_to_remove)
 i = 0
 new_events_path = parameters['mimic_data_path'] + parameters['features_low_frequency_removed_dirname']
 if not os.path.exists(new_events_path):
@@ -114,11 +121,13 @@ if not os.path.exists(new_events_path):
 print("====== Removing low frequency features =====")
 with mp.Pool(processes=6) as pool:
     partial_remove_low_frequency_features = partial(remove_low_frequency_features,
-                                                    patient_events_path=patient_events_path,
+                                                    patient_events_path=parameters['mimic_data_path']
+                                                                        + "sepsis_all_features_no_missing/",
                                                     new_events_path=new_events_path,
                                                     features_to_remove=features_to_remove,
                                                     manager_queue=queue)
-    map_obj = pool.map_async(partial_remove_low_frequency_features, icustays)
+    # map_obj = pool.map_async(partial_remove_low_frequency_features, icustays)
+    partial_remove_low_frequency_features(icustays[0])
     consumed = 0
     while not map_obj.ready():
         for _ in range(queue.qsize()):
