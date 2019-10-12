@@ -14,7 +14,7 @@ import multiprocessing as mp
 import numpy as np
 import sys
 
-from nltk import WhitespaceTokenizer
+from nltk import WhitespaceTokenizer, RegexpTokenizer
 
 import functions
 
@@ -25,6 +25,7 @@ def escape_invalid_xml_characters(text):
     return text
 
 def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=None, manager_queue=None):
+    tokenizer = RegexpTokenizer(r'\w+')
     for icustay in icustayids:
         if manager_queue is not None:
             manager_queue.put(icustay)
@@ -37,7 +38,10 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
         for index, note in noteevents.iterrows():
             new_filename = "{}_{}".format(index, note['Unnamed: 0'])
             with open(icustay_path + new_filename, 'w') as file:
-                file.write(escape_invalid_xml_characters(note['Note']))
+                text = escape_invalid_xml_characters(note['Note'])
+                text = functions.remove_only_special_characters_tokens(tokenizer.tokenize(text))
+                text = " ".join(text)
+                file.write(text)
 
 def get_word_cuis_from_xml(root, text):
     words = dict()

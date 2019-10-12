@@ -8,6 +8,7 @@ import pprint
 
 import sys
 from functools import partial
+from math import floor
 
 import functions
 import pandas as pd
@@ -50,7 +51,7 @@ parameters = functions.load_parameters_file()
 pp = pprint.PrettyPrinter(indent=4)
 
 dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
-patient_events_path = parameters['mimic_data_path'] + "sepsis_separated_features/"
+patient_events_path = parameters['mimic_data_path'] + "sepsis_raw_merged/"
 icustays = np.array_split(dataset['icustay_id'], 10)
 m = mp.Manager()
 queue = m.Queue()
@@ -74,6 +75,17 @@ if not os.path.exists(parameters['mimic_data_path'] + parameters['features_frequ
 else:
     with open(parameters['mimic_data_path'] + parameters['features_frequency_file_name'], 'rb') as file:
         features_frequency = pickle.load(file)
+
+index = lambda x, l: floor((x/l) * 10)
+frequency_bins = dict()
+for feature in features_frequency.keys():
+    bin = index(features_frequency[feature], len(dataset))
+    if bin not in frequency_bins.keys():
+        frequency_bins[bin] = 0
+    frequency_bins[bin] += 1
+pp.pprint(frequency_bins)
+exit()
+
 
 features_to_remove = set()
 for feature in features_frequency.keys():
