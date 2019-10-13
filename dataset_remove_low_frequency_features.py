@@ -123,7 +123,7 @@ print("====== Removing low frequency features =====")
 with mp.Pool(processes=6) as pool:
     partial_remove_low_frequency_features = partial(remove_low_frequency_features,
                                                     patient_events_path=parameters['mimic_data_path']
-                                                                        + "sepsis_all_features_no_missing/",
+                                                                        + "sepsis_all_features_raw_merged/",
                                                     new_events_path=new_events_path,
                                                     features_to_remove=features_to_remove,
                                                     manager_queue=queue)
