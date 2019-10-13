@@ -2,7 +2,7 @@
     "datasetCsvFilePath": "mimic/dataset_patients.csv",
     "modelCheckpointPath": "mimic/all_features_training/checkpoint/",
     "modelConfigPath": "mimic/all_features_training/checkpoint/config.json",
-    "dataPath" : "mimic/sepsis_all_features_no_missing/",
+    "dataPath" : "mimic/sepsis_low_frequency_removed/",
     "trainingDataPath" :  "mimic/all_features_training/dataTraining/",
     "testingDataPath" : "mimic/all_features_training/dataTest/",
     "datasetFilesFileName": "mimic/all_features_training/datasetFiles.pkl",
