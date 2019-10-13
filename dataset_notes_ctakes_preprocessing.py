@@ -29,7 +29,8 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
     for icustay in icustayids:
         if manager_queue is not None:
             manager_queue.put(icustay)
-        if not os.path.exists(noteevents_path + "{}.csv".format(icustay)):
+        if not os.path.exists(noteevents_path + "{}.csv".format(icustay)) \
+                or os.path.exists(ctakes_data_path + str(icustay) + '/'):
             continue
         icustay_path = ctakes_data_path + str(icustay) + '/'
         if not os.path.exists(icustay_path):
@@ -280,30 +281,30 @@ if not os.path.exists(sentences_data_path):
 with mp.Pool(processes=4) as pool:
     m = mp.Manager()
     queue = m.Queue()
-    # partial_split_data_ctakes = partial(split_data_for_ctakes,
-    #                                     noteevents_path = noteevents_path,
-    #                                     ctakes_data_path=ctakes_data_path,
-    #                                     manager_queue=queue)
-    # # TODO : process the fales and put it into a format that can be readable for the ctakes (ID_TIME.txt)
-    # print("===== Spliting events into different files =====")
-    # map_obj = pool.map_async(partial_split_data_ctakes, icustays)
-    # consumed = 0
-    # while not map_obj.ready():
-    #     for _ in range(queue.qsize()):
-    #         queue.get()
-    #         consumed += 1
-    #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
-    #
+    partial_split_data_ctakes = partial(split_data_for_ctakes,
+                                        noteevents_path = noteevents_path,
+                                        ctakes_data_path=ctakes_data_path,
+                                        manager_queue=queue)
+    # TODO : process the fales and put it into a format that can be readable for the ctakes (ID_TIME.txt)
+    print("===== Spliting events into different files =====")
+    map_obj = pool.map_async(partial_split_data_ctakes, icustays)
+    consumed = 0
+    while not map_obj.ready():
+        for _ in range(queue.qsize()):
+            queue.get()
+            consumed += 1
+        sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
+
     ctakes_params = functions.load_ctakes_parameters_file()
-    # dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
-    # ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
-    #     .format(ctakes_params['ctakes_path'], dirname + ctakes_data_path, dirname + ctakes_result_data_path,
-    #             ctakes_params['umls_username'], ctakes_params['umls_password'])
-    # print(ctakes_command)
-    # process = subprocess.Popen(ctakes_command, shell=True, stdout=subprocess.PIPE)
-    # for line in process.stdout:
-    #     print(line)
-    # process.wait()
+    dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
+    ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
+        .format(ctakes_params['ctakes_path'], dirname + ctakes_data_path, dirname + ctakes_result_data_path,
+                ctakes_params['umls_username'], ctakes_params['umls_password'])
+    print(ctakes_command)
+    process = subprocess.Popen(ctakes_command, shell=True, stdout=subprocess.PIPE)
+    for line in process.stdout:
+        print(line)
+    process.wait()
     partial_merge_results = partial(merge_ctakes_result_to_csv, texts_path=ctakes_data_path,
                                     ctakes_result_path=ctakes_result_data_path,
                                     sentences_data_path=sentences_data_path,
