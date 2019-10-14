@@ -55,6 +55,16 @@ def remove_low_frequency_features(icustays, patient_events_path=None, new_events
         events = events.sort_index(axis=1)
         events.to_csv(new_events_path + "{}.csv".format(icustay), index=False, quoting=csv.QUOTE_NONNUMERIC)
 
+
+def merge_results(results):
+    final_dict = dict()
+    for result in results:
+        for key in result:
+            if key not in final_dict.keys():
+                final_dict[key] = 0
+            final_dict[key] += result[key]
+    return final_dict
+
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 3)
 
@@ -66,17 +76,6 @@ patient_events_path = parameters['mimic_data_path'] + "sepsis_raw_merged/"
 icustays = list(np.array_split(dataset['icustay_id'], 10))
 m = mp.Manager()
 queue = m.Queue()
-
-
-def merge_results(results):
-    final_dict = dict()
-    for result in results:
-        for key in result:
-            if key not in final_dict.keys():
-                final_dict[key] = 0
-            final_dict[key] += result[key]
-    return final_dict
-
 
 if not os.path.exists(parameters['mimic_data_path'] + parameters['features_frequency_file_name']):
     print("====== Getting frequencies =====")
@@ -127,6 +126,8 @@ with mp.Pool(processes=6) as pool:
                                                     features_to_remove=features_to_remove,
                                                     manager_queue=queue)
     features_to_remove_from_patient = partial_remove_low_frequency_features(icustays[0])
+    print(len(features_to_remove_from_patient))
+    print(len(icustays[0]))
     partial_remove_low_frequency_features = partial(partial_remove_low_frequency_features,
                                                     features_to_remove_from_patient=features_to_remove_from_patient)
     map_obj = pool.map_async(partial_remove_low_frequency_features, icustays)
