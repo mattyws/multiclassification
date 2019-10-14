@@ -128,6 +128,7 @@ def get_multiwords_references(words_references):
                 multiwords_references.append(copy.deepcopy(expression_reference))
     return multiwords_references, already_added_references
 
+
 def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None,
                                sentences_data_path=None, merged_results_path=None, manager_queue=None):
     #TODO: save two files - one csv with CUI's for each text, and other with the tokenized sentences for the word2vec
@@ -300,7 +301,6 @@ with mp.Pool(processes=4) as pool:
     ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
         .format(ctakes_params['ctakes_path'], dirname + ctakes_data_path, dirname + ctakes_result_data_path,
                 ctakes_params['umls_username'], ctakes_params['umls_password'])
-    print(ctakes_command)
     process = subprocess.Popen(ctakes_command, shell=True, stdout=subprocess.PIPE)
     for line in process.stdout:
         print(line)

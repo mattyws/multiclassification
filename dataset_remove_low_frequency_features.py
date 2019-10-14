@@ -63,7 +63,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
 patient_events_path = parameters['mimic_data_path'] + "sepsis_raw_merged/"
-icustays = np.array_split(dataset['icustay_id'], 10)
+icustays = list(np.array_split(dataset['icustay_id'], 10))
 m = mp.Manager()
 queue = m.Queue()
 
@@ -114,7 +114,6 @@ for feature in features_frequency.keys():
 pp.pprint(frequency_bins)
 features_to_remove = list(features_to_remove)
 features_to_remove.sort()
-i = 0
 new_events_path = parameters['mimic_data_path'] + parameters['features_low_frequency_removed_dirname']
 if not os.path.exists(new_events_path):
     os.mkdir(new_events_path)
