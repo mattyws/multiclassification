@@ -282,19 +282,19 @@ if not os.path.exists(sentences_data_path):
 with mp.Pool(processes=4) as pool:
     m = mp.Manager()
     queue = m.Queue()
-    partial_split_data_ctakes = partial(split_data_for_ctakes,
-                                        noteevents_path = noteevents_path,
-                                        ctakes_data_path=ctakes_data_path,
-                                        manager_queue=queue)
-    # TODO : process the fales and put it into a format that can be readable for the ctakes (ID_TIME.txt)
-    print("===== Spliting events into different files =====")
-    map_obj = pool.map_async(partial_split_data_ctakes, icustays)
-    consumed = 0
-    while not map_obj.ready():
-        for _ in range(queue.qsize()):
-            queue.get()
-            consumed += 1
-        sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
+    # partial_split_data_ctakes = partial(split_data_for_ctakes,
+    #                                     noteevents_path = noteevents_path,
+    #                                     ctakes_data_path=ctakes_data_path,
+    #                                     manager_queue=queue)
+    # # TODO : process the fales and put it into a format that can be readable for the ctakes (ID_TIME.txt)
+    # print("===== Spliting events into different files =====")
+    # map_obj = pool.map_async(partial_split_data_ctakes, icustays)
+    # consumed = 0
+    # while not map_obj.ready():
+    #     for _ in range(queue.qsize()):
+    #         queue.get()
+    #         consumed += 1
+    #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
 
     ctakes_params = functions.load_ctakes_parameters_file()
     dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
