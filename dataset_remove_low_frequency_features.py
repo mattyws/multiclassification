@@ -126,8 +126,8 @@ with mp.Pool(processes=6) as pool:
                                                     features_to_remove=features_to_remove,
                                                     manager_queue=queue)
     features_to_remove_from_patient = partial_remove_low_frequency_features(icustays[0])
-    print(len(features_to_remove_from_patient))
-    print(len(icustays[0]))
+    print(features_to_remove_from_patient)
+    print(len(icustays))
     partial_remove_low_frequency_features = partial(partial_remove_low_frequency_features,
                                                     features_to_remove_from_patient=features_to_remove_from_patient)
     map_obj = pool.map_async(partial_remove_low_frequency_features, icustays)
