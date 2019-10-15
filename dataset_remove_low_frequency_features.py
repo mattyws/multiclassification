@@ -34,8 +34,9 @@ def remove_low_frequency_features(icustays, patient_events_path=None, new_events
     for icustay in icustays:
         if manager_queue is not None:
             manager_queue.put(icustay)
-        if not os.path.exists(patient_events_path + "{}.csv".format(icustay))\
-                or os.path.exists(new_events_path + "{}.csv".format(icustay)):
+        if features_to_remove_from_patient is not None and \
+                (not os.path.exists(patient_events_path + "{}.csv".format(icustay))
+                or os.path.exists(new_events_path + "{}.csv".format(icustay))):
             continue
         events = pd.read_csv(patient_events_path + "{}.csv".format(icustay))
         if features_to_remove_from_patient is None:
