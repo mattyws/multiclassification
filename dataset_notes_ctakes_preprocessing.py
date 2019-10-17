@@ -3,6 +3,7 @@ import itertools
 import os
 import subprocess
 from functools import partial
+from html.parser import HTMLParser
 from xml.sax.saxutils import escape, quoteattr, unescape
 import xml.etree.ElementTree as ET
 import nltk.data
@@ -24,6 +25,11 @@ def escape_invalid_xml_characters(text):
     text = "".join(ch for ch in text if unicodedata.category(ch)[0]!="C")
     return text
 
+
+def escape_html_special_entities(text):
+    return html.unescape(text)
+
+
 def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=None, manager_queue=None):
     tokenizer = WhitespaceTokenizer()
     for icustay in icustayids:
@@ -40,6 +46,7 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
             new_filename = "{}_{}".format(index, note['Unnamed: 0'])
             with open(icustay_path + new_filename, 'w') as file:
                 text = escape_invalid_xml_characters(note['Note'])
+                text = escape_html_special_entities(text)
                 text = functions.remove_only_special_characters_tokens(tokenizer.tokenize(text))
                 text = " ".join(text)
                 file.write(text)
