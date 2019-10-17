@@ -25,7 +25,7 @@ def escape_invalid_xml_characters(text):
     return text
 
 def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=None, manager_queue=None):
-    tokenizer = RegexpTokenizer(r'\w+')
+    tokenizer = WhitespaceTokenizer()
     for icustay in icustayids:
         if manager_queue is not None:
             manager_queue.put(icustay)
@@ -54,7 +54,6 @@ def get_word_cuis_from_xml(root, text):
         # in their names
         if '{http:///org/apache/ctakes/typesystem/type/textsem.ecore}' in child.tag \
                 and "Mention" in child.tag:
-            print("--------------------------------------------------")
             # Get the word marked by this tag
             word = text[int(child.attrib['begin']):int(child.attrib['end'])].lower()
             word_attrib = dict()
@@ -62,16 +61,12 @@ def get_word_cuis_from_xml(root, text):
             word_attrib['end'] = int(child.attrib['end'])
             word_attrib['word'] = word
             word_attrib['cuis'] = set()
-            print(word)
-            print(child.tag, child.attrib)
             # Now go after their CUIs and add it to the set at the words dictionary
             for ontology in child.attrib['ontologyConceptArr'].split(' '):
                 umls_ref = root.find(
                     '{http:///org/apache/ctakes/typesystem/type/refsem.ecore}UmlsConcept[@{http://www.omg.org/XMI}id="'
                     + ontology + '"]')
                 word_attrib['cuis'].add(umls_ref.attrib['cui'])
-                print(umls_ref.attrib)
-            print("--------------------------------------------------")
             word_attrib['cuis'] = list(word_attrib['cuis'])
             if word not in words.keys():
                 words[word] = []
@@ -92,8 +87,6 @@ def get_references_from_sentence(words, sentence, begin, end):
     words_references = []
     for word in words.keys():
         if word in sentence:
-            print(word)
-            print(words[word])
             for word_attrib in words[word]:
                 if word_attrib['begin'] >= begin and word_attrib['begin'] <= end:
                     words_references.append(copy.deepcopy(word_attrib))
@@ -131,14 +124,12 @@ def get_multiwords_references(words_references):
 
 def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None,
                                sentences_data_path=None, merged_results_path=None, manager_queue=None):
-    #TODO: save two files - one csv with CUI's for each text, and other with the tokenized sentences for the word2vec
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
     tokenizer = WhitespaceTokenizer()
     for icustay in icustayids:
         if manager_queue is not None:
             manager_queue.put(icustay)
         if not os.path.exists(ctakes_result_path + "{}/".format(icustay)):
-            print("continua")
             continue
         icustay_xmi_path = ctakes_result_path + str(icustay) + '/'
         icustay_text_path = texts_path + str(icustay) + '/'
@@ -163,19 +154,13 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 # sentence = sentence.strip()
                 begin = text.index(sentence)
                 end = begin + len(sentence)
-                print("=====")
                 # end += len(sentence)
                 words_references = get_references_from_sentence(words, sentence, begin, end)
                 #Creating a copy just to not change the original reference
                 words_references = copy.deepcopy(words_references)
-                # print(html.unescape(sentence).replace('\n', ' '))
-                # print(begin, end, len(sentence))
-                # print(words_references)
-                # print("Updating references")
                 for reference in words_references:
                     reference['begin'] -= begin
                     reference['end'] -= begin
-                # print(words_references)
                 # Look for multi word expressions
                 multiwords_references, already_added_references = get_multiwords_references(words_references)
                 # Getting words that were not multiwords or part of it
@@ -188,17 +173,9 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                             is_not_multiword = False
                     if is_not_multiword:
                         not_multiwords.append(copy.deepcopy(word_reference))
-                # print(not_multiwords)
-                # print("#######")
-                # for reference in multiwords_references:
-                #     print(reference)
-                # print(sentence)
                 for reference in list(itertools.product(*multiwords_references)):
-                    print("******************************")
                     reference = list(reference)
                     reference.extend(not_multiwords)
-                    print(reference)
-                    exit()
                     # First, copy the object with each of its CUI, if it have more than one CUI
                     new_reference = []
                     for item in reference:
@@ -209,9 +186,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                             cui_object_list.append(cui_object)
                         new_reference.append(cui_object_list)
                     for item in list(itertools.product(*new_reference)):
-                        print("!!!!!!!!!!!!")
                         copied_reference = copy.deepcopy(item)
-                        print(copied_reference)
                         new_sentence = copy.copy(sentence)
                         for index in range(len(copied_reference)):
                             sentence_len = len(new_sentence)
@@ -225,29 +200,17 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                                     print(item2['word'], len_diff)
                                     item2['begin'] += len_diff
                                     item2['end'] += len_diff
-                            print(copied_reference)
-                        print(sentence)
-                        print(new_sentence)
                         text_sentences.append(new_sentence)
-                    print("@!@@@@@@@@@@@@!@!@!@!@!@!@!!@!@!@!")
                 # Now replace the CUIs in text and duplicate the sentence if is the case
-
-                print("=====")
-                exit()
-                # begin = end
             icustay_sentences.extend(text_sentences)
             icu_cuis.append(text_cuis)
-            exit()
         for text_cuis in icu_cuis:
-            print("====")
-            print(text_cuis['cuis'])
             text_cuis['cuis'] = sorted(text_cuis['cuis'], key=lambda i: i['begin'])
             cuis = []
             for attrib in text_cuis['cuis']:
                 for cui in attrib['cuis']:
                     cuis.append(cui)
             text_cuis['cuis'] = cuis
-            print(text_cuis['cuis'])
         icu_cuis = pandas.DataFrame(icu_cuis)
         icu_cuis['timestamp'] = pandas.to_datetime(icu_cuis['timestamp'], format=parameters['datetime_pattern'])
         icu_cuis = icu_cuis.sort_values(by=['timestamp'])
@@ -255,10 +218,6 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         with open(sentences_data_path + '{}.txt'.format(icustay), 'w') as file:
             for sentence in icustay_sentences:
                 file.write(sentence + '\n')
-        exit()
-
-        # data = pandas.DataFrame(data)
-        # data.to_csv(merged_results_path + "{}.csv".format(icustay), index=False)
 
 parameters = functions.load_parameters_file()
 
@@ -282,19 +241,19 @@ if not os.path.exists(sentences_data_path):
 with mp.Pool(processes=4) as pool:
     m = mp.Manager()
     queue = m.Queue()
-    # partial_split_data_ctakes = partial(split_data_for_ctakes,
-    #                                     noteevents_path = noteevents_path,
-    #                                     ctakes_data_path=ctakes_data_path,
-    #                                     manager_queue=queue)
-    # # TODO : process the fales and put it into a format that can be readable for the ctakes (ID_TIME.txt)
-    # print("===== Spliting events into different files =====")
-    # map_obj = pool.map_async(partial_split_data_ctakes, icustays)
-    # consumed = 0
-    # while not map_obj.ready():
-    #     for _ in range(queue.qsize()):
-    #         queue.get()
-    #         consumed += 1
-    #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
+    partial_split_data_ctakes = partial(split_data_for_ctakes,
+                                        noteevents_path = noteevents_path,
+                                        ctakes_data_path=ctakes_data_path,
+                                        manager_queue=queue)
+    # TODO : process the fales and put it into a format that can be readable for the ctakes (ID_TIME.txt)
+    print("===== Spliting events into different files =====")
+    map_obj = pool.map_async(partial_split_data_ctakes, icustays)
+    consumed = 0
+    while not map_obj.ready():
+        for _ in range(queue.qsize()):
+            queue.get()
+            consumed += 1
+        sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
 
     ctakes_params = functions.load_ctakes_parameters_file()
     dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
