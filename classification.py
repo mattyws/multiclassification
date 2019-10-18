@@ -114,6 +114,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         # normalization_values = Normalization.get_normalization_values(data[trainIndex])
         values = normalization_values.get_normalization_values(data[trainIndex],
                                                                saved_file_name=parameters['normalization_data_path'].format(i))
+        print(len(values))
         print(values)
         exit()
         normalizer = Normalization(values, temporary_path=parameters['temporary_data_path'].format(i))
