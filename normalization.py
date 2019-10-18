@@ -102,11 +102,15 @@ class NormalizationValues(object):
             new_values[key] = dict()
             unique_values = list(values[key].keys())
             count_values = [values[key][k] for k in unique_values]
-            new_values[key]['max'] = max(unique_values)
-            new_values[key]['min'] = min(unique_values)
-            mean_std = self.__weighted_avg_and_std(unique_values, count_values)
-            new_values[key]['mean'] = mean_std[0]
-            new_values[key]['std'] = mean_std[1]
+            if len(unique_values) == 0:
+                print(key)
+                raise Exception("Deu erro aqui")
+            else:
+                new_values[key]['max'] = max(unique_values)
+                new_values[key]['min'] = min(unique_values)
+                mean_std = self.__weighted_avg_and_std(unique_values, count_values)
+                new_values[key]['mean'] = mean_std[0]
+                new_values[key]['std'] = mean_std[1]
         if saved_file_name is not None:
             self.__save_value_count(new_values, saved_file_name)
         return new_values
