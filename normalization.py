@@ -97,6 +97,8 @@ class NormalizationValues(object):
         for file in training_files:
             fnames.append(self.counts[file])
         values = self.sum_counts(fnames)
+        print(values)
+        exit()
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()
