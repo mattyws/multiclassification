@@ -52,13 +52,9 @@ def get_file_value_counts(file, pickle_object_path):
                 df[column].fillna(0, inplace=True)
                 save_at_the_end = True
                 columns_altered.append(column)
-
         counts[column] = df[column].value_counts().to_dict()
         # counts[column].index = counts[column].index.map(float)
     if save_at_the_end:
-        for column in columns_altered:
-            print(df[column])
-        raise Exception("Travar aqui")
         df.to_csv(file, index=False)
     try:
         with open(pickle_fname, 'wb') as result_file:
