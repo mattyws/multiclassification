@@ -41,9 +41,25 @@ def get_file_value_counts(file, pickle_object_path):
     if 'endtime' in df.columns:
         df = df.drop(columns=['endtime'])
     counts = dict()
+    save_at_the_end = False
+    columns_altered = []
     for column in df.columns:
+        # This is a temporary code, had a problem when inserting missing features to files that did not took into account
+        # The already hot encoded features. First see if is a categorical column
+        if "categorical" in column \
+            or ('categorical' not in column and 'numerical' not in column and len(column.split('_')) > 2):
+            if len(df[column].dropna()) == 0:
+                df[column].fillna(0, inplace=True)
+                save_at_the_end = True
+                columns_altered.append(column)
+
         counts[column] = df[column].value_counts().to_dict()
         # counts[column].index = counts[column].index.map(float)
+    if save_at_the_end:
+        for column in columns_altered:
+            print(df[column])
+        raise Exception("Travar aqui")
+        df.to_csv(file, index=False)
     try:
         with open(pickle_fname, 'wb') as result_file:
             pickle.dump(counts, result_file)
