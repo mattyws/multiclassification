@@ -109,20 +109,17 @@ class NormalizationValues(object):
         for file in training_files:
             fnames.append(self.counts[file])
         values = self.sum_counts(fnames)
-        print(values)
-        for key in values.keys():
-            if len(values[key]) == 0:
-                print(key, values[key])
-        exit()
+        # print(values)
+        # for key in values.keys():
+        #     if len(values[key]) == 0:
+        #         print(key, values[key])
+        # exit()
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()
             unique_values = list(values[key].keys())
             count_values = [values[key][k] for k in unique_values]
-            if len(unique_values) == 0:
-                print(key)
-                raise Exception("Deu erro aqui")
-            else:
+            if len(unique_values) != 0:
                 new_values[key]['max'] = max(unique_values)
                 new_values[key]['min'] = min(unique_values)
                 mean_std = self.__weighted_avg_and_std(unique_values, count_values)
