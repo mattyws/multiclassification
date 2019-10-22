@@ -262,12 +262,17 @@ class Word2VecTextEmbeddingGenerator(Sequence):
 
 
 class NoteeventsTextDataGenerator(object):
-    def __init__(self, data_paths):
+
+    def __init__(self, data_paths, preprocessing_pipeline=None):
         self.data_paths = data_paths
+        self.preprocessing_pipeline = preprocessing_pipeline
 
     def __iter__(self):
         for path in self.data_paths:
             noteevents = pd.read_csv(path)
             noteevents = noteevents['Note']
             for note in noteevents:
+                if self.preprocessing_pipeline is not None and isinstance(self.preprocessing_pipeline, list):
+                    for preprocessing_func in self.preprocessing_pipeline:
+                        note = preprocessing_func(note)
                 yield [note]

@@ -1,3 +1,4 @@
+# TODO: change the script to use the word2vec and notes, bc now it's the copy of classification.py
 import csv
 import json
 import os
@@ -52,22 +53,11 @@ classes_for_stratified = np.array([1 if c == 'sepsis' else 0 for c in list(data_
 # Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 
-print("========= Preparing normalization values")
-normalization_values = NormalizationValues(data, pickle_object_path=parameters['normalization_value_counts_path'])
-normalization_values.prepare()
-# Get input shape
-aux = pd.read_csv(data[0])
-if 'Unnamed: 0' in aux.columns:
-    aux = aux.drop(columns=['Unnamed: 0'])
-if 'chartevents_Unnamed: 0' in aux.columns:
-    aux = aux.drop(columns=['chartevents_Unnamed: 0'])
-if 'labevents_Unnamed: 0' in aux.columns:
-    aux = aux.drop(columns=['labevents_Unnamed: 0'])
-if 'starttime' in aux.columns:
-    aux = aux.drop(columns=['starttime'])
-if 'endtime' in aux.columns:
-    aux = aux.drop(columns=['endtime'])
-inputShape = (None, len(aux.columns))
+# TODO: Transfer these variables to a .json parameter file
+embedding_size = 400
+
+
+inputShape = (None, embedding_size)
 i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended

@@ -1,0 +1,34 @@
+{
+    "datasetCsvFilePath": "mimic/dataset_patients.csv",
+    "modelCheckpointPath": "mimic/word2vec_raw_training/checkpoint/",
+    "modelConfigPath": "mimic/word2vec_raw_training/checkpoint/config.json",
+    "dataPath" : "mimic/sepsis_low_frequency_removed/",
+    "trainingDataPath" :  "mimic/word2vec_raw_training/dataTraining/",
+    "testingDataPath" : "mimic/word2vec_raw_training/dataTest/",
+    "datasetFilesFileName": "mimic/word2vec_raw_training/datasetFiles.pkl",
+    "datasetLabelsFileName": "mimic/word2vec_raw_training/datasetLabels.pkl",
+    "trainingGeneratorPath": "mimic/word2vec_raw_training/checkpoint/dataTrainGenerator.pkl",
+    "testingGeneratorPath": "mimic/word2vec_raw_training/checkpoint/dataTestGenerator.pkl",
+    "resultFilePath": "mimic/word2vec_raw_training/checkpoint/result.csv",
+    "temporary_data_path" : "mimic/word2vec_raw_training/data_tmp_{}/",
+    "normalization_data_path": "mimic/word2vec_raw_training/normalization_values_{}.pkl",
+    "normalization_value_counts_path" : "mimic/word2vec_raw_training/value_counts/",
+    "training_events_sizes_file" : "mimic/word2vec_raw_training/training_sizes_{}.pkl",
+    "training_events_sizes_labels_file" : "mimic/word2vec_raw_training/training_sizes_labels_{}.pkl",
+    "testing_events_sizes_file" : "mimic/word2vec_raw_training/testing_sizes_{}.pkl",
+    "testing_events_sizes_labels_file" : "mimic/word2vec_raw_training/testing_sizes_labels_{}.pkl",
+    "dataLength" : 12,
+    "outputUnits": [
+        64
+    ],
+    "numOutputNeurons": 1,
+    "loss": "binary_crossentropy",
+    "layersActivations": [
+        "relu"
+    ],
+    "gru": true,
+    "useDropout": true,
+    "dropout": 0.6,
+    "trainingEpochs": 40,
+    "batchSize": 50
+}

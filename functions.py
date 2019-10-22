@@ -12,6 +12,8 @@ import pandas as pd
 from os.path import exists, join, abspath
 from os import pathsep
 
+from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, cohen_kappa_score, accuracy_score, \
+    confusion_matrix, classification_report
 
 DATE_PATTERN = "%Y-%m-%d"
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
@@ -223,3 +225,24 @@ def remove_only_special_characters_tokens(tokens):
         if not re.match(r'^[\W_]+$', token):
             new_tokens.append(token)
     return new_tokens
+
+
+def test_model(kerasAdapter, dataTestGenerator, fold):
+    testClasses, result = kerasAdapter.predict_generator(dataTestGenerator)
+    metrics = dict()
+    metrics['fscore'] = f1_score(testClasses, result, average='weighted')
+    metrics['precision'] = precision_score(testClasses, result, average='weighted')
+    metrics['recall'] = recall_score(testClasses, result, average='weighted')
+    metrics['auc'] = roc_auc_score(testClasses, result, average='weighted')
+
+    metrics['fscore_b'] = f1_score(testClasses, result)
+    metrics['precision_b'] = precision_score(testClasses, result)
+    metrics['recall_b'] = recall_score(testClasses, result)
+    metrics['auc_b'] = roc_auc_score(testClasses, result)
+
+    metrics['kappa'] = cohen_kappa_score(testClasses, result)
+    metrics['accuracy'] = accuracy_score(testClasses, result)
+    tn, fp, fn, metrics['tp_rate'] = confusion_matrix(testClasses, result).ravel()
+    print(classification_report(testClasses, result))
+    metrics["fold"] = fold
+    return metrics
