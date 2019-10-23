@@ -1,5 +1,10 @@
 import numpy as np
 
+class TransformClinicalTextsRepresentations(object):
+    """
+    Changes the representation for patients notes using a word2vec model.
+    The patients notes must be into different csv.
+    """
 
 class Word2VecEmbeddingCreator(object):
 
@@ -9,12 +14,14 @@ class Word2VecEmbeddingCreator(object):
      The first dimension represents the document, the second dimension represents the word and the third dimension is the word embedding array
     """
 
-    def __init__(self, word2vecModel, embeddingSize=200):
+    def __init__(self, word2vecModel, embeddingSize=200, window = 2):
         self.word2vecModel = word2vecModel
         self.embeddingSize = embeddingSize
         self.num_docs = 0
+        self.window = window
 
     def create_embedding_matrix(self, text, max_words=None):
+        # TODO: change it to use context words to generate the embedding of unknown word
         """
         Transform a tokenized text into a 2 dimensional array with the word2vec model
         :param text: the tokenized text
@@ -29,7 +36,17 @@ class Word2VecEmbeddingCreator(object):
             if max_words is not None and pos >= max_words:
                 break
             try:
-                x[pos] = self.word2vecModel[w]
+                x[pos] = self.word2vecModel.wv[w]
             except:
-                x[pos] = np.zeros(shape=self.embeddingSize)
+                # x[pos] = np.zeros(shape=self.embeddingSize)
+                if pos - self.window < 0:
+                    begin = 0
+                else:
+                    begin = pos - self.window
+                if pos + self.window > len(text):
+                    end = len(text)
+                else:
+                    end = pos + self.window
+                word = self.word2vecModel.predict_output_word(text[begin:end])[0][0]
+                x[pos] = self.word2vecModel.wv[word]
         return x

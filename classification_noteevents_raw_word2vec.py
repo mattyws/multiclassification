@@ -1,26 +1,46 @@
 # TODO: change the script to use the word2vec and notes, bc now it's the copy of classification.py
 import csv
+import html
 import json
 import os
+from datetime import datetime
 
 import pandas as pd
 import numpy as np
 
 import keras
+import unicodedata
+from nltk import WhitespaceTokenizer
 
 from sklearn.model_selection._split import StratifiedKFold
 
 import functions
+import train_word2vec
 from data_generators import LengthLongitudinalDataGenerator
+from xml.sax.saxutils import escape, quoteattr, unescape
 from functions import test_model
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator
 from normalization import Normalization, NormalizationValues
 
+def escape_invalid_xml_characters(text):
+    text = escape(text)
+    text = quoteattr(text)
+    text = "".join(ch for ch in text if unicodedata.category(ch)[0] != "C")
+    return text
+
+
+def escape_html_special_entities(text):
+    return html.unescape(text)
+
+def tokenize_text(text):
+    tokenizer = WhitespaceTokenizer()
+    return tokenizer.tokenize(text)
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
-parametersFilePath = "./classification_parameters.json"
+parametersFilePath = "./classification_noteevents_word2vec_parameters.json"
 
 #Loading parameters file
 print("========= Loading Parameters")
@@ -55,6 +75,10 @@ kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 
 # TODO: Transfer these variables to a .json parameter file
 embedding_size = 400
+min_count = 2
+workers = 4
+window = 2
+iterations = 30
 
 
 inputShape = (None, embedding_size)
@@ -68,14 +92,18 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             i += 1
             continue
         print("======== Fold {} ========".format(i))
-        print("===== Getting values for normalization =====")
-        # normalization_values = Normalization.get_normalization_values(data[trainIndex])
-        values = normalization_values.get_normalization_values(data[trainIndex],
-                                                               saved_file_name=parameters['normalization_data_path'].format(i))
-        normalizer = Normalization(values, temporary_path=parameters['temporary_data_path'].format(i))
-        print("===== Normalizing fold data =====")
-        normalizer.normalize_files(data)
-        normalized_data = np.array(normalizer.get_new_paths(data))
+        print("{} ======= Training Word2vec ======".format(datetime.now().strftime("%d/%m %H:%M:%S")))
+        preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, tokenize_text,
+                                  functions.remove_only_special_characters_tokens]
+        wor2vec_model = train_word2vec.train(data[trainIndex],
+                                             parameters['word2vecModelFileName'].format(i), min_count,
+                                             embedding_size, workers, window, iterations,
+                                             preprocessing_pipeline=preprocessing_pipeline)
+        # TODO: use the word2vec model to transform the representation of all data before creating the generator with the transformed data
+        print("{} ===== Transforming representation =====".format(datetime.now().strftime("%d/%m %H:%M:%S")))
+
+
+
         print("===== Creating generators =====")
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
