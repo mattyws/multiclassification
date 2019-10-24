@@ -11,7 +11,7 @@ from sklearn.model_selection._split import StratifiedKFold
 
 import functions
 from data_generators import LengthLongitudinalDataGenerator
-from functions import test_model
+from functions import test_model, print_with_time
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator
 from normalization import Normalization, NormalizationValues
@@ -38,7 +38,7 @@ if os.path.exists(parameters['modelConfigPath']):
         config = json.load(configHandler)
 
 # Loading csv
-print("========= Loading data")
+print_with_time("Loading data")
 data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
 data_csv = data_csv.sort_values(['icustay_id'])
 # Get the values in data_csv that have events saved
@@ -46,13 +46,13 @@ data = np.array([itemid for itemid in list(data_csv['icustay_id'])
                  if os.path.exists(parameters['dataPath'] + '{}.csv'.format(itemid))])
 data_csv = data_csv[data_csv['icustay_id'].isin(data)]
 data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
-print("========= Transforming classes")
+print_with_time("Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
 classes_for_stratified = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
 # Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 
-print("========= Preparing normalization values")
+print_with_time("Preparing normalization values")
 normalization_values = NormalizationValues(data, pickle_object_path=parameters['normalization_value_counts_path'])
 normalization_values.prepare()
 # Get input shape
@@ -77,16 +77,16 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             print("Pass fold {}".format(i))
             i += 1
             continue
-        print("======== Fold {} ========".format(i))
-        print("===== Getting values for normalization =====")
+        print_with_time("Fold {}".format(i))
+        print_with_time("Getting values for normalization")
         # normalization_values = Normalization.get_normalization_values(data[trainIndex])
         values = normalization_values.get_normalization_values(data[trainIndex],
                                                                saved_file_name=parameters['normalization_data_path'].format(i))
         normalizer = Normalization(values, temporary_path=parameters['temporary_data_path'].format(i))
-        print("===== Normalizing fold data =====")
+        print_with_time("Normalizing fold data")
         normalizer.normalize_files(data)
         normalized_data = np.array(normalizer.get_new_paths(data))
-        print("===== Creating generators =====")
+        print_with_time("Creating generators")
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
                                                                       , sizes_filename=parameters['training_events_sizes_file'].format(i)

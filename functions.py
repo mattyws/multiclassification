@@ -246,3 +246,6 @@ def test_model(kerasAdapter, dataTestGenerator, fold):
     print(classification_report(testClasses, result))
     metrics["fold"] = fold
     return metrics
+
+def print_with_time(text):
+    print("{} ===== {} =====".format(datetime.now().strftime("%d/%m %H:%M:%S"), text))

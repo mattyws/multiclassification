@@ -130,6 +130,7 @@ def get_multiwords_references(words_references):
 
 def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None,
                                sentences_data_path=None, merged_results_path=None, manager_queue=None):
+    # TODO: only extract the words that have a medical concept associated with it
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
     tokenizer = WhitespaceTokenizer()
     for icustay in icustayids:
