@@ -21,7 +21,6 @@ class Word2VecEmbeddingCreator(object):
         self.window = window
 
     def create_embedding_matrix(self, text, max_words=None):
-        # TODO: change it to use context words to generate the embedding of unknown word
         """
         Transform a tokenized text into a 2 dimensional array with the word2vec model
         :param text: the tokenized text
