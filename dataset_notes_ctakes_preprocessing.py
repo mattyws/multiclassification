@@ -273,8 +273,6 @@ with mp.Pool(processes=4) as pool:
                                     ctakes_result_path=ctakes_result_data_path,
                                     sentences_data_path=sentences_data_path,
                                     merged_results_path=uids_data_path, manager_queue=queue)
-    partial_merge_results(icustays[0])
-    exit()
     print("===== Merging events into a csv =====")
     map_obj = pool.map_async(partial_merge_results, icustays)
     consumed = 0
