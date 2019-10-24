@@ -137,7 +137,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         if manager_queue is not None:
             manager_queue.put(icustay)
         if not os.path.exists(ctakes_result_path + "{}/".format(icustay)) \
-                or os.path.exists(sentences_data_path + '{}.txt'.format(icustay)):
+                or os.path.exists(merged_results_path + '{}.csv'.format(icustay)):
             continue
         icustay_xmi_path = ctakes_result_path + str(icustay) + '/'
         icustay_text_path = texts_path + str(icustay) + '/'
@@ -157,61 +157,70 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
             root = tree.getroot()
             # Getting the words that reference a medical concept at the text, and its CUI
             words, text_cuis['cuis'] = get_word_cuis_from_xml(root, text)
-            text = text.strip().lower()
-            for sentence in sentence_detector.tokenize(text):
-                # sentence = sentence.strip()
-                begin = text.index(sentence)
-                end = begin + len(sentence)
-                # end += len(sentence)
-                words_references = get_references_from_sentence(words, sentence, begin, end)
-                #Creating a copy just to not change the original reference
-                words_references = copy.deepcopy(words_references)
-                for reference in words_references:
-                    reference['begin'] -= begin
-                    reference['end'] -= begin
-                # Look for multi word expressions
-                multiwords_references, already_added_references = get_multiwords_references(words_references)
-                # Getting words that were not multiwords or part of it
-                not_multiwords = []
-                for word_reference in words_references:
-                    is_not_multiword = True
-                    for added_reference in already_added_references:
-                        if added_reference['word'] == word_reference['word'] \
-                            and added_reference['begin'] == word_reference['begin']:
-                            is_not_multiword = False
-                    if is_not_multiword:
-                        not_multiwords.append(copy.deepcopy(word_reference))
-                for reference in list(itertools.product(*multiwords_references)):
-                    reference = list(reference)
-                    reference.extend(not_multiwords)
-                    # First, copy the object with each of its CUI, if it have more than one CUI
-                    new_reference = []
-                    for item in reference:
-                        cui_object_list = []
-                        for cui in item['cuis']:
-                            cui_object = copy.deepcopy(item)
-                            cui_object['cui'] = cui
-                            cui_object_list.append(cui_object)
-                        new_reference.append(cui_object_list)
-                    for item in list(itertools.product(*new_reference)):
-                        copied_reference = copy.deepcopy(item)
-                        new_sentence = copy.copy(sentence)
-                        for index in range(len(copied_reference)):
-                            sentence_len = len(new_sentence)
-                            new_sentence = new_sentence[0:copied_reference[index]['begin']] \
-                                           + copied_reference[index]['cui'] \
-                                           + new_sentence[copied_reference[index]['end']:len(new_sentence)]
-                            len_diff = len(new_sentence) - sentence_len
-                            for item2 in copied_reference:
-                                if item2['begin'] > copied_reference[index]['begin']:
-                                    item2['begin'] += len_diff
-                                    item2['end'] += len_diff
-                        text_sentences.append(new_sentence)
-                # Now replace the CUIs in text and duplicate the sentence if is the case
-            icustay_sentences.extend(text_sentences)
-            icu_cuis.append(text_cuis)
-        for text_cuis in icu_cuis:
             text_cuis['cuis'] = sorted(text_cuis['cuis'], key=lambda i: i['begin'])
+            text = text.lower()
+            text_cuis['words'] = []
+            for cui in text_cuis['cuis']:
+                word = text[cui['begin']:cui['end']]
+                print(word)
+                text_cuis['words'].append(word)
+            icu_cuis.append(text_cuis)
+
+
+            # for sentence in sentence_detector.tokenize(text):
+            #     # sentence = sentence.strip()
+            #     begin = text.index(sentence)
+            #     end = begin + len(sentence)
+            #     # end += len(sentence)
+            #     words_references = get_references_from_sentence(words, sentence, begin, end)
+            #     #Creating a copy just to not change the original reference
+            #     words_references = copy.deepcopy(words_references)
+            #     for reference in words_references:
+            #         reference['begin'] -= begin
+            #         reference['end'] -= begin
+            #     # Look for multi word expressions
+            #     multiwords_references, already_added_references = get_multiwords_references(words_references)
+            #     # Getting words that were not multiwords or part of it
+            #     not_multiwords = []
+            #     for word_reference in words_references:
+            #         is_not_multiword = True
+            #         for added_reference in already_added_references:
+            #             if added_reference['word'] == word_reference['word'] \
+            #                 and added_reference['begin'] == word_reference['begin']:
+            #                 is_not_multiword = False
+            #         if is_not_multiword:
+            #             not_multiwords.append(copy.deepcopy(word_reference))
+            #     for reference in list(itertools.product(*multiwords_references)):
+            #         reference = list(reference)
+            #         reference.extend(not_multiwords)
+            #         # First, copy the object with each of its CUI, if it have more than one CUI
+            #         new_reference = []
+            #         for item in reference:
+            #             cui_object_list = []
+            #             for cui in item['cuis']:
+            #                 cui_object = copy.deepcopy(item)
+            #                 cui_object['cui'] = cui
+            #                 cui_object_list.append(cui_object)
+            #             new_reference.append(cui_object_list)
+            #         for item in list(itertools.product(*new_reference)):
+            #             copied_reference = copy.deepcopy(item)
+            #             new_sentence = copy.copy(sentence)
+            #             for index in range(len(copied_reference)):
+            #                 sentence_len = len(new_sentence)
+            #                 new_sentence = new_sentence[0:copied_reference[index]['begin']] \
+            #                                + copied_reference[index]['cui'] \
+            #                                + new_sentence[copied_reference[index]['end']:len(new_sentence)]
+            #                 len_diff = len(new_sentence) - sentence_len
+            #                 for item2 in copied_reference:
+            #                     if item2['begin'] > copied_reference[index]['begin']:
+            #                         item2['begin'] += len_diff
+            #                         item2['end'] += len_diff
+            #             text_sentences.append(new_sentence)
+            #     # Now replace the CUIs in text and duplicate the sentence if is the case
+            # icustay_sentences.extend(text_sentences)
+            # icu_cuis.append(text_cuis)
+        for text_cuis in icu_cuis:
+            # text_cuis['cuis'] = sorted(text_cuis['cuis'], key=lambda i: i['begin'])
             cuis = []
             for attrib in text_cuis['cuis']:
                 for cui in attrib['cuis']:
@@ -220,10 +229,12 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         icu_cuis = pandas.DataFrame(icu_cuis)
         icu_cuis['timestamp'] = pandas.to_datetime(icu_cuis['timestamp'], format=parameters['datetime_pattern'])
         icu_cuis = icu_cuis.sort_values(by=['timestamp'])
+        print(icu_cuis)
+        exit()
         icu_cuis.to_csv(merged_results_path + '{}.csv'.format(icustay), index=False)
-        with open(sentences_data_path + '{}.txt'.format(icustay), 'w') as file:
-            for sentence in icustay_sentences:
-                file.write(sentence + '\n')
+        # with open(sentences_data_path + '{}.txt'.format(icustay), 'w') as file:
+        #     for sentence in icustay_sentences:
+        #         file.write(sentence + '\n')
 
 parameters = functions.load_parameters_file()
 
@@ -277,6 +288,8 @@ with mp.Pool(processes=4) as pool:
                                     ctakes_result_path=ctakes_result_data_path,
                                     sentences_data_path=sentences_data_path,
                                     merged_results_path=uids_data_path, manager_queue=queue)
+    partial_merge_results(icustays[0])
+    exit()
     print("===== Merging events into a csv =====")
     map_obj = pool.map_async(partial_merge_results, icustays)
     consumed = 0
