@@ -55,7 +55,6 @@ def get_word_cuis_from_xml(root, text):
     words = dict()
     cuis = []
     # Getting the words that reference a medical concept at the text, and its CUI
-    # TODO: a word can be identified as a medication or a procedure, change it to compress all the information in one attrib, using begin an end
     for child in root.iter('*'):
         # The words are marked with the textsem tag and the medical procedures, medication etc have Mention
         # in their names
@@ -259,7 +258,11 @@ with mp.Pool(processes=4) as pool:
             queue.get()
             consumed += 1
         sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
-
+    if queue.qsize() != 0:
+        for _ in range(queue.qsize()):
+            queue.get()
+            consumed += 1
+        sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
     ctakes_params = functions.load_ctakes_parameters_file()
     dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
     # ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
