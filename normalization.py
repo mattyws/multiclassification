@@ -113,10 +113,10 @@ class NormalizationValues(object):
             fnames.append(self.counts[file])
         values = self.sum_counts(fnames)
         # print(values)
-        # for key in values.keys():
-        #     if len(values[key]) == 0:
-        #         print(key, values[key])
-        # exit()
+        for key in values.keys():
+            if len(values[key]) == 0:
+                print(key, values[key])
+        exit()
         new_values = dict()
         for key in values.keys():
             new_values[key] = dict()

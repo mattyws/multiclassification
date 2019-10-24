@@ -250,7 +250,6 @@ with mp.Pool(processes=4) as pool:
                                         noteevents_path = noteevents_path,
                                         ctakes_data_path=ctakes_data_path,
                                         manager_queue=queue)
-    # TODO : process the fales and put it into a format that can be readable for the ctakes (ID_TIME.txt)
     print("===== Spliting events into different files =====")
     map_obj = pool.map_async(partial_split_data_ctakes, icustays)
     consumed = 0
