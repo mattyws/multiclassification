@@ -200,11 +200,9 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                             new_sentence = new_sentence[0:copied_reference[index]['begin']] \
                                            + copied_reference[index]['cui'] \
                                            + new_sentence[copied_reference[index]['end']:len(new_sentence)]
-                            print(new_sentence)
                             len_diff = len(new_sentence) - sentence_len
                             for item2 in copied_reference:
                                 if item2['begin'] > copied_reference[index]['begin']:
-                                    print(item2['word'], len_diff)
                                     item2['begin'] += len_diff
                                     item2['end'] += len_diff
                         text_sentences.append(new_sentence)
