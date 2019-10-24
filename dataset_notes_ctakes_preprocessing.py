@@ -136,7 +136,8 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
     for icustay in icustayids:
         if manager_queue is not None:
             manager_queue.put(icustay)
-        if not os.path.exists(ctakes_result_path + "{}/".format(icustay)):
+        if not os.path.exists(ctakes_result_path + "{}/".format(icustay)) \
+                or os.path.exists(sentences_data_path + '{}.txt'.format(icustay)):
             continue
         icustay_xmi_path = ctakes_result_path + str(icustay) + '/'
         icustay_text_path = texts_path + str(icustay) + '/'
