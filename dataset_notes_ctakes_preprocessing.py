@@ -54,6 +54,7 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
 def get_word_cuis_from_xml(root, text):
     words = dict()
     cuis = []
+    print(text)
     # Getting the words that reference a medical concept at the text, and its CUI
     for child in root.iter('*'):
         # The words are marked with the textsem tag and the medical procedures, medication etc have Mention
