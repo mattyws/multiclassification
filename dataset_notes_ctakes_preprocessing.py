@@ -165,6 +165,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 print(word)
                 text_cuis['words'].append(word)
             icu_cuis.append(text_cuis)
+            exit()
 
 
             # for sentence in sentence_detector.tokenize(text):
