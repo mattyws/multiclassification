@@ -168,6 +168,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
                 print(word)
                 text_cuis['words'].append(word)
             icu_cuis.append(text_cuis)
+            print(text)
 
 
             # for sentence in sentence_detector.tokenize(text):
@@ -232,7 +233,6 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         icu_cuis = pandas.DataFrame(icu_cuis)
         icu_cuis['timestamp'] = pandas.to_datetime(icu_cuis['timestamp'], format=parameters['datetime_pattern'])
         icu_cuis = icu_cuis.sort_values(by=['timestamp'])
-        print(text)
         print(icu_cuis)
         exit()
         icu_cuis.to_csv(merged_results_path + '{}.csv'.format(icustay), index=False)
