@@ -56,6 +56,7 @@ def get_word_cuis_from_xml(root, text):
     cuis = []
     # Getting the words that reference a medical concept at the text, and its CUI
     for child in root.iter('*'):
+        print(child)
         # The words are marked with the textsem tag and the medical procedures, medication etc have Mention
         # in their names
         if '{http:///org/apache/ctakes/typesystem/type/textsem.ecore}' in child.tag \
