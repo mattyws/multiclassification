@@ -130,7 +130,6 @@ def get_multiwords_references(words_references):
 
 def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=None,
                                sentences_data_path=None, merged_results_path=None, manager_queue=None):
-    # TODO: only extract the words that have a medical concept associated with it
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
     tokenizer = WhitespaceTokenizer()
     for icustay in icustayids:
@@ -164,10 +163,8 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
             text_cuis['words'] = []
             for cui in text_cuis['cuis']:
                 word = text[cui['begin']:cui['end']]
-                print(word)
                 text_cuis['words'].append(word)
             icu_cuis.append(text_cuis)
-            print(text)
 
 
             # for sentence in sentence_detector.tokenize(text):
@@ -232,8 +229,6 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         icu_cuis = pandas.DataFrame(icu_cuis)
         icu_cuis['timestamp'] = pandas.to_datetime(icu_cuis['timestamp'], format=parameters['datetime_pattern'])
         icu_cuis = icu_cuis.sort_values(by=['timestamp'])
-        print(icu_cuis)
-        exit()
         icu_cuis.to_csv(merged_results_path + '{}.csv'.format(icustay), index=False)
         # with open(sentences_data_path + '{}.txt'.format(icustay), 'w') as file:
         #     for sentence in icustay_sentences:
@@ -291,12 +286,10 @@ with mp.Pool(processes=4) as pool:
                                     ctakes_result_path=ctakes_result_data_path,
                                     sentences_data_path=sentences_data_path,
                                     merged_results_path=uids_data_path, manager_queue=queue)
-    partial_merge_results(icustays[0])
-    exit()
     print("===== Merging events into a csv =====")
     map_obj = pool.map_async(partial_merge_results, icustays)
     consumed = 0
-    while not map_obj.ready():
+    while not map_obj.ready() or queue.qsize() != 0:
         for _ in range(queue.qsize()):
             queue.get()
             consumed += 1
