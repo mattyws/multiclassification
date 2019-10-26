@@ -144,7 +144,11 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         icustay_xmi_path = ctakes_result_path + str(icustay) + '/'
         icustay_text_path = texts_path + str(icustay) + '/'
         xmls = [icustay_xmi_path + x for x in os.listdir(icustay_xmi_path)]
+        xmls.sort()
         texts = [icustay_text_path + x for x in os.listdir(icustay_text_path)]
+        texts.sort()
+        print(xmls)
+        print(texts)
         icu_cuis = []
         icustay_sentences = []
         for xml, text in zip(xmls, texts):
