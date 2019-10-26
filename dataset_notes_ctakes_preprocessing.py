@@ -54,7 +54,6 @@ def split_data_for_ctakes(icustayids, noteevents_path=None, ctakes_data_path=Non
 def get_word_cuis_from_xml(root, text):
     words = dict()
     cuis = []
-    print(text)
     # Getting the words that reference a medical concept at the text, and its CUI
     for child in root.iter('*'):
         # The words are marked with the textsem tag and the medical procedures, medication etc have Mention
@@ -147,8 +146,6 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         xmls.sort()
         texts = [icustay_text_path + x for x in os.listdir(icustay_text_path)]
         texts.sort()
-        print(xmls)
-        print(texts)
         icu_cuis = []
         icustay_sentences = []
         for xml, text in zip(xmls, texts):
@@ -167,12 +164,10 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
             text = text.lower()
             text_cuis['words'] = []
             for cui in text_cuis['cuis']:
-                print(cui)
                 word = text[cui['begin']:cui['end']]
                 print(word)
                 text_cuis['words'].append(word)
             icu_cuis.append(text_cuis)
-            exit()
 
 
             # for sentence in sentence_detector.tokenize(text):
@@ -237,6 +232,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
         icu_cuis = pandas.DataFrame(icu_cuis)
         icu_cuis['timestamp'] = pandas.to_datetime(icu_cuis['timestamp'], format=parameters['datetime_pattern'])
         icu_cuis = icu_cuis.sort_values(by=['timestamp'])
+        print(text)
         print(icu_cuis)
         exit()
         icu_cuis.to_csv(merged_results_path + '{}.csv'.format(icustay), index=False)
