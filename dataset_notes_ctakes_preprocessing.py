@@ -161,6 +161,7 @@ def merge_ctakes_result_to_csv(icustayids, texts_path=None, ctakes_result_path=N
             text = text.lower()
             text_cuis['words'] = []
             for cui in text_cuis['cuis']:
+                print(cui)
                 word = text[cui['begin']:cui['end']]
                 print(word)
                 text_cuis['words'].append(word)
