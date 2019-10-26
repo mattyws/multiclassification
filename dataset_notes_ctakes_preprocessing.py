@@ -60,7 +60,6 @@ def get_word_cuis_from_xml(root, text):
         # in their names
         if '{http:///org/apache/ctakes/typesystem/type/textsem.ecore}' in child.tag \
                 and "Mention" in child.tag:
-            print(child.attrib)
             # Get the word marked by this tag
             word = text[int(child.attrib['begin']):int(child.attrib['end'])].lower()
             word_attrib = dict()
