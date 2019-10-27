@@ -18,7 +18,7 @@ import functions
 import train_word2vec
 from data_generators import LengthLongitudinalDataGenerator
 from xml.sax.saxutils import escape, quoteattr, unescape
-from functions import test_model
+from functions import test_model, print_with_time
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator
 from normalization import Normalization, NormalizationValues
@@ -32,6 +32,11 @@ def escape_invalid_xml_characters(text):
 
 def escape_html_special_entities(text):
     return html.unescape(text)
+
+
+def text_to_lower(text):
+    return text.lower()
+
 
 def tokenize_text(text):
     tokenizer = WhitespaceTokenizer()
@@ -91,20 +96,20 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             print("Pass fold {}".format(i))
             i += 1
             continue
-        print("======== Fold {} ========".format(i))
-        print("{} ======= Training Word2vec ======".format(datetime.now().strftime("%d/%m %H:%M:%S")))
-        preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, tokenize_text,
+        print_with_time("Fold {}".format(i))
+        print_with_time("Training Word2vec")
+        preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower, tokenize_text,
                                   functions.remove_only_special_characters_tokens]
         wor2vec_model = train_word2vec.train(data[trainIndex],
                                              parameters['word2vecModelFileName'].format(i), min_count,
                                              embedding_size, workers, window, iterations,
                                              preprocessing_pipeline=preprocessing_pipeline)
         # TODO: use the word2vec model to transform the representation of all data before creating the generator with the transformed data
-        print("{} ===== Transforming representation =====".format(datetime.now().strftime("%d/%m %H:%M:%S")))
+        print_with_time("Transforming representation")
 
 
 
-        print("===== Creating generators =====")
+        print_with_time("Creating generators")
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
                                                                       , sizes_filename=parameters['training_events_sizes_file'].format(i)
