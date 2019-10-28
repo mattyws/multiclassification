@@ -1,5 +1,7 @@
 import abc
 
+import keras
+from keras.layers.convolutional import Conv2D
 from keras.layers.wrappers import TimeDistributed
 from keras.models import load_model
 from keras.layers.core import Dense, Dropout, RepeatVector
@@ -26,19 +28,72 @@ class ModelCreator(object, metaclass=abc.ABCMeta):
 
 class NoteeventsClassificationModelCreator(ModelCreator):
 
-    def __init__(self, input_shape):
-        self.input_shape = input_shape
-        pass
+    def __init__(self, input_shape, outputUnits, numOutputNeurons,
+                 layersActivations=None, networkActivation='sigmoid',
+                 loss='categorical_crossentropy', optimizer='adam', gru=False, use_dropout=False, dropout=0.5,
+                 metrics=['accuracy']):
+        self.inputShape = input_shape
+        self.outputUnits = outputUnits
+        self.numOutputNeurons = numOutputNeurons
+        self.networkActivation = networkActivation
+        self.layersActivations = layersActivations
+        self.loss = loss
+        self.optimizer = optimizer
+        self.gru = gru
+        self.use_dropout = use_dropout
+        self.dropout = dropout
+        self.metrics = metrics
+
+        self.__check_parameters()
+
+    def __check_parameters(self):
+        if self.layersActivations is not None and len(self.layersActivations) != len(self.outputUnits):
+            raise ValueError("Output units must have the same size as activations!")
 
     def create(self):
-        pass
+        input, output = self.build_network()
+        model = Model(inputs=input, outputs=output)
+        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        return adapter.KerasGeneratorAdapter(model)
 
-    def __build_model(self):
-        model = Sequential()
-        model.add(TimeDistributed(Conv1D(256, kernel_size=8, activation='relu', padding='same'), input_shape=self.input_shape))
-        model.add(TimeDistributed(AveragePooling1D(pool_size=1)))
-        model.add(Dropout(0.5))
-        model.add()
+    def build_network(self):
+        input = Input(self.inputShape)
+        conv = Conv1D(3, 3, activation='relu')
+        pooling = AveragePooling1D(pool_size=1)
+        dropout = Dropout(0.5)
+        dense = Dense(128, activation='tanh')
+        flatten = Flatten()
+        layer = TimeDistributed(conv)(input)
+        layer = TimeDistributed(pooling)(layer)
+        layer = TimeDistributed(dense)(layer)
+        layer = TimeDistributed(flatten)(layer)
+        if len(self.outputUnits) == 1:
+            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False)(layer)
+        else:
+            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True)(layer)
+        if len(self.outputUnits) > 1:
+            for i in range(1, len(self.outputUnits)):
+                if self.use_dropout:
+                    dropout = Dropout(self.dropout)(layer)
+                    layer = dropout
+                layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)(layer)
+        if self.use_dropout:
+            dropout = Dropout(self.dropout)(layer)
+            layer = dropout
+        output = Dense(self.numOutputNeurons, activation=self.networkActivation)(layer)
+        return input, output
+
+    def __create_recurrent_layer(self, outputUnit, activation, returnSequences, inputShape=None):
+        if self.gru:
+            if inputShape:
+                return GRU(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
+            else:
+                return GRU(outputUnit, activation=activation, return_sequences=returnSequences)
+        else:
+            if inputShape:
+                return LSTM(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
+            else:
+                return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
 
 
 class KerasCovolutionalNNCreator(ModelCreator):
@@ -87,22 +142,21 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
             raise ValueError("Output units must have the same size as activations!")
 
     def build_network(self):
+        input = Input(self.inputShape)
         layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True,
                                                           inputShape=self.inputShape)(input)
         first_layer = layer
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
-                new_layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True,
-                                                      inputShape=self.inputShape)(layer)
-                layer = new_layer
                 if self.use_dropout:
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
+                layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
         output = Dense(self.numOutputNeurons, activation=self.networkActivation)(layer)
-        return first_layer, output
+        return input, output
 
     def __create_recurrent_layer(self, outputUnit, activation, returnSequences, inputShape=None):
         if self.gru:
@@ -117,9 +171,7 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
                 return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
 
     def create(self, model_summary_filename=None):
-        first_layer, output = self.build_network()
-        input = Input(self.inputShape)
-        first_layer = first_layer(input)
+        input, output = self.build_network()
         model = Model(inputs=input, outputs=output)
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
         if model_summary_filename is not None:
