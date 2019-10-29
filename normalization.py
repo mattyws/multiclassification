@@ -226,7 +226,7 @@ class Normalization(object):
             partial_normalize_files = partial(self.do_normalization, queue=queue)
             map_obj = pool.map_async(partial_normalize_files, filesList)
             consumed = 0
-            while not map_obj.ready():
+            while not map_obj.ready() or queue.qsize() != 0:
                 for _ in range(queue.qsize()):
                     queue.get()
                     consumed += 1

@@ -106,6 +106,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                              preprocessing_pipeline=preprocessing_pipeline)
         # TODO: use the word2vec model to transform the representation of all data before creating the generator with the transformed data
         print_with_time("Transforming representation")
+        for file in data:
 
 
 

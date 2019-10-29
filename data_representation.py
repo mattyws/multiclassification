@@ -1,10 +1,50 @@
 import numpy as np
+import pandas
+
+
+def create_embedding_matrix(text, word2vec_model, embedding_size, window):
+    """
+    Transform a tokenized text into a 3 dimensional array with the word2vec model
+    :param text: the tokenized text
+    :return: the 3 dimensional array representing the content of the tokenized text
+    """
+    x = np.zeros(shape=(len(text), embedding_size), dtype='float')
+    for pos, w in enumerate(text):
+        try:
+            x[pos] = word2vec_model.wv[w]
+        except:
+            # x[pos] = np.zeros(shape=self.embeddingSize)
+            if pos - window < 0:
+                begin = 0
+            else:
+                begin = pos - window
+            if pos + window > len(text):
+                end = len(text)
+            else:
+                end = pos + window
+            word = word2vec_model.predict_output_word(text[begin:end])[0][0]
+            x[pos] = word2vec_model.wv[word]
+    return x
+
+def trainsform_docs(docs, word2vec_mode, embedding_size, window, representation_save_path):
+    for doc in docs:
+        data = pandas.read_csv(doc)
+        for index, row in data.iterrows()
+
+
 
 class TransformClinicalTextsRepresentations(object):
     """
     Changes the representation for patients notes using a word2vec model.
     The patients notes must be into different csv.
     """
+    def __init__(self, word2vecModel, embeddingSize=200, window=2):
+        self.word2vecModel = word2vecModel
+        self.embeddingSize = embeddingSize
+        self.window = window
+
+    def transform(self, train_docs):
+
 
 class Word2VecEmbeddingCreator(object):
 
@@ -17,7 +57,6 @@ class Word2VecEmbeddingCreator(object):
     def __init__(self, word2vecModel, embeddingSize=200, window = 2):
         self.word2vecModel = word2vecModel
         self.embeddingSize = embeddingSize
-        self.num_docs = 0
         self.window = window
 
     def create_embedding_matrix(self, text, max_words=None):
