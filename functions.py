@@ -199,7 +199,13 @@ def divide_by_events_lenght(data_list, classes, sizes_filename="sizes.pkl", clas
             sys.stderr.write('\rdone {0:%}'.format(aux / len(data_list)))
             aux += 1
             with open(d, 'rb') as file_handler:
-                values = pickle.load(file_handler)
+                try:
+                    values = pickle.load(file_handler)
+                except Exception as e:
+                    print(d)
+                    print("test")
+                    print(e)
+                    raise ValueError()
                 if len(values) not in sizes.keys():
                     sizes[len(values)] = []
                     labels[len(values)] = []
