@@ -99,18 +99,22 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
         dataTestGenerator.create_batches()
         print(dataTrainGenerator[0][1])
+        print(dataTrainGenerator[0][0].shape)
         # for i in range(0, len(dataTrainGenerator)):
         #     print(len(dataTrainGenerator[i][0]))
         #     print(dataTrainGenerator[i][0])
         #     print(len(dataTrainGenerator[i][1]))
         #     print(dataTrainGenerator[i][1])
         #     input()
-        # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
-        #                                                classes[trainIndex], parameters['batchSize'],
-        #                                                saved_batch_dir='training_batches_fold_{}'.format(i))
+        dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
+                                                       classes[trainIndex], parameters['batchSize'],
+                                                       saved_batch_dir='training_batches_fold_{}'.format(i))
+        print(dataTrainGenerator[0][0].shape)
+        exit()
         # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
         #                                               classes[testIndex], parameters['batchSize'],
         #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
+
 
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
