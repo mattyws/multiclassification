@@ -18,6 +18,8 @@ import functions
 import train_word2vec
 from data_generators import LengthLongitudinalDataGenerator
 from xml.sax.saxutils import escape, quoteattr, unescape
+
+from data_representation import TransformClinicalTextsRepresentations
 from functions import test_model, print_with_time
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator
@@ -100,14 +102,15 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         print_with_time("Training Word2vec")
         preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower, tokenize_text,
                                   functions.remove_only_special_characters_tokens]
-        wor2vec_model = train_word2vec.train(data[trainIndex],
+        word2vec_model = train_word2vec.train(data[trainIndex],
                                              parameters['word2vecModelFileName'].format(i), min_count,
                                              embedding_size, workers, window, iterations,
                                              preprocessing_pipeline=preprocessing_pipeline)
         # TODO: use the word2vec model to transform the representation of all data before creating the generator with the transformed data
         print_with_time("Transforming representation")
-        for file in data:
-
+        texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
+                                                                  window=window, texts_path=parameters['dataPath'],
+                                                                  representation_save_path=parameters['word2vec_representation_files_path'])
 
 
         print_with_time("Creating generators")
