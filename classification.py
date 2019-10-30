@@ -87,6 +87,16 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         normalizer.normalize_files(data)
         normalized_data = np.array(normalizer.get_new_paths(data))
         print_with_time("Creating generators")
+        dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
+                                                       classes[trainIndex], parameters['batchSize'],
+                                                       saved_batch_dir='training_batches_fold_{}'.format(i))
+        print(dataTrainGenerator[0][1])
+        print(dataTrainGenerator[0][0].shape)
+        print(dataTrainGenerator[0][1].shape)
+        # exit()
+        # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
+        #                                               classes[testIndex], parameters['batchSize'],
+        #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
                                                                       , sizes_filename=parameters['training_events_sizes_file'].format(i)
@@ -107,16 +117,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         #     print(len(dataTrainGenerator[i][1]))
         #     print(dataTrainGenerator[i][1])
         #     input()
-        dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
-                                                       classes[trainIndex], parameters['batchSize'],
-                                                       saved_batch_dir='training_batches_fold_{}'.format(i))
-        print(dataTrainGenerator[0][1])
-        print(dataTrainGenerator[0][0].shape)
-        print(dataTrainGenerator[0][1].shape)
-        # exit()
-        # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
-        #                                               classes[testIndex], parameters['batchSize'],
-        #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
 
 
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
