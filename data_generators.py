@@ -31,6 +31,7 @@ class LengthLongitudinalDataGenerator(Sequence):
                 batch_num += 1
         self.batches = new_batches
         self.labels = new_labels
+        print(self.batches)
 
     def __load(self, filesNames):
         x = []

@@ -94,16 +94,17 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
-        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels)
+        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
         dataTrainGenerator.create_batches()
-        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
+        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
         dataTestGenerator.create_batches()
         for i in range(0, len(dataTrainGenerator)):
             print(len(dataTrainGenerator[i][0]))
             print(len(dataTrainGenerator[i][1]))
             input()
-            for data in dataTrainGenerator[i][0]:
-                print(data)
+            for j in len(dataTrainGenerator[i][0]):
+                print(dataTrainGenerator[i][0][j])
+                print(dataTrainGenerator[i][1][j])
                 print(len(data))
                 input()
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
