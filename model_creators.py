@@ -143,9 +143,10 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
 
     def build_network(self):
         input = Input(self.inputShape)
-        layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True,
-                                                          inputShape=self.inputShape)(input)
-        first_layer = layer
+        if len(self.outputUnits) == 1:
+            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False)(input)
+        else:
+            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True)(input)
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
                 if self.use_dropout:
