@@ -1,5 +1,13 @@
+import os
+import pickle
+from functools import partial
+
+import multiprocessing
+
+import numpy
 import numpy as np
 import pandas
+import sys
 
 
 def create_embedding_matrix(text, word2vec_model, embedding_size, window):
@@ -26,11 +34,20 @@ def create_embedding_matrix(text, word2vec_model, embedding_size, window):
             x[pos] = word2vec_model.wv[word]
     return x
 
-def trainsform_docs(docs, word2vec_mode, embedding_size, window, representation_save_path):
-    for doc in docs:
-        data = pandas.read_csv(doc)
-        for index, row in data.iterrows()
-
+def transform_docs(icustays, word2vec_model, embedding_size, window, texts_path, representation_save_path, manager_queue=None):
+    for icustay in icustays:
+        if manager_queue is not None:
+            manager_queue.add(icustay)
+        transformed_doc_path = representation_save_path + icustay + '/'
+        if not os.path.exists(texts_path + icustay + '.csv'):
+            continue
+        if not os.path.exists(transformed_doc_path):
+            os.mkdir(transformed_doc_path)
+        data = pandas.read_csv(texts_path + icustay + '.csv')
+        for index, row in data.iterrows():
+            new_representation = create_embedding_matrix(row['Note'], word2vec_model, embedding_size, window)
+            with open(transformed_doc_path + "{}_{}.pkl".format(index, row['timestamp']), 'wb') as handler:
+                pickle.dump(new_representation, handler)
 
 
 class TransformClinicalTextsRepresentations(object):
@@ -38,12 +55,30 @@ class TransformClinicalTextsRepresentations(object):
     Changes the representation for patients notes using a word2vec model.
     The patients notes must be into different csv.
     """
-    def __init__(self, word2vecModel, embeddingSize=200, window=2):
+    def __init__(self, word2vecModel, embeddingSize=200, window=2, texts_path=None, representation_save_path=None):
         self.word2vecModel = word2vecModel
         self.embeddingSize = embeddingSize
         self.window = window
+        self.texts_path = texts_path
+        self.representation_save_path = representation_save_path
 
-    def transform(self, train_docs):
+    def transform(self, icustays):
+        with multiprocessing.Pool(processes=4) as pool:
+            manager = multiprocessing.Manager()
+            manager_queue = manager.Queue()
+            partial_transform_docs = partial(transform_docs, word2vecModel=self.word2vecModel,
+                                             embeddingSize=self.embeddingSize, window=self.window,
+                                             texts_path=self.texts_path, representation_save_path=self.representation_save_path,
+                                             manager_queue=manager_queue)
+            data = numpy.array_split(icustays, 6)
+            total_files = len(icustays)
+            map_obj = pool.map_async(partial_transform_docs, data)
+            consumed=0
+            while not map_obj.ready() or manager_queue.qsize() != 0:
+                for _ in range(manager_queue.qsize()):
+                    manager_queue.get()
+                    consumed += 1
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
 
 
 class Word2VecEmbeddingCreator(object):
