@@ -110,6 +110,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
                                                        classes[trainIndex], parameters['batchSize'],
                                                        saved_batch_dir='training_batches_fold_{}'.format(i))
+        print(dataTrainGenerator[0][1])
         print(dataTrainGenerator[0][0].shape)
         print(dataTrainGenerator[0][1].shape)
         exit()
