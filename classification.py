@@ -94,22 +94,22 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
-        # dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
-        # dataTrainGenerator.create_batches()
-        # dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
-        # dataTestGenerator.create_batches()
+        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
+        dataTrainGenerator.create_batches()
+        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
+        dataTestGenerator.create_batches()
         # for i in range(0, len(dataTrainGenerator)):
         #     print(len(dataTrainGenerator[i][0]))
         #     print(dataTrainGenerator[i][0])
         #     print(len(dataTrainGenerator[i][1]))
         #     print(dataTrainGenerator[i][1])
         #     input()
-        dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
-                                                       classes[trainIndex], parameters['batchSize'],
-                                                       saved_batch_dir='training_batches_fold_{}'.format(i))
-        dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
-                                                      classes[testIndex], parameters['batchSize'],
-                                                      saved_batch_dir='testing_batches_fold_{}'.format(i))
+        # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
+        #                                                classes[trainIndex], parameters['batchSize'],
+        #                                                saved_batch_dir='training_batches_fold_{}'.format(i))
+        # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
+        #                                               classes[testIndex], parameters['batchSize'],
+        #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
 
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
