@@ -111,7 +111,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                                   window=window, texts_path=parameters['dataPath'],
                                                                   representation_save_path=parameters['word2vec_representation_files_path'])
-
+        texts_transformer.transform(data_csv['icustay_id'])
 
         print_with_time("Creating generators")
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
