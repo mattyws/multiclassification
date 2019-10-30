@@ -108,36 +108,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTrainGenerator.create_batches()
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
         dataTestGenerator.create_batches()
-        import sys
-        from types import ModuleType, FunctionType
-        from gc import get_referents
-
-        # Custom objects know their class.
-        # Function objects seem to know way too much, including modules.
-        # Exclude modules as well.
-        BLACKLIST = type, ModuleType, FunctionType
-
-
-        def getsize(obj):
-            """sum size of object & members."""
-            if isinstance(obj, BLACKLIST):
-                raise TypeError('getsize() does not take argument of type: ' + str(type(obj)))
-            seen_ids = set()
-            size = 0
-            objects = [obj]
-            while objects:
-                need_referents = []
-                for obj in objects:
-                    if not isinstance(obj, BLACKLIST) and id(obj) not in seen_ids:
-                        seen_ids.add(id(obj))
-                        size += sys.getsizeof(obj)
-                        need_referents.append(obj)
-                objects = get_referents(*need_referents)
-            return size
-
-        for i in range(0, len(dataTrainGenerator)):
-            size = getsize(dataTrainGenerator[i][0]) / (1024 * 1024)
-            print(size)
         # print(dataTrainGenerator[0][1])
         # print(dataTrainGenerator[0][0].shape)
         # print(dataTrainGenerator[0][1].shape)
