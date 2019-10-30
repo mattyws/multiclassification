@@ -100,13 +100,10 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTestGenerator.create_batches()
         for i in range(0, len(dataTrainGenerator)):
             print(len(dataTrainGenerator[i][0]))
+            print(dataTrainGenerator[i][0])
             print(len(dataTrainGenerator[i][1]))
+            print(dataTrainGenerator[i][1])
             input()
-            for j in len(dataTrainGenerator[i][0]):
-                print(dataTrainGenerator[i][0][j])
-                print(dataTrainGenerator[i][1][j])
-                print(len(data))
-                input()
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
         #                                                classes[trainIndex], parameters['batchSize'],
         #                                                saved_batch_dir='training_batches_fold_{}'.format(i))
