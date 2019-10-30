@@ -136,7 +136,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             return size
 
         for i in range(0, len(dataTrainGenerator)):
-            print(getsize(dataTrainGenerator[i]))
+            size = getsize(dataTrainGenerator[i]) / (1024 * 1024)
+            print(size)
         # print(dataTrainGenerator[0][1])
         # print(dataTrainGenerator[0][0].shape)
         # print(dataTrainGenerator[0][1].shape)
