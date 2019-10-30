@@ -99,9 +99,10 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
         dataTestGenerator.create_batches()
         for i in range(0, len(dataTrainGenerator)):
-            print(len(dataTrainGenerator[i]))
+            print(len(dataTrainGenerator[i][0]))
+            print(len(dataTrainGenerator[i][1]))
             input()
-            for data in dataTrainGenerator[i]:
+            for data in dataTrainGenerator[i][0]:
                 print(data)
                 print(len(data))
                 input()
