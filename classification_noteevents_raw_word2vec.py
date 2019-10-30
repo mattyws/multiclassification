@@ -22,7 +22,7 @@ from xml.sax.saxutils import escape, quoteattr, unescape
 from data_representation import TransformClinicalTextsRepresentations
 from functions import test_model, print_with_time
 from keras_callbacks import Metrics
-from model_creators import MultilayerKerasRecurrentNNCreator
+from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator
 from normalization import Normalization, NormalizationValues
 
 def escape_invalid_xml_characters(text):
@@ -112,6 +112,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                                   window=window, texts_path=parameters['dataPath'],
                                                                   representation_save_path=parameters['word2vec_representation_files_path'])
         texts_transformer.transform(data_csv['icustay_id'])
+        normalized_data = np.array(texts_transformer.get_new_paths(data))
 
         print_with_time("Creating generators")
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
@@ -132,7 +133,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         #                                               classes[testIndex], parameters['batchSize'],
         #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
 
-        modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
+        modelCreator = NoteeventsClassificationModelCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
                                                          gru=parameters['gru'], use_dropout=parameters['useDropout'],
                                                          dropout=parameters['dropout'],

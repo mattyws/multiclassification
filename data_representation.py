@@ -34,20 +34,26 @@ def create_embedding_matrix(text, word2vec_model, embedding_size, window):
             x[pos] = word2vec_model.wv[word]
     return x
 
-def transform_docs(icustays, word2vec_model, embedding_size, window, texts_path, representation_save_path, manager_queue=None):
-    for icustay in icustays:
+def transform_docs(docs_path, word2vec_model, embedding_size, window, representation_save_path, manager_queue=None):
+    new_paths = dict()
+    for path in docs_path:
+        file_name = path.split('/')[-1]
         if manager_queue is not None:
-            manager_queue.add(icustay)
-        transformed_doc_path = representation_save_path + icustay + '/'
-        if not os.path.exists(texts_path + icustay + '.csv'):
+            manager_queue.add(path)
+        transformed_doc_path = representation_save_path + os.path.splitext(file_name)[0] + '.pkl'
+        if os.path.exists(transformed_doc_path):
+            new_paths.append(transformed_doc_path)
             continue
-        if not os.path.exists(transformed_doc_path):
-            os.mkdir(transformed_doc_path)
-        data = pandas.read_csv(texts_path + icustay + '.csv')
+        data = pandas.read_csv(path)
+        transformed_texts = []
         for index, row in data.iterrows():
             new_representation = create_embedding_matrix(row['Note'], word2vec_model, embedding_size, window)
-            with open(transformed_doc_path + "{}_{}.pkl".format(index, row['timestamp']), 'wb') as handler:
-                pickle.dump(new_representation, handler)
+            transformed_texts.append(new_representation)
+        transformed_texts = numpy.array(transformed_texts)
+        with open(transformed_doc_path, 'wb') as handler:
+            pickle.dump(transformed_texts, handler)
+        new_paths[path] = transformed_doc_path
+    return new_paths
 
 
 class TransformClinicalTextsRepresentations(object):
@@ -62,16 +68,17 @@ class TransformClinicalTextsRepresentations(object):
         self.texts_path = texts_path
         self.representation_save_path = representation_save_path
 
-    def transform(self, icustays):
+    def transform(self, docs_paths):
+        self.new_paths = dict()
         with multiprocessing.Pool(processes=4) as pool:
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
             partial_transform_docs = partial(transform_docs, word2vecModel=self.word2vecModel,
                                              embeddingSize=self.embeddingSize, window=self.window,
-                                             texts_path=self.texts_path, representation_save_path=self.representation_save_path,
+                                             representation_save_path=self.representation_save_path,
                                              manager_queue=manager_queue)
-            data = numpy.array_split(icustays, 6)
-            total_files = len(icustays)
+            data = numpy.array_split(docs_paths, 6)
+            total_files = len(docs_paths)
             map_obj = pool.map_async(partial_transform_docs, data)
             consumed=0
             while not map_obj.ready() or manager_queue.qsize() != 0:
@@ -79,6 +86,19 @@ class TransformClinicalTextsRepresentations(object):
                     manager_queue.get()
                     consumed += 1
                 sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            print()
+            result = map_obj.get()
+            for r in result:
+                self.new_paths.update(r)
+
+    def get_new_paths(self, files_list):
+        if self.new_paths is not None:
+            new_list = []
+            for file in files_list:
+                new_list.append(self.new_paths[file])
+            return new_list
+        else:
+            raise Exception("Data not normalized!")
 
 
 class Word2VecEmbeddingCreator(object):

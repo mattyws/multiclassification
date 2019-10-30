@@ -50,10 +50,13 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         if self.layersActivations is not None and len(self.layersActivations) != len(self.outputUnits):
             raise ValueError("Output units must have the same size as activations!")
 
-    def create(self):
+    def create(self, model_summary_filename=None):
         input, output = self.build_network()
         model = Model(inputs=input, outputs=output)
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        if model_summary_filename is not None:
+            with open(model_summary_filename, 'w') as summary_file:
+                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
         return adapter.KerasGeneratorAdapter(model)
 
     def build_network(self):
