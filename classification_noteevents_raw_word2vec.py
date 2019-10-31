@@ -81,11 +81,11 @@ classes_for_stratified = np.array([1 if c == 'sepsis' else 0 for c in list(data_
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 
 # TODO: Transfer these variables to a .json parameter file
-embedding_size = 400
-min_count = 2
-workers = 4
-window = 2
-iterations = 30
+embedding_size = parameters['embedding_size']
+min_count = parameters['min_count']
+workers = parameters['workers']
+window = parameters['window']
+iterations = parameters['iterations']
 
 
 inputShape = (None, embedding_size)
