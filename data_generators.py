@@ -276,4 +276,4 @@ class NoteeventsTextDataGenerator(object):
                 if self.preprocessing_pipeline is not None and isinstance(self.preprocessing_pipeline, list):
                     for preprocessing_func in self.preprocessing_pipeline:
                         note = preprocessing_func(note)
-                yield [note]
+                yield note
