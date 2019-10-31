@@ -67,9 +67,9 @@ class TransformClinicalTextsRepresentations(object):
         self.window = window
         self.texts_path = texts_path
         self.representation_save_path = representation_save_path
+        self.new_paths = dict()
 
     def transform(self, docs_paths):
-        self.new_paths = dict()
         with multiprocessing.Pool(processes=4) as pool:
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
