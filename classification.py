@@ -111,7 +111,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             new_sizes[key] = train_sizes[key]
             new_labels[key] = train_labels[key]
             if i == 4:
-                exit()
+                break
             i += 1
         train_sizes = new_sizes
         train_labels = new_labels
