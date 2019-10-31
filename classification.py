@@ -106,28 +106,28 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
 
 
-        new_sizes = dict()
-        new_labels = dict()
-        i = 0
-        for key in train_sizes.keys():
-            new_sizes[key] = train_sizes[key]
-            new_labels[key] = train_labels[key]
-            if i == 4:
-                break
-            i += 1
-        train_sizes = new_sizes
-        train_labels = new_labels
-        new_sizes = dict()
-        new_labels = dict()
-        i = 0
-        for key in test_sizes.keys():
-            new_sizes[key] = test_sizes[key]
-            new_labels[key] = test_labels[key]
-            if i == 4:
-                break
-            i += 1
-        test_sizes = new_sizes
-        test_labels = new_labels
+        # new_sizes = dict()
+        # new_labels = dict()
+        # i = 0
+        # for key in train_sizes.keys():
+        #     new_sizes[key] = train_sizes[key]
+        #     new_labels[key] = train_labels[key]
+        #     if i == 4:
+        #         break
+        #     i += 1
+        # train_sizes = new_sizes
+        # train_labels = new_labels
+        # new_sizes = dict()
+        # new_labels = dict()
+        # i = 0
+        # for key in test_sizes.keys():
+        #     new_sizes[key] = test_sizes[key]
+        #     new_labels[key] = test_labels[key]
+        #     if i == 4:
+        #         break
+        #     i += 1
+        # test_sizes = new_sizes
+        # test_labels = new_labels
 
 
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
@@ -157,8 +157,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None)
         print_with_time("Testing model")
         metrics = test_model(kerasAdapter, dataTestGenerator, i)
-        print(metrics)
-        exit()
         if dictWriter is None:
             dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
         if metrics['fold'] == 0:

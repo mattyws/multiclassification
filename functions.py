@@ -235,7 +235,6 @@ def remove_only_special_characters_tokens(tokens):
 
 def test_model(kerasAdapter, dataTestGenerator, fold):
     testClasses, result = kerasAdapter.predict_generator(dataTestGenerator)
-    print(result)
     metrics = dict()
     metrics['fscore'] = f1_score(testClasses, result, average='weighted')
     metrics['precision'] = precision_score(testClasses, result, average='weighted')
