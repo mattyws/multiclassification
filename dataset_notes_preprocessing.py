@@ -35,6 +35,7 @@ def text_to_lower(text):
 
 def note_preprocessing(icustays, preprocessing_pipeline, noteevents_path=None, preprocessed_data_path=None, manager_queue=None):
     for icustay in icustays:
+        print_with_time(icustay)
         if manager_queue is not None:
             manager_queue.add(icustay)
         if not os.path.exists(noteevents_path+icustay+'.csv') or \
@@ -69,7 +70,7 @@ preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_ent
                                   functions.remove_only_special_characters_tokens]
 if not os.path.exists(preprocessed_noteevents_path):
     os.mkdir(preprocessed_noteevents_path)
-
+print_with_time(icustays)
 with mp.Pool(processes=4) as pool:
     m = mp.Manager()
     queue = m.Queue()
@@ -78,6 +79,8 @@ with mp.Pool(processes=4) as pool:
                                                noteevents_path = noteevents_path,
                                                preprocessed_data_path=preprocessed_noteevents_path,
                                                manager_queue=queue)
+    partial_preprocessing_noteevents(icustays[0])
+    exit()
     print_with_time("Preprocessing noteevents")
     map_obj = pool.map_async(partial_preprocessing_noteevents, icustays)
     consumed = 0
