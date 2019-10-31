@@ -39,7 +39,7 @@ def transform_docs(docs_path, word2vec_model, embedding_size, window, representa
     for path in docs_path:
         file_name = path.split('/')[-1]
         if manager_queue is not None:
-            manager_queue.add(path)
+            manager_queue.put(path)
         transformed_doc_path = representation_save_path + os.path.splitext(file_name)[0] + '.pkl'
         if os.path.exists(transformed_doc_path):
             new_paths.append(transformed_doc_path)
