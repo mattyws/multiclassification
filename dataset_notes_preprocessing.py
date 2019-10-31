@@ -37,11 +37,11 @@ def note_preprocessing(icustays, preprocessing_pipeline, noteevents_path=None, p
     for icustay in icustays:
         if manager_queue is not None:
             manager_queue.put(icustay)
-        if not os.path.exists(noteevents_path+icustay+'.csv') or \
-                os.path.exists(preprocessed_data_path + icustay + '.csv'):
+        if not os.path.exists(noteevents_path+str(icustay)+'.csv') or \
+                os.path.exists(preprocessed_data_path + str(icustay) + '.csv'):
             continue
         new_events = []
-        icu_noteevents = pandas.read_csv(noteevents_path+icustay+'.csv')
+        icu_noteevents = pandas.read_csv(noteevents_path+str(icustay)+'.csv')
         for index, noteevent in icu_noteevents.iterrows():
             event = dict()
             text = noteevent['Note']
@@ -51,7 +51,7 @@ def note_preprocessing(icustays, preprocessing_pipeline, noteevents_path=None, p
             event['Note'] = text
             new_events.append(event)
         new_events = pandas.DataFrame(new_events)
-        new_events.to_csv(preprocessed_data_path + icustay + '.csv', index=False)
+        new_events.to_csv(preprocessed_data_path + str(icustay) + '.csv', index=False)
 
 def tokenize_text(text):
     tokenizer = WhitespaceTokenizer()
