@@ -104,7 +104,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
-        new_sizes, new_labels = dict()
+        new_sizes = dict()
+        new_labels = dict()
         i = 0
         for key in test_sizes.keys():
             new_sizes[key] = train_sizes[key]
