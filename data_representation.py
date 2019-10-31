@@ -61,9 +61,9 @@ class TransformClinicalTextsRepresentations(object):
     Changes the representation for patients notes using a word2vec model.
     The patients notes must be into different csv.
     """
-    def __init__(self, word2vecModel, embeddingSize=200, window=2, texts_path=None, representation_save_path=None):
-        self.word2vecModel = word2vecModel
-        self.embeddingSize = embeddingSize
+    def __init__(self, word2vec_model, embedding_size=200, window=2, texts_path=None, representation_save_path=None):
+        self.word2vec_model = word2vec_model
+        self.embedding_size = embedding_size
         self.window = window
         self.texts_path = texts_path
         self.representation_save_path = representation_save_path
@@ -73,8 +73,8 @@ class TransformClinicalTextsRepresentations(object):
         with multiprocessing.Pool(processes=4) as pool:
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
-            partial_transform_docs = partial(transform_docs, word2vecModel=self.word2vecModel,
-                                             embeddingSize=self.embeddingSize, window=self.window,
+            partial_transform_docs = partial(transform_docs, word2vecModel=self.word2vec_model,
+                                             embeddingSize=self.embedding_size, window=self.window,
                                              representation_save_path=self.representation_save_path,
                                              manager_queue=manager_queue)
             data = numpy.array_split(docs_paths, 6)

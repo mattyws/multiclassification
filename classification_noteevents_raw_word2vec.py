@@ -106,7 +106,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                              parameters['word2vecModelFileName'].format(i), min_count,
                                              embedding_size, workers, window, iterations,
                                              preprocessing_pipeline=preprocessing_pipeline)
-        # TODO: use the word2vec model to transform the representation of all data before creating the generator with the transformed data
         print_with_time("Transforming representation")
         texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                                   window=window, texts_path=parameters['dataPath'],
@@ -141,7 +140,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
-        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator), callbacks=[metrics_callback])
+        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator))
         metrics = test_model(kerasAdapter, dataTestGenerator, i)
         if dictWriter is None:
             dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())

@@ -104,10 +104,12 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
+
+
         new_sizes = dict()
         new_labels = dict()
         i = 0
-        for key in test_sizes.keys():
+        for key in train_sizes.keys():
             new_sizes[key] = train_sizes[key]
             new_labels[key] = train_labels[key]
             if i == 4:
@@ -115,6 +117,19 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             i += 1
         train_sizes = new_sizes
         train_labels = new_labels
+        new_sizes = dict()
+        new_labels = dict()
+        i = 0
+        for key in test_sizes.keys():
+            new_sizes[key] = test_sizes[key]
+            new_labels[key] = test_labels[key]
+            if i == 4:
+                break
+            i += 1
+        test_sizes = new_sizes
+        test_labels = new_labels
+
+
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
         dataTrainGenerator.create_batches()
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
@@ -138,7 +153,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
+        print_with_time("Training model")
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None)
+        print_with_time("Testing model")
         metrics = test_model(kerasAdapter, dataTestGenerator, i)
         print(metrics)
         exit()
