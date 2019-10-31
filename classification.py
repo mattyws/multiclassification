@@ -97,13 +97,23 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
         #                                               classes[testIndex], parameters['batchSize'],
         #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
-        train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex[:4]]
+        train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
                                                                       , sizes_filename=parameters['training_events_sizes_file'].format(i)
                                                                       , classes_filename=parameters['training_events_sizes_labels_file'].format(i))
         test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
+        new_sizes, new_labels = dict()
+        i = 0
+        for key in test_sizes.keys():
+            new_sizes[key] = train_sizes[key]
+            new_labels[key] = train_labels[key]
+            if i == 4:
+                exit()
+            i += 1
+        train_sizes = new_sizes
+        train_labels = new_labels
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
         dataTrainGenerator.create_batches()
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
