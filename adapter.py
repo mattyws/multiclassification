@@ -49,7 +49,7 @@ class KerasGeneratorAdapter(ModelAdapter):
 
     def predict(self, testDocs, batch_size=10):
         result = self.model.predict(testDocs, batch_size, verbose=0)
-        result = result.argmac(axis=-1)
+        result = result.argmax(axis=-1)
         # result = self.model.predict_generator(testDocs)
         return result
 
