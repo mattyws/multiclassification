@@ -29,6 +29,6 @@
     "gru": true,
     "useDropout": true,
     "dropout": 0.6,
-    "trainingEpochs": 2,
+    "trainingEpochs": 40,
     "batchSize": 50
 }
