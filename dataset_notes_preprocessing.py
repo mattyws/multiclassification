@@ -47,7 +47,7 @@ def note_preprocessing(icustays, preprocessing_pipeline, noteevents_path=None, p
             text = noteevent['Note']
             for func in preprocessing_pipeline:
                 text = func(text)
-            event['timestamp'] = noteevent['timestamp']
+            event['timestamp'] = noteevent['Unnamed: 0']
             event['Note'] = text
             new_events.append(event)
         new_events = pandas.DataFrame(new_events)
