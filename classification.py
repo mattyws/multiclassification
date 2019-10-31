@@ -140,6 +140,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         metrics_callback = Metrics(dataTestGenerator)
         kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None)
         metrics = test_model(kerasAdapter, dataTestGenerator, i)
+        print(metrics)
+        exit()
         if dictWriter is None:
             dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
         if metrics['fold'] == 0:
