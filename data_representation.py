@@ -42,7 +42,7 @@ def transform_docs(docs_path, word2vec_model, embedding_size, window, representa
             manager_queue.put(path)
         transformed_doc_path = representation_save_path + os.path.splitext(file_name)[0] + '.pkl'
         if os.path.exists(transformed_doc_path):
-            new_paths.append(transformed_doc_path)
+            new_paths[path] = transformed_doc_path
             continue
         data = pandas.read_csv(path)
         transformed_texts = []
