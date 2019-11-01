@@ -15,7 +15,7 @@ import unicodedata
 from nltk import WhitespaceTokenizer
 
 import functions
-from functions import print_with_time
+from functions import print_with_time, remove_only_special_characters_tokens
 
 
 def escape_invalid_xml_characters(text):
@@ -45,17 +45,31 @@ def note_preprocessing(icustays, preprocessing_pipeline, noteevents_path=None, p
         for index, noteevent in icu_noteevents.iterrows():
             event = dict()
             text = noteevent['Note']
-            for func in preprocessing_pipeline:
-                text = func(text)
+            text = escape_invalid_xml_characters(text)
+            text = escape_html_special_entities(text)
+            text = text_to_lower(text)
+            text = tokenize_text(text)
+            text = tokenize_sentences(text)
+            cleaned_sentences = []
+            for sentence in text:
+                cleaned_sentences.append(remove_only_special_characters_tokens(sentence))
             event['timestamp'] = noteevent['Unnamed: 0']
-            event['Note'] = text
+            event['Note'] = cleaned_sentences
             new_events.append(event)
         new_events = pandas.DataFrame(new_events)
         new_events.to_csv(preprocessed_data_path + str(icustay) + '.csv', index=False)
 
 def tokenize_text(text):
+    sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
+    return sentence_detector.tokenize(text)
+
+
+def tokenize_sentences(sentences):
     tokenizer = WhitespaceTokenizer()
-    return tokenizer.tokenize(text)
+    tokenized_sentences = []
+    for sentence in sentences:
+        tokenized_sentences.append(tokenizer.tokenize(sentence))
+    return tokenized_sentences
 
 parameters = functions.load_parameters_file()
 
