@@ -1,18 +1,11 @@
-import html
 from functools import partial
-from xml.sax.saxutils import escape, quoteattr
 
 import pandas
 import numpy as np
 import multiprocessing as mp
-import nltk
 import os
 
 import sys
-
-import unicodedata
-
-from nltk import WhitespaceTokenizer
 from functions import print_with_time, remove_only_special_characters_tokens, escape_invalid_xml_characters, \
     escape_html_special_entities, text_to_lower, tokenize_text, tokenize_sentences, load_parameters_file
 
@@ -34,7 +27,9 @@ def note_preprocessing(icustays, noteevents_path=None, preprocessed_data_path=No
             text = tokenize_text(text)
             text = tokenize_sentences(text)
             for sentence in text:
-                icu_sentences.append(' '.join(remove_only_special_characters_tokens(sentence)))
+                sentence = ' '.join(remove_only_special_characters_tokens(sentence)).replace('"', '')
+                if len(sentence.strip()) != 0:
+                    icu_sentences.append(sentence)
         with open(preprocessed_data_path + str(icustay) + '.txt', 'w') as handler:
             for sentence in icu_sentences:
                 handler.write(sentence + '\n')
