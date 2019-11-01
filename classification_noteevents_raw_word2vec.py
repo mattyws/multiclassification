@@ -104,8 +104,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                   functions.remove_only_special_characters_tokens]
         word2vec_model = train_word2vec.train(data[trainIndex],
                                              parameters['word2vecModelFileName'].format(i), min_count,
-                                             embedding_size, workers, window, iterations,
-                                             preprocessing_pipeline=preprocessing_pipeline)
+                                             embedding_size, workers, window, iterations)
         print_with_time("Transforming representation")
         texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                                   window=window, texts_path=parameters['dataPath'],
