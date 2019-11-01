@@ -2,6 +2,7 @@
 import csv
 import html
 import json
+import logging
 import os
 from datetime import datetime
 
@@ -24,6 +25,8 @@ from functions import test_model, print_with_time
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator
 from normalization import Normalization, NormalizationValues
+
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 def escape_invalid_xml_characters(text):
     text = escape(text)

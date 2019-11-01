@@ -271,10 +271,11 @@ class NoteeventsTextDataGenerator(object):
     def __iter__(self):
         for path in self.data_paths:
             noteevents = pd.read_csv(path)
-            noteevents = noteevents['Note']
+            noteevents = noteevents['Note'].tolist()
             for note in noteevents:
                 if self.preprocessing_pipeline is not None and isinstance(self.preprocessing_pipeline, list):
                     for preprocessing_func in self.preprocessing_pipeline:
                         note = preprocessing_func(note)
-                print(note)
+                # print(note)
+                print(type(note))
                 yield note
