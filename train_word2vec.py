@@ -11,6 +11,8 @@ import functions
 from adapter import Word2VecTrainer
 from data_generators import NoteeventsTextDataGenerator
 
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+
 
 def train(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None, preprocessing_pipeline=None):
     if noteevents_iterator is None:
