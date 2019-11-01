@@ -278,5 +278,6 @@ class NoteeventsTextDataGenerator(object):
                     for preprocessing_func in self.preprocessing_pipeline:
                         note = preprocessing_func(note)
                 for sentence in note:
+                    print(sentence)
                     yield sentence
                 # yield note

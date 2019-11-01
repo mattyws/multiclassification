@@ -147,7 +147,7 @@ class Word2VecTrainer(object):
         self.iter = iter
         self.model = None
 
-    def train(self, corpus, sg=0):
+    def train(self, corpus, sg=1):
         self.model = Word2Vec(corpus, min_count=self.min_count, size=self.size, workers=self.workers, window=self.window, iter=self.iter, sg=sg)
 
     def save(self, filename):
