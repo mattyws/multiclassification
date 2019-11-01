@@ -17,6 +17,9 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 def train(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None, preprocessing_pipeline=None):
     if noteevents_iterator is None:
         noteevents_iterator = NoteeventsTextDataGenerator(files_paths, preprocessing_pipeline=preprocessing_pipeline)
+    for noteevent in noteevents_iterator:
+        print(noteevent)
+        exit()
     word2vec_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
     if os.path.exists(saved_model_path):
         model = word2vec_trainer.load_model(saved_model_path)
