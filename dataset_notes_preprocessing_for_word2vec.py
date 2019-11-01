@@ -54,8 +54,6 @@ with mp.Pool(processes=4) as pool:
                                                noteevents_path = noteevents_path,
                                                preprocessed_data_path=preprocessed_noteevents_path,
                                                manager_queue=queue)
-    partial_preprocessing_noteevents(icustays[0])
-    exit()
     print_with_time("Preprocessing noteevents")
     map_obj = pool.map_async(partial_preprocessing_noteevents, icustays)
     consumed = 0
