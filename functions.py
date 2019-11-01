@@ -1,3 +1,4 @@
+import html
 import json
 import os
 import pickle
@@ -6,12 +7,17 @@ from datetime import datetime, timedelta
 import time
 import re
 from itertools import islice
+from xml.sax.saxutils import escape, quoteattr
 
+import nltk
 import pandas as pd
 
 from os.path import exists, join, abspath
 from os import pathsep
 
+import unicodedata
+
+from nltk import WhitespaceTokenizer
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, cohen_kappa_score, accuracy_score, \
     confusion_matrix, classification_report
 
@@ -255,3 +261,29 @@ def test_model(kerasAdapter, dataTestGenerator, fold):
 
 def print_with_time(text):
     print("{} ===== {} =====".format(datetime.now().strftime("%d/%m %H:%M:%S"), text))
+
+def escape_invalid_xml_characters(text):
+    text = escape(text)
+    text = quoteattr(text)
+    text = "".join(ch for ch in text if unicodedata.category(ch)[0] != "C")
+    return text
+
+
+def escape_html_special_entities(text):
+    return html.unescape(text)
+
+
+def text_to_lower(text):
+    return text.lower()
+
+def tokenize_text(text):
+    sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
+    return sentence_detector.tokenize(text)
+
+
+def tokenize_sentences(sentences):
+    tokenizer = WhitespaceTokenizer()
+    tokenized_sentences = []
+    for sentence in sentences:
+        tokenized_sentences.append(tokenizer.tokenize(sentence))
+    return tokenized_sentences
