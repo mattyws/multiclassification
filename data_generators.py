@@ -7,6 +7,7 @@ import numpy as np
 import os
 import pandas as pd
 from keras.utils import Sequence
+from ast import literal_eval
 
 from data_representation import Word2VecEmbeddingCreator
 
@@ -271,7 +272,7 @@ class NoteeventsTextDataGenerator(object):
     def __iter__(self):
         for path in self.data_paths:
             noteevents = pd.read_csv(path)
-            noteevents = noteevents['Note'].tolist()
+            noteevents = noteevents['Note'].applymap(literal_eval).tolist()
             for note in noteevents:
                 if self.preprocessing_pipeline is not None and isinstance(self.preprocessing_pipeline, list):
                     for preprocessing_func in self.preprocessing_pipeline:
