@@ -34,7 +34,8 @@ def create_embedding_matrix(text, word2vec_model, embedding_size, window):
             x[pos] = word2vec_model.wv[word]
     return x
 
-def transform_docs(docs_path, word2vec_model, embedding_size, window, representation_save_path, manager_queue=None):
+def transform_docs(docs_path, word2vec_model, embedding_size, window, representation_save_path, preprocessing_pipeline=[],
+                   manager_queue=None):
     new_paths = dict()
     for path in docs_path:
         file_name = path.split('/')[-1]
@@ -47,7 +48,11 @@ def transform_docs(docs_path, word2vec_model, embedding_size, window, representa
         data = pandas.read_csv(path)
         transformed_texts = []
         for index, row in data.iterrows():
-            new_representation = create_embedding_matrix(row['Note'], word2vec_model, embedding_size, window)
+            note = row['Note']
+            if preprocessing_pipeline is not None:
+                for func in preprocessing_pipeline:
+                    note = func(note)
+            new_representation = create_embedding_matrix(note, word2vec_model, embedding_size, window)
             transformed_texts.append(new_representation)
         transformed_texts = numpy.array(transformed_texts)
         with open(transformed_doc_path, 'wb') as handler:
@@ -69,13 +74,14 @@ class TransformClinicalTextsRepresentations(object):
         self.representation_save_path = representation_save_path
         self.new_paths = dict()
 
-    def transform(self, docs_paths):
+    def transform(self, docs_paths, preprocessing_pipeline=None):
         with multiprocessing.Pool(processes=4) as pool:
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
             partial_transform_docs = partial(transform_docs, word2vecModel=self.word2vec_model,
                                              embeddingSize=self.embedding_size, window=self.window,
                                              representation_save_path=self.representation_save_path,
+                                             preprocessing_pipeline=preprocessing_pipeline,
                                              manager_queue=manager_queue)
             data = numpy.array_split(docs_paths, 6)
             total_files = len(docs_paths)

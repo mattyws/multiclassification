@@ -276,14 +276,17 @@ def escape_html_special_entities(text):
 def text_to_lower(text):
     return text.lower()
 
+def whitespace_tokenize_text(text):
+    tokenizer = WhitespaceTokenizer()
+    return tokenizer.tokenize(text)
+
 def tokenize_text(text):
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
     return sentence_detector.tokenize(text)
 
 
 def tokenize_sentences(sentences):
-    tokenizer = WhitespaceTokenizer()
     tokenized_sentences = []
     for sentence in sentences:
-        tokenized_sentences.append(tokenizer.tokenize(sentence))
+        tokenized_sentences.append(whitespace_tokenize_text(sentence))
     return tokenized_sentences

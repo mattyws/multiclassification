@@ -10,22 +10,18 @@ import pandas as pd
 import numpy as np
 
 import keras
-import unicodedata
-from nltk import WhitespaceTokenizer
 
 from sklearn.model_selection._split import StratifiedKFold
 
-import functions
-import train_word2vec
 from adapter import Word2VecTrainer
 from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataGenerator
-from xml.sax.saxutils import escape, quoteattr, unescape
 
 from data_representation import TransformClinicalTextsRepresentations
-from functions import test_model, print_with_time
+from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+    text_to_lower, tokenize_text, remove_only_special_characters_tokens, whitespace_tokenize_text, \
+    divide_by_events_lenght
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator
-from normalization import Normalization, NormalizationValues
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
@@ -45,25 +41,6 @@ def train_word2vec(files_paths, saved_model_path, min_count, size, workers, wind
         word2vec_trainer.train(noteevents_iterator)
         word2vec_trainer.save(saved_model_path)
         return word2vec_trainer.model
-
-def escape_invalid_xml_characters(text):
-    text = escape(text)
-    text = quoteattr(text)
-    text = "".join(ch for ch in text if unicodedata.category(ch)[0] != "C")
-    return text
-
-
-def escape_html_special_entities(text):
-    return html.unescape(text)
-
-
-def text_to_lower(text):
-    return text.lower()
-
-
-def tokenize_text(text):
-    tokenizer = WhitespaceTokenizer()
-    return tokenizer.tokenize(text)
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
@@ -95,6 +72,7 @@ data = np.array([itemid for itemid in list(data_csv['icustay_id'])
                  if os.path.exists(parameters['dataPath'] + '{}.csv'.format(itemid))])
 data_csv = data_csv[data_csv['icustay_id'].isin(data)]
 data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
+word2vec_data = np.array([parameters['notes_word2vec_path'] + '{}.txt'.format(itemid) for itemid in data])
 print("========= Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
 classes_for_stratified = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
@@ -120,24 +98,24 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             continue
         print_with_time("Fold {}".format(i))
         print_with_time("Training Word2vec")
-        preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower, tokenize_text,
-                                  functions.remove_only_special_characters_tokens]
-        word2vec_model = train_word2vec(data[trainIndex],
+        preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower, whitespace_tokenize_text,
+                                  remove_only_special_characters_tokens]
+        word2vec_model = train_word2vec(word2vec_data[trainIndex],
                                         parameters['word2vecModelFileName'].format(i), min_count,
                                         embedding_size, workers, window, iterations)
         print_with_time("Transforming representation")
         texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                                   window=window, texts_path=parameters['dataPath'],
                                                                   representation_save_path=parameters['word2vec_representation_files_path'])
-        texts_transformer.transform(data_csv['icustay_id'])
+        texts_transformer.transform(data_csv['icustay_id'], preprocessing_pipeline=preprocessing_pipeline)
         normalized_data = np.array(texts_transformer.get_new_paths(data))
 
         print_with_time("Creating generators")
-        train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
+        train_sizes, train_labels = divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
                                                                       , sizes_filename=parameters['training_events_sizes_file'].format(i)
                                                                       , classes_filename=parameters['training_events_sizes_labels_file'].format(i))
-        test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
+        test_sizes, test_labels = divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels)

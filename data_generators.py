@@ -9,6 +9,8 @@ import pandas as pd
 from keras.utils import Sequence
 from ast import literal_eval
 
+from nltk import WhitespaceTokenizer
+
 from data_representation import Word2VecEmbeddingCreator
 
 class LengthLongitudinalDataGenerator(Sequence):
@@ -270,14 +272,18 @@ class NoteeventsTextDataGenerator(object):
         self.preprocessing_pipeline = preprocessing_pipeline
 
     def __iter__(self):
+        tokenizer = WhitespaceTokenizer()
         for path in self.data_paths:
-            noteevents = pd.read_csv(path)
-            noteevents = noteevents['Note'].apply(literal_eval).tolist()
-            for note in noteevents:
-                if self.preprocessing_pipeline is not None and isinstance(self.preprocessing_pipeline, list):
-                    for preprocessing_func in self.preprocessing_pipeline:
-                        note = preprocessing_func(note)
-                for sentence in note:
-                    # print(sentence)
-                    yield sentence
-                # yield note
+            with open(path, 'r') as handler:
+                for line in handler:
+                    yield tokenizer.tokenize(line)
+            # noteevents = pd.read_csv(path)
+            # noteevents = noteevents['Note'].apply(literal_eval).tolist()
+            # for note in noteevents:
+            #     if self.preprocessing_pipeline is not None and isinstance(self.preprocessing_pipeline, list):
+            #         for preprocessing_func in self.preprocessing_pipeline:
+            #             note = preprocessing_func(note)
+            #     for sentence in note:
+            #         # print(sentence)
+            #         yield sentence
+            #     # yield note
