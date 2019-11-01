@@ -17,7 +17,8 @@ from sklearn.model_selection._split import StratifiedKFold
 
 import functions
 import train_word2vec
-from data_generators import LengthLongitudinalDataGenerator
+from adapter import Word2VecTrainer
+from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataGenerator
 from xml.sax.saxutils import escape, quoteattr, unescape
 
 from data_representation import TransformClinicalTextsRepresentations
@@ -26,7 +27,24 @@ from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator
 from normalization import Normalization, NormalizationValues
 
-# logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+
+
+def train_word2vec(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None, preprocessing_pipeline=None):
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    if noteevents_iterator is None:
+        noteevents_iterator = NoteeventsTextDataGenerator(files_paths, preprocessing_pipeline=preprocessing_pipeline)
+    # for noteevent in noteevents_iterator:
+    #     print(noteevent)
+    #     exit()
+    word2vec_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
+    if os.path.exists(saved_model_path):
+        model = word2vec_trainer.load_model(saved_model_path)
+        return model
+    else:
+        word2vec_trainer.train(noteevents_iterator)
+        word2vec_trainer.save(saved_model_path)
+        return word2vec_trainer.model
 
 def escape_invalid_xml_characters(text):
     text = escape(text)
@@ -83,7 +101,6 @@ classes_for_stratified = np.array([1 if c == 'sepsis' else 0 for c in list(data_
 # Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 
-# TODO: Transfer these variables to a .json parameter file
 embedding_size = parameters['embedding_size']
 min_count = parameters['min_count']
 workers = parameters['workers']
@@ -105,9 +122,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         print_with_time("Training Word2vec")
         preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower, tokenize_text,
                                   functions.remove_only_special_characters_tokens]
-        word2vec_model = train_word2vec.train(data[trainIndex],
-                                             parameters['word2vecModelFileName'].format(i), min_count,
-                                             embedding_size, workers, window, iterations)
+        word2vec_model = train_word2vec(data[trainIndex],
+                                        parameters['word2vecModelFileName'].format(i), min_count,
+                                        embedding_size, workers, window, iterations)
         print_with_time("Transforming representation")
         texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                                   window=window, texts_path=parameters['dataPath'],
