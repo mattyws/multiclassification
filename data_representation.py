@@ -48,7 +48,11 @@ def transform_docs(docs_path, word2vec_model, embedding_size, window, representa
         data = pandas.read_csv(path)
         transformed_texts = []
         for index, row in data.iterrows():
-            note = row['Note']
+            try:
+                note = row['Note']
+            except Exception as e:
+                print(path)
+                raise Exception("deu errado")
             if preprocessing_pipeline is not None:
                 for func in preprocessing_pipeline:
                     note = func(note)
