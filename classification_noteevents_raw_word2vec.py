@@ -103,10 +103,12 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         word2vec_model = train_word2vec(word2vec_data[trainIndex],
                                         parameters['word2vecModelFileName'].format(i), min_count,
                                         embedding_size, workers, window, iterations)
+        print(word2vec_model.wv.vocab)
+        exit()
         print_with_time("Transforming representation")
         texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                                   window=window, texts_path=parameters['dataPath'],
-                                                                  representation_save_path=parameters['word2vec_representation_files_path'])
+                                                                  representation_save_path=parameters['word2vec_representation_files_path'].format(i))
         texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
         normalized_data = np.array(texts_transformer.get_new_paths(data))
 
