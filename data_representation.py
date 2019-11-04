@@ -79,6 +79,8 @@ class TransformClinicalTextsRepresentations(object):
         self.window = window
         self.texts_path = texts_path
         self.representation_save_path = representation_save_path
+        if not os.path.exists(representation_save_path):
+            os.mkdir(representation_save_path)
         self.new_paths = dict()
 
     def transform(self, docs_paths, preprocessing_pipeline=None):
