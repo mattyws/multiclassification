@@ -78,7 +78,7 @@ class TransformClinicalTextsRepresentations(object):
         with multiprocessing.Pool(processes=4) as pool:
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
-            partial_transform_docs = partial(transform_docs, word2vecModel=self.word2vec_model,
+            partial_transform_docs = partial(transform_docs, word2vec_model=self.word2vec_model,
                                              embeddingSize=self.embedding_size, window=self.window,
                                              representation_save_path=self.representation_save_path,
                                              preprocessing_pipeline=preprocessing_pipeline,
