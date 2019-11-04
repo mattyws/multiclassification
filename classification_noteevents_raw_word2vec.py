@@ -107,7 +107,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                                   window=window, texts_path=parameters['dataPath'],
                                                                   representation_save_path=parameters['word2vec_representation_files_path'])
-        texts_transformer.transform(word2vec_data, preprocessing_pipeline=preprocessing_pipeline)
+        texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
         normalized_data = np.array(texts_transformer.get_new_paths(data))
 
         print_with_time("Creating generators")
