@@ -125,7 +125,7 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
     def __init__(self, input_shape, outputUnits, numOutputNeurons,
                  layersActivations=None, networkActivation='sigmoid',
                  loss='categorical_crossentropy', optimizer='adam', gru=False, use_dropout=False, dropout=0.5,
-                 metrics=['accuracy']):
+                 metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
         self.inputShape = input_shape
         self.outputUnits = outputUnits
         self.numOutputNeurons = numOutputNeurons
@@ -137,6 +137,9 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         self.use_dropout = use_dropout
         self.dropout = dropout
         self.metrics = metrics
+        self.kernel_regularizer = kernel_regularizer
+        self.bias_regularizer = bias_regularizer
+        self.activity_regularizer = activity_regularizer
 
         self.__check_parameters()
 
@@ -159,7 +162,9 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
-        output = Dense(self.numOutputNeurons, activation=self.networkActivation)(layer)
+        output = Dense(self.numOutputNeurons, activation=self.networkActivation,
+                       kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
+                       activity_regularizer=self.activity_regularizer)(layer)
         return input, output
 
     def __create_recurrent_layer(self, outputUnit, activation, returnSequences, inputShape=None):

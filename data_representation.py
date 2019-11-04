@@ -79,7 +79,7 @@ class TransformClinicalTextsRepresentations(object):
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
             partial_transform_docs = partial(transform_docs, word2vec_model=self.word2vec_model,
-                                             embeddingSize=self.embedding_size, window=self.window,
+                                             embedding_size=self.embedding_size, window=self.window,
                                              representation_save_path=self.representation_save_path,
                                              preprocessing_pipeline=preprocessing_pipeline,
                                              manager_queue=manager_queue)

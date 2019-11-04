@@ -6,6 +6,9 @@ import pandas as pd
 import numpy as np
 
 import keras
+from keras import backend as K
+import tensorflow as tf
+from keras.regularizers import l1_l2
 
 from sklearn.model_selection._split import StratifiedKFold
 
@@ -15,6 +18,13 @@ from functions import test_model, print_with_time
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator
 from normalization import Normalization, NormalizationValues
+
+def focal_loss(y_true, y_pred):
+    gamma = 2.0
+    alpha = 0.25
+    pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
+    pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
+    return -K.sum(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1))-K.sum((1-alpha) * K.pow( pt_0, gamma) * K.log(1. - pt_0))
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
@@ -146,10 +156,10 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
 
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
-                                                         loss=parameters['loss'], layersActivations=parameters['layersActivations'],
+                                                         loss=focal_loss, layersActivations=parameters['layersActivations'],
                                                          gru=parameters['gru'], use_dropout=parameters['useDropout'],
-                                                         dropout=parameters['dropout'],
-                                                         metrics=[keras.metrics.binary_accuracy])
+                                                         dropout=parameters['dropout'], kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
+                                                         metrics=[keras.metrics.binary_accuracy], optimizer='nadam')
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
