@@ -30,8 +30,11 @@ def create_embedding_matrix(text, word2vec_model, embedding_size, window):
                 end = len(text)
             else:
                 end = pos + window
-            word = word2vec_model.predict_output_word(text[begin:end])[0][0]
-            x[pos] = word2vec_model.wv[word]
+            try:
+                word = word2vec_model.predict_output_word(text[begin:end])[0][0]
+                x[pos] = word2vec_model.wv[word]
+            except:
+                x[pos] = np.zeros(shape=embedding_size)
     return x
 
 def transform_docs(docs_path, word2vec_model, embedding_size, window, representation_save_path, preprocessing_pipeline=[],
