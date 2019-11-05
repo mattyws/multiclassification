@@ -1,6 +1,8 @@
 import csv
 import json
 import os
+from collections import Counter
+from pprint import PrettyPrinter
 
 import pandas as pd
 import numpy as np
@@ -115,29 +117,21 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
 
+        print_with_time("Checking class distribution between classes and check if classes are right at csv")
+        data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
+        class_count = dict()
+        for key in train_sizes.keys():
+            counts = Counter(train_labels[key])
+            class_count[key] = counts
+            for f, c in zip(train_sizes[key], train_labels[key]):
+                f = f.split('/')[-1].split('.')[0]
+                row = data_csv[data_csv['icustay_id'] == int(f)]
+                true = 1 if row['class'] == 'sepsis' else 0
+                if c != true:
+                    print(c, true)
+        pp = PrettyPrinter(indent=4)
+        pp.pprint(class_count)
 
-        # new_sizes = dict()
-        # new_labels = dict()
-        # i = 0
-        # for key in train_sizes.keys():
-        #     new_sizes[key] = train_sizes[key]
-        #     new_labels[key] = train_labels[key]
-        #     if i == 4:
-        #         break
-        #     i += 1
-        # train_sizes = new_sizes
-        # train_labels = new_labels
-        # new_sizes = dict()
-        # new_labels = dict()
-        # i = 0
-        # for key in test_sizes.keys():
-        #     new_sizes[key] = test_sizes[key]
-        #     new_labels[key] = test_labels[key]
-        #     if i == 4:
-        #         break
-        #     i += 1
-        # test_sizes = new_sizes
-        # test_labels = new_labels
 
 
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
