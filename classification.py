@@ -152,6 +152,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
+                                                         networkActivation=parameters['networkActivation'],
                                                          gru=parameters['gru'], use_dropout=parameters['useDropout'],
                                                          dropout=parameters['dropout'], kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
                                                          metrics=[keras.metrics.binary_accuracy], optimizer='nadam')

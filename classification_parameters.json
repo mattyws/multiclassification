@@ -28,6 +28,7 @@
         "relu",
         "relu"
     ],
+    "networkActivation" : "relu",
     "gru": false,
     "useDropout": true,
     "dropout": 0.3,
