@@ -119,13 +119,14 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
         print_with_time("Checking class distribution between classes and check if classes are right at csv")
         data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
+        data_csv = data_csv.set_index(['icustay_id'])
         class_count = dict()
         for key in train_sizes.keys():
             counts = Counter(train_labels[key])
             class_count[key] = counts
             for f, c in zip(train_sizes[key], train_labels[key]):
                 f = f.split('/')[-1].split('.')[0]
-                row = data_csv[data_csv['icustay_id'] == int(f)]
+                row = data_csv[int(f)]
                 true = 1 if row['class'] == 'sepsis' else 0
                 if c != true:
                     print(c, true)
