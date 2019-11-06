@@ -28,7 +28,7 @@
         "relu",
         "relu"
     ],
-    "networkActivation" : "relu",
+    "networkActivation" : "tanh",
     "gru": false,
     "useDropout": true,
     "dropout": 0.3,
