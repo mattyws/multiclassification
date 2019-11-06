@@ -158,7 +158,10 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
                 if self.use_dropout:
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
-                layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)(layer)
+                if i == len(self.outputUnits) - 1:
+                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], False)(layer)
+                else:
+                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
