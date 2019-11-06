@@ -117,21 +117,21 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
 
-        print_with_time("Checking class distribution between classes and check if classes are right at csv")
-        data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
-        data_csv = data_csv.set_index(['icustay_id'])
-        class_count = dict()
-        for key in train_sizes.keys():
-            counts = Counter(train_labels[key])
-            class_count[key] = counts
-            for f, c in zip(train_sizes[key], train_labels[key]):
-                f = f.split('/')[-1].split('.')[0]
-                row = data_csv.loc[int(f)]
-                true = 1 if row['class'] == 'sepsis' else 0
-                if c != true:
-                    print(c, true)
-        pp = PrettyPrinter(indent=4)
-        pp.pprint(class_count)
+        # print_with_time("Checking class distribution between classes and check if classes are right at csv")
+        # data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
+        # data_csv = data_csv.set_index(['icustay_id'])
+        # class_count = dict()
+        # for key in train_sizes.keys():
+        #     counts = Counter(train_labels[key])
+        #     class_count[key] = counts
+        #     for f, c in zip(train_sizes[key], train_labels[key]):
+        #         f = f.split('/')[-1].split('.')[0]
+        #         row = data_csv.loc[int(f)]
+        #         true = 1 if row['class'] == 'sepsis' else 0
+        #         if c != true:
+        #             print(c, true)
+        # pp = PrettyPrinter(indent=4)
+        # pp.pprint(class_count)
 
 
 

@@ -84,9 +84,21 @@ min_count = parameters['min_count']
 workers = parameters['workers']
 window = parameters['window']
 iterations = parameters['iterations']
-
-
 inputShape = (None, embedding_size)
+
+print_with_time("Training Word2vec")
+preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
+                          whitespace_tokenize_text, remove_only_special_characters_tokens]
+word2vec_model = train_word2vec(word2vec_data,
+                                parameters['word2vecModelFileName'], min_count,
+                                embedding_size, workers, window, iterations)
+print_with_time("Transforming representation")
+texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
+                                                          window=window, texts_path=parameters['dataPath'],
+                                                          representation_save_path=parameters['word2vec_representation_files_path'])
+texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
+normalized_data = np.array(texts_transformer.get_new_paths(data))
+
 i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
@@ -97,19 +109,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             i += 1
             continue
         print_with_time("Fold {}".format(i))
-        print_with_time("Training Word2vec")
-        preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower, whitespace_tokenize_text,
-                                  remove_only_special_characters_tokens]
-        word2vec_model = train_word2vec(word2vec_data[trainIndex],
-                                        parameters['word2vecModelFileName'], min_count,
-                                        embedding_size, workers, window, iterations)
-        print_with_time("Transforming representation")
-        texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
-                                                                  window=window, texts_path=parameters['dataPath'],
-                                                                  representation_save_path=parameters['word2vec_representation_files_path'].format(i))
-        texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
-        normalized_data = np.array(texts_transformer.get_new_paths(data))
-
         print_with_time("Creating generators")
         train_sizes, train_labels = divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
