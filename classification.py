@@ -126,7 +126,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             class_count[key] = counts
             for f, c in zip(train_sizes[key], train_labels[key]):
                 f = f.split('/')[-1].split('.')[0]
-                row = data_csv[int(f)]
+                row = data_csv.loc[int(f)]
                 true = 1 if row['class'] == 'sepsis' else 0
                 if c != true:
                     print(c, true)

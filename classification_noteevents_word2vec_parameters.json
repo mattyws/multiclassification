@@ -1,7 +1,7 @@
 {
     "datasetCsvFilePath": "mimic/dataset_patients.csv",
     "modelCheckpointPath": "mimic/word2vec_raw_training/checkpoint/",
-    "word2vecModelFileName": "mimic/word2vec_raw_training/checkpoint/word2vec_f{}.model",
+    "word2vecModelFileName": "mimic/word2vec_raw_training/word2vec.model",
     "word2vec_representation_files_path": "mimic/word2vec_raw_training/transformed_representation_{}/",
     "embedding_size" : 400,
     "min_count" : 2,
