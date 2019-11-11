@@ -96,6 +96,7 @@ print_with_time("Transforming representation")
 texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                           window=window, texts_path=parameters['dataPath'],
                                                           representation_save_path=parameters['word2vec_representation_files_path'])
+word2vec_model = None
 texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
 normalized_data = np.array(texts_transformer.get_new_paths(data))
 
