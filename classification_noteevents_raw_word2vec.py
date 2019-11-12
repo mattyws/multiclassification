@@ -1,4 +1,3 @@
-# TODO: change the script to use the word2vec and notes, bc now it's the copy of classification.py
 import csv
 import html
 import json

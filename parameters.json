@@ -6,6 +6,7 @@
   "pivoted_sofa" :  "pivoted_sofa.csv",
   "raw_dataset_file_name" : "dataset_patients_no_filtering.csv",
   "dataset_file_name" : "dataset_patients.csv",
+  "dataset_file_undersampled_name": "dataset_patients_undersampled.csv",
   "insight_dataset_file_name" : "dataset_patients_insight.csv",
   "word2vec_model_file_name": "word2vec.model",
 
