@@ -1,6 +1,5 @@
 """
 Creates the binary columns for nominal data, adding the columns that doesn't appear at each patients events
-# TODO: save features names in a file - for each patient/ or the final feature set
 """
 import csv
 import os
@@ -114,7 +113,7 @@ for feature_type in features_types:
     if not os.path.exists(patients_features_path):
         os.mkdir(patients_features_path)
 
-dataset_csv = pd.read_csv(parameters["mimic_data_path"] + parameters['dataset_file_name'])
+dataset_csv = pd.read_csv(parameters["mimic_data_path"] + parameters['dataset_file_undersampled_name'])
 # Using as arg only the icustay_id, bc of fixating the others parameters
 total_files = len(dataset_csv) * len(features_types)
 results = []
