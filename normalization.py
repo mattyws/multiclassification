@@ -269,8 +269,13 @@ class Normalization(object):
         if 'starttime' in data.columns:
             data = data.drop(columns=['starttime'])
         if 'endtime' in data.columns:
-            data = data.drop(columns=['endtime'])
-        data = self.__normalize_dataframe(data, self.normalization_values)
+            data = data.drop(columns=['endtime']
+        try:
+            data = self.__normalize_dataframe(data, self.normalization_values)
+        except Exception as e:
+            print(file)
+            print(e)
+            raise Exception()
         # Fill na
         data = data.fillna(method='ffill')
         data = data.fillna(method='backfill')
@@ -286,6 +291,8 @@ class Normalization(object):
         :return: the data normalized
         """
         for column in data.columns:
+            if column not in data.columns:
+                raise Exception("coluna não existe")
             data.loc[:, column] = self.__z_score_normalization(column, data[column], normalization_values)
         return data
 
