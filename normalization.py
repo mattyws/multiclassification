@@ -269,7 +269,7 @@ class Normalization(object):
         if 'starttime' in data.columns:
             data = data.drop(columns=['starttime'])
         if 'endtime' in data.columns:
-            data = data.drop(columns=['endtime']
+            data = data.drop(columns=['endtime'])
         try:
             data = self.__normalize_dataframe(data, self.normalization_values)
         except Exception as e:
