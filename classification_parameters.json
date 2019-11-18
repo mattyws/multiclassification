@@ -2,7 +2,7 @@
     "datasetCsvFilePath": "mimic/dataset_patients_undersampled.csv",
     "modelCheckpointPath": "mimic/undersampled_training/checkpoint_0/",
     "modelConfigPath": "mimic/undersampled_training/checkpoint_0/config.json",
-    "dataPath" : "mimic/sepsis_hotencoded_undersampled_raw_merged/",
+    "dataPath" : "mimic/sepsis_all_features_undersampled_raw_merged/",
     "trainingDataPath" :  "mimic/undersampled_training/dataTraining/",
     "testingDataPath" : "mimic/undersampled_training/dataTest/",
     "datasetFilesFileName": "mimic/undersampled_training/datasetFiles.pkl",
