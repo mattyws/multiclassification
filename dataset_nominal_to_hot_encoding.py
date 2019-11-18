@@ -157,7 +157,8 @@ with mp.Pool(processes=4) as pool:
     else:
         with open(mimic_data_path + parameters['features_after_binarized_file_name'], 'rb') as file:
             features_after_binarized = pickle.load(file)
-
+    print(features_after_binarized)
+    exit()
     # Removing nominal features in raw form if they exists (somehow that happens)
     print("====== Removing hot encoded raw features from set of all features ======")
     are_nominal = dict()
