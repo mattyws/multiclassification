@@ -37,7 +37,8 @@ def create_embedding_matrix(text, word2vec_model, embedding_size, window):
                 # x[pos] = word2vec_model.wv[word]
                 x.append(word2vec_model.wv[word])
             except:
-                x[pos] = np.zeros(shape=embedding_size)
+                # x[pos] = np.zeros(shape=embedding_size)
+                x.append(np.zeros(shape=embedding_size))
     x = np.array(x)
     return x
 
