@@ -18,7 +18,7 @@ from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataG
 from data_representation import TransformClinicalTextsRepresentations
 from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, tokenize_text, remove_only_special_characters_tokens, whitespace_tokenize_text, \
-    divide_by_events_lenght
+    divide_by_events_lenght, remove_sepsis_mentions
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator
 
@@ -87,7 +87,7 @@ inputShape = (None, embedding_size)
 
 print_with_time("Training Word2vec")
 preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
-                          whitespace_tokenize_text, remove_only_special_characters_tokens]
+                          whitespace_tokenize_text, remove_only_special_characters_tokens, remove_sepsis_mentions]
 word2vec_model = train_word2vec(word2vec_data,
                                 parameters['word2vecModelFileName'], min_count,
                                 embedding_size, workers, window, iterations)

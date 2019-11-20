@@ -262,6 +262,13 @@ def test_model(kerasAdapter, dataTestGenerator, fold):
 def print_with_time(text):
     print("{} ===== {} =====".format(datetime.now().strftime("%d/%m %H:%M:%S"), text))
 
+def remove_sepsis_mentions(tokens):
+    sepsis_texts = ['sepsis', 'septic', 'septicemia']
+    tokens = [token for token in tokens if token not in sepsis_texts]
+    return tokens
+
+
+
 def escape_invalid_xml_characters(text):
     text = escape(text)
     text = quoteattr(text)

@@ -16,10 +16,12 @@ def create_embedding_matrix(text, word2vec_model, embedding_size, window):
     :param text: the tokenized text
     :return: the 3 dimensional array representing the content of the tokenized text
     """
-    x = np.zeros(shape=(len(text), embedding_size), dtype='float')
+    # x = np.zeros(shape=(len(text), embedding_size), dtype='float')
+    x = []
     for pos, w in enumerate(text):
         try:
-            x[pos] = word2vec_model.wv[w]
+            # x[pos] = word2vec_model.wv[w]
+            x.append(word2vec_model.wv[w])
         except:
             # x[pos] = np.zeros(shape=self.embeddingSize)
             if pos - window < 0:
@@ -32,9 +34,11 @@ def create_embedding_matrix(text, word2vec_model, embedding_size, window):
                 end = pos + window
             try:
                 word = word2vec_model.predict_output_word(text[begin:end])[0][0]
-                x[pos] = word2vec_model.wv[word]
+                # x[pos] = word2vec_model.wv[word]
+                x.append(word2vec_model.wv[word])
             except:
                 x[pos] = np.zeros(shape=embedding_size)
+    x = np.array(x)
     return x
 
 def transform_docs(docs_path, word2vec_model, embedding_size, window, representation_save_path, preprocessing_pipeline=[],
