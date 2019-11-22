@@ -100,15 +100,13 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         normalized_data = np.array(normalizer.get_new_paths(data))
         print_with_time("Creating generators")
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
-        #                                                classes[trainIndex], parameters['batchSize'],
-        #                                                saved_batch_dir='training_batches_fold_{}'.format(i))
-        # print(dataTrainGenerator[0][1])
-        # print(dataTrainGenerator[0][0].shape)
-        # print(dataTrainGenerator[0][1].shape)
-        # exit()
+        #                                                classes[trainIndex], parameters['batchSize'])
+        # # print(dataTrainGenerator[0][1])
+        # # print(dataTrainGenerator[0][0].shape)
+        # # print(dataTrainGenerator[0][1].shape)
+        # # exit()
         # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
-        #                                               classes[testIndex], parameters['batchSize'],
-        #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
+        #                                               classes[testIndex], parameters['batchSize'])
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
                                                                       , sizes_filename=parameters['training_events_sizes_file'].format(i)
@@ -155,7 +153,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                          networkActivation=parameters['networkActivation'],
                                                          gru=parameters['gru'], use_dropout=parameters['useDropout'],
                                                          dropout=parameters['dropout'], kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
-                                                         metrics=[keras.metrics.binary_accuracy], optimizer='nadam')
+                                                         metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
+        with open(parameters['modelCheckpointPath']+"parameters.json", 'w') as handler:
+            json.dump(parameters, handler)
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
