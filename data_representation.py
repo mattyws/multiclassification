@@ -10,67 +10,6 @@ import pandas
 import sys
 
 
-def create_embedding_matrix(text, word2vec_model, embedding_size, window):
-    """
-    Transform a tokenized text into a 3 dimensional array with the word2vec model
-    :param text: the tokenized text
-    :return: the 3 dimensional array representing the content of the tokenized text
-    """
-    # x = np.zeros(shape=(len(text), embedding_size), dtype='float')
-    x = []
-    for pos, w in enumerate(text):
-        try:
-            # x[pos] = word2vec_model.wv[w]
-            x.append(word2vec_model.wv[w])
-        except:
-            # x[pos] = np.zeros(shape=self.embeddingSize)
-            if pos - window < 0:
-                begin = 0
-            else:
-                begin = pos - window
-            if pos + window > len(text):
-                end = len(text)
-            else:
-                end = pos + window
-            try:
-                word = word2vec_model.predict_output_word(text[begin:end])[0][0]
-                # x[pos] = word2vec_model.wv[word]
-                x.append(word2vec_model.wv[word])
-            except:
-                # x[pos] = np.zeros(shape=embedding_size)
-                x.append(np.zeros(shape=embedding_size))
-    x = np.array(x)
-    return x
-
-def transform_docs(docs_path, word2vec_model, embedding_size, window, representation_save_path, preprocessing_pipeline=[],
-                   manager_queue=None):
-    new_paths = dict()
-    for path in docs_path:
-        file_name = path.split('/')[-1]
-        if manager_queue is not None:
-            manager_queue.put(path)
-        transformed_doc_path = representation_save_path + os.path.splitext(file_name)[0] + '.pkl'
-        if os.path.exists(transformed_doc_path):
-            new_paths[path] = transformed_doc_path
-            continue
-        data = pandas.read_csv(path)
-        transformed_texts = []
-        for index, row in data.iterrows():
-            try:
-                note = row['Note']
-            except Exception as e:
-                print(path)
-                raise Exception("deu errado")
-            if preprocessing_pipeline is not None:
-                for func in preprocessing_pipeline:
-                    note = func(note)
-            new_representation = create_embedding_matrix(note, word2vec_model, embedding_size, window)
-            transformed_texts.append(new_representation)
-        transformed_texts = numpy.array(transformed_texts)
-        with open(transformed_doc_path, 'wb') as handler:
-            pickle.dump(transformed_texts, handler)
-        new_paths[path] = transformed_doc_path
-    return new_paths
 
 
 class TransformClinicalTextsRepresentations(object):
@@ -87,14 +26,76 @@ class TransformClinicalTextsRepresentations(object):
         if not os.path.exists(representation_save_path):
             os.mkdir(representation_save_path)
         self.new_paths = dict()
+        self.lock = multiprocessing.Lock()
+
+    def create_embedding_matrix(self, text):
+        """
+        Transform a tokenized text into a 3 dimensional array with the word2vec model
+        :param text: the tokenized text
+        :return: the 3 dimensional array representing the content of the tokenized text
+        """
+        # x = np.zeros(shape=(len(text), embedding_size), dtype='float')
+        x = []
+        for pos, w in enumerate(text):
+            try:
+                # x[pos] = word2vec_model.wv[w]
+                x.append(self.word2vec_model.wv[w])
+            except:
+                # x[pos] = np.zeros(shape=self.embeddingSize)
+                if pos - self.window < 0:
+                    begin = 0
+                else:
+                    begin = pos - self.window
+                if pos + self.window > len(text):
+                    end = len(text)
+                else:
+                    end = pos + self.window
+                try:
+                    word = self.word2vec_model.predict_output_word(text[begin:end])[0][0]
+                    # x[pos] = word2vec_model.wv[word]
+                    x.append(self.word2vec_model.wv[word])
+                except:
+                    # x[pos] = np.zeros(shape=embedding_size)
+                    x.append(np.zeros(shape=self.embedding_size))
+        x = np.array(x)
+        return x
+
+    def transform_docs(self, docs_path, preprocessing_pipeline=[], manager_queue=None):
+        new_paths = dict()
+        for path in docs_path:
+            file_name = path.split('/')[-1]
+            if manager_queue is not None:
+                manager_queue.put(path)
+            transformed_doc_path = self.representation_save_path + os.path.splitext(file_name)[0] + '.pkl'
+            if os.path.exists(transformed_doc_path):
+                new_paths[path] = transformed_doc_path
+                continue
+            data = pandas.read_csv(path)
+            transformed_texts = []
+            for index, row in data.iterrows():
+                try:
+                    note = row['Note']
+                except Exception as e:
+                    print(path)
+                    raise Exception("deu errado")
+                if preprocessing_pipeline is not None:
+                    for func in preprocessing_pipeline:
+                        note = func(note)
+                self.lock.acquire()
+                new_representation = self.create_embedding_matrix(note)
+                self.lock.release()
+                transformed_texts.append(new_representation)
+            transformed_texts = numpy.array(transformed_texts)
+            with open(transformed_doc_path, 'wb') as handler:
+                pickle.dump(transformed_texts, handler)
+            new_paths[path] = transformed_doc_path
+        return new_paths
 
     def transform(self, docs_paths, preprocessing_pipeline=None):
         with multiprocessing.Pool(processes=4) as pool:
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
-            partial_transform_docs = partial(transform_docs, word2vec_model=self.word2vec_model,
-                                             embedding_size=self.embedding_size, window=self.window,
-                                             representation_save_path=self.representation_save_path,
+            partial_transform_docs = partial(self.transform_docs,
                                              preprocessing_pipeline=preprocessing_pipeline,
                                              manager_queue=manager_queue)
             data = numpy.array_split(docs_paths, 6)
