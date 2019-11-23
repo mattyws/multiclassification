@@ -26,7 +26,7 @@ class TransformClinicalTextsRepresentations(object):
         if not os.path.exists(representation_save_path):
             os.mkdir(representation_save_path)
         self.new_paths = dict()
-        self.lock = multiprocessing.Lock()
+        self.lock = None
 
     def create_embedding_matrix(self, text):
         """
@@ -95,6 +95,7 @@ class TransformClinicalTextsRepresentations(object):
         with multiprocessing.Pool(processes=4) as pool:
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
+            self.lock = manager.Lock()
             partial_transform_docs = partial(self.transform_docs,
                                              preprocessing_pipeline=preprocessing_pipeline,
                                              manager_queue=manager_queue)
