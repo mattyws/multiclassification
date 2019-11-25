@@ -43,14 +43,15 @@ class KerasGeneratorAdapter(ModelAdapter):
 
     def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator = None,
             validationSteps=None, callbacks=None):
-        self.model.fit_generator(dataGenerator, epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
+        self.model.fit_generator(dataGenerator, len(dataGenerator), epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
                                  workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
-                                 callbacks=callbacks, use_multiprocessing=False)
+                                 callbacks=callbacks, use_multiprocessing=True)
 
     def predict(self, testDocs, batch_size=10):
-        result = self.model.predict(testDocs, batch_size, verbose=0)
-        result = result.argmax(axis=-1)
+        # result = self.model.predict(testDocs, batch_size, verbose=0)
+        # result = result.argmax(axis=-1)
         # result = self.model.predict_generator(testDocs)
+        result = self.model.predict_classes(testDocs, batch_size, verbose=0)
         return result
 
     def predict_one(self, doc):

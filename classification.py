@@ -101,10 +101,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         print_with_time("Creating generators")
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
         #                                                classes[trainIndex], parameters['batchSize'])
-        # # print(dataTrainGenerator[0][1])
-        # # print(dataTrainGenerator[0][0].shape)
-        # # print(dataTrainGenerator[0][1].shape)
-        # # exit()
         # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
         #                                               classes[testIndex], parameters['batchSize'])
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
@@ -114,49 +110,19 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
-
-        # print_with_time("Checking class distribution between classes and check if classes are right at csv")
-        # data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
-        # data_csv = data_csv.set_index(['icustay_id'])
-        # class_count = dict()
-        # for key in train_sizes.keys():
-        #     counts = Counter(train_labels[key])
-        #     class_count[key] = counts
-        #     for f, c in zip(train_sizes[key], train_labels[key]):
-        #         f = f.split('/')[-1].split('.')[0]
-        #         row = data_csv.loc[int(f)]
-        #         true = 1 if row['class'] == 'sepsis' else 0
-        #         if c != true:
-        #             print(c, true)
-        # pp = PrettyPrinter(indent=4)
-        # pp.pprint(class_count)
-
-
-
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
         dataTrainGenerator.create_batches()
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
         dataTestGenerator.create_batches()
-        # print(dataTrainGenerator[0][1])
-        # print(dataTrainGenerator[0][0].shape)
-        # print(dataTrainGenerator[0][1].shape)
-        # for i in range(0, len(dataTrainGenerator)):
-        #     print(len(dataTrainGenerator[i][0]))
-        #     print(dataTrainGenerator[i][0])
-        #     print(len(dataTrainGenerator[i][1]))
-        #     print(dataTrainGenerator[i][1])
-        #     input()
-
-
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
                                                          networkActivation=parameters['networkActivation'],
                                                          gru=parameters['gru'], use_dropout=parameters['useDropout'],
-                                                         dropout=parameters['dropout'], kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
+                                                         dropout=parameters['dropout'],
                                                          metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
         with open(parameters['modelCheckpointPath']+"parameters.json", 'w') as handler:
             json.dump(parameters, handler)
-        kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
+        kerasAdapter = modelCreator.create_sequential(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
         print_with_time("Training model")
@@ -168,4 +134,5 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         if metrics['fold'] == 0:
             dictWriter.writeheader()
         dictWriter.writerow(metrics)
+        kerasAdapter.save(parameters['modelCheckpointPath'] + 'trained_{}.model'.format(i))
         i += 1

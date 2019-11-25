@@ -1,15 +1,15 @@
 {
-    "datasetCsvFilePath": "mimic/dataset_patients_undersampled.csv",
-    "modelCheckpointPath": "mimic/insight_training/checkpoint_4/",
-    "modelConfigPath": "mimic/insight_training/checkpoint_4/config.json",
+    "datasetCsvFilePath": "mimic/dataset_patients.csv",
+    "modelCheckpointPath": "mimic/insight_training/checkpoint_2/",
+    "modelConfigPath": "mimic/insight_training/checkpoint_2/config.json",
     "dataPath" : "mimic/sepsis_insight_bucket/",
     "trainingDataPath" :  "mimic/insight_training/dataTraining/",
     "testingDataPath" : "mimic/insight_training/dataTest/",
     "datasetFilesFileName": "mimic/insight_training/datasetFiles.pkl",
     "datasetLabelsFileName": "mimic/insight_training/datasetLabels.pkl",
-    "trainingGeneratorPath": "mimic/insight_training/checkpoint_4/dataTrainGenerator.pkl",
-    "testingGeneratorPath": "mimic/insight_training/checkpoint_4/dataTestGenerator.pkl",
-    "resultFilePath": "mimic/insight_training/checkpoint_4/result.csv",
+    "trainingGeneratorPath": "mimic/insight_training/checkpoint_2/dataTrainGenerator.pkl",
+    "testingGeneratorPath": "mimic/insight_training/checkpoint_2/dataTestGenerator.pkl",
+    "resultFilePath": "mimic/insight_training/checkpoint_2/result.csv",
     "temporary_data_path" : "mimic/insight_training/data_tmp_{}/",
     "normalization_data_path": "mimic/insight_training/normalization_values_{}.pkl",
     "normalization_value_counts_path" : "mimic/insight_training/value_counts/",
@@ -19,18 +19,20 @@
     "testing_events_sizes_labels_file" : "mimic/insight_training/testing_sizes_labels_{}.pkl",
     "dataLength" : 12,
     "outputUnits": [
-        64
+        64,
+        32
     ],
     "numOutputNeurons": 1,
     "loss": "binary_crossentropy",
-    "optimizer":"nadam",
+    "optimizer":"adam",
     "layersActivations": [
+        "relu",
         "relu"
     ],
-    "networkActivation" : "relu",
+    "networkActivation" : "sigmoid",
     "gru": true,
     "useDropout": true,
-    "dropout": 0.3,
+    "dropout": 0.5,
     "trainingEpochs": 40,
     "batchSize": 50
 }

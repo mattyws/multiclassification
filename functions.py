@@ -18,9 +18,9 @@ from os import pathsep
 import unicodedata
 
 from nltk import WhitespaceTokenizer
-from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, cohen_kappa_score, accuracy_score, \
+from sklearn.metrics.classification import f1_score, precision_score, recall_score, cohen_kappa_score, accuracy_score, \
     confusion_matrix, classification_report
-
+from sklearn.metrics.ranking import roc_auc_score
 DATE_PATTERN = "%Y-%m-%d"
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 

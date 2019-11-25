@@ -191,6 +191,36 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
                 model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
         return adapter.KerasGeneratorAdapter(model)
 
+    def __build_model(self):
+        model = Sequential()
+        if len(self.outputUnits) > 1:
+            for i in range(0, len(self.outputUnits)-1):
+                if i == 0:
+                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True,
+                                                          inputShape=self.inputShape)
+                else:
+                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)
+                model.add(layer)
+                if self.use_dropout:
+                    model.add(Dropout(self.dropout))
+        if len(self.outputUnits) == 1:
+            model.add(self.__create_recurrent_layer(self.outputUnits[-1], self.layersActivations[-1], False,
+                                                    inputShape=self.inputShape))
+        else:
+            model.add(self.__create_recurrent_layer(self.outputUnits[-1], self.layersActivations[-1], False))
+        if self.use_dropout:
+            model.add(Dropout(self.dropout))
+        model.add(Dense(self.numOutputNeurons, activation=self.networkActivation))
+        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        return model
+
+    def create_sequential(self, model_summary_filename=None):
+        model = self.__build_model()
+        if model_summary_filename is not None:
+            with open(model_summary_filename, 'w') as summary_file:
+                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
+        return adapter.KerasGeneratorAdapter(model)
+
     @staticmethod
     def create_from_path(filepath, custom_objects=None):
         model = load_model(filepath, custom_objects=custom_objects)
