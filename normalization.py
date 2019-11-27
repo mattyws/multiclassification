@@ -277,8 +277,8 @@ class Normalization(object):
             print(e)
             raise Exception()
         # Fill na
-        data = data.fillna(method='ffill')
-        data = data.fillna(method='backfill')
+        # data = data.fillna(method='ffill')
+        # data = data.fillna(method='backfill')
         data = data.fillna(0)
         data = np.array(data.values)
         self.__save_normalized_data(data, self.temporary_path, fileName)

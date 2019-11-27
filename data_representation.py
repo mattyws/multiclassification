@@ -81,9 +81,9 @@ class TransformClinicalTextsRepresentations(object):
                 if preprocessing_pipeline is not None:
                     for func in preprocessing_pipeline:
                         note = func(note)
-                self.lock.acquire()
+                # self.lock.acquire()
                 new_representation = self.create_embedding_matrix(note)
-                self.lock.release()
+                # self.lock.release()
                 transformed_texts.append(new_representation)
             transformed_texts = numpy.array(transformed_texts)
             with open(transformed_doc_path, 'wb') as handler:
