@@ -69,7 +69,7 @@ def filter_features(files_list, events_ids, dataset_filtered_files_path, manager
             manager_queue.put(f)
     return data_statistic
 
-
+pd.set_option('display.max_rows', None)
 parameters = functions.load_parameters_file()
 
 # sepsis_raw_merged is the merge_chartevents_labevents on raw features and renamed
@@ -92,6 +92,52 @@ events_ids = {
     "gcs_motor" : [454, 223901],
     "gcs_eyes" : [184, 220739]
 }
+
+article_ids = {
+    "Heart rate": [211, 220045],
+    "Respiratory rate": [615, 618, 8113, 3603, 224690, 220210],
+    "Temperature": [676, 677, 678, 679, 223761, 223762],
+    "SBP": [6, 51, 6701, 220050, 225309],
+    "SBP (noninvasive)*": [442, 455, 3313, 220179],
+    "DBP": [8364, 8368, 8555, 220051, 225310],
+    "DBP (noninvasive)*": [8440, 8441, 8502, 220180],
+    "Mean BP": [52, 6702, 6927, 456],
+    "Mean BP (noninvasive)": [443, 3312, 220181],
+    "CVP": [716, 1103, 113, 220074],
+    "PaO2": [490, 779, 3785, 3837, 220224],
+    "FiO2": [190, 191, 3420, 3422, 1863, 2518, 2981, 7570, 223835],
+    "GCS": [198],
+    "GCS (MV)**": [220739, 223900, 223901],
+    "Bilirubin": [848, 5483, 5543, 4049, 3220, 5821, 1583, 5032, 5045, 4354, 225690],
+    "Platelets": [828, 3789, 6256, 227457],
+    "Creatinine": [791, 3750, 1525, 220615],
+    "Lactate": [818, 1531, 225668],
+    "BUN": [1162, 781, 5876, 3737, 225624],
+    "Arterial pH": [1126, 4753, 780, 223830],
+    "WBC": [1127, 861, 4200, 1542, 220546],
+    "PaCO2": [777, 778, 3784, 3835, 220235],
+    "Hemoglobin": [814, 220228],
+    "Hematocrit": [813, 3761, 226540],
+    "Potassium": [829, 3792, 1535, 4194, 227442, 227464]
+}
+d_items = pd.read_csv(parameters['mimic_data_path'] + 'csv/D_ITEMS.csv')
+items_in = pd.DataFrame({})
+for key in article_ids.keys():
+    items_in = items_in.append(d_items[d_items['ITEMID'].isin(article_ids[key])])
+print(items_in[["ITEMID", "LABEL"]])
+print()
+items_in = pd.DataFrame({})
+for key in events_ids.keys():
+    items_in = items_in.append(d_items[d_items['ITEMID'].isin(events_ids[key])])
+print(items_in[["ITEMID", "LABEL"]])
+exit()
+
+
+
+
+
+
+
 
 files_list = [dataset_merged_files_path + x for x in os.listdir(dataset_merged_files_path)]
 total_files = len(files_list)
