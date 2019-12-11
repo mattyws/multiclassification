@@ -61,7 +61,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
 
     def build_network(self):
         input = Input(self.inputShape)
-        conv = Conv1D(50, self.embedding_size, activation='relu')
+        conv = Conv1D(self.embedding_size, kernel_size=5, activation='relu')
         pooling = AveragePooling1D(pool_size=1)
         dropout = Dropout(0.5)
         dense = Dense(128, activation='tanh')
