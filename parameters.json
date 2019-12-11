@@ -1,5 +1,5 @@
 {
-  "mimic_data_path" : "./mimic/",
+  "mimic_data_path" : "../mimic/",
   "csv_files_directory" : "csv/",
   "json_files_directory" : "json/",
   "sepsis3_df_no_exclusions" :  "sepsis3-df-no-exclusions.csv",
