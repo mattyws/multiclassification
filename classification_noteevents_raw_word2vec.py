@@ -83,7 +83,7 @@ min_count = parameters['min_count']
 workers = parameters['workers']
 window = parameters['window']
 iterations = parameters['iterations']
-inputShape = (None, None, embedding_size, 1)
+inputShape = (None, None, embedding_size)
 
 print_with_time("Training Word2vec")
 preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
@@ -121,8 +121,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTrainGenerator.create_batches()
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
         dataTestGenerator.create_batches()
-        # for i in range(0, len(dataTestGenerator)):
-        #     print(dataTestGenerator[i].shape)
+        for i in range(0, len(dataTestGenerator)):
+            print(dataTestGenerator[i].shape())
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
         #                                                classes[trainIndex], parameters['batchSize'],
         #                                                saved_batch_dir='training_batches_fold_{}'.format(i))
