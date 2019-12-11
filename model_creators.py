@@ -69,7 +69,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         layer = TimeDistributed(conv)(input)
         layer = TimeDistributed(pooling)(layer)
         # layer = TimeDistributed(dense)(layer)
-        layer = TimeDistributed(flatten)(layer)
+        layer = flatten(layer)
         if len(self.outputUnits) == 1:
             layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False)(layer)
         else:
