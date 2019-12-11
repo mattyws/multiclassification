@@ -127,6 +127,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             print(test.shape)
             print(test[0].shape)
             print(test[0])
+            for note in test[0]:
+                print(note.shape)
+                print(note[0].shape)
             # print(test)
             exit()
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
