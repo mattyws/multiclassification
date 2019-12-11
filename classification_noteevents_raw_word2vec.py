@@ -122,7 +122,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
         dataTestGenerator.create_batches()
         for i in range(0, len(dataTestGenerator)):
-            test = np.matrix(dataTestGenerator[i])
+            test = np.array(dataTestGenerator[i][0])
             print(test.shape)
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
         #                                                classes[trainIndex], parameters['batchSize'],
