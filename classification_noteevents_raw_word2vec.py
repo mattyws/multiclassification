@@ -83,7 +83,7 @@ min_count = parameters['min_count']
 workers = parameters['workers']
 window = parameters['window']
 iterations = parameters['iterations']
-inputShape = (None, embedding_size)
+inputShape = (None, None, embedding_size)
 
 print_with_time("Training Word2vec")
 preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
@@ -129,6 +129,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
 
         modelCreator = NoteeventsClassificationModelCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
+                                                         embedding_size=embedding_size,
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
                                                          gru=parameters['gru'], use_dropout=parameters['useDropout'],
                                                          dropout=parameters['dropout'],

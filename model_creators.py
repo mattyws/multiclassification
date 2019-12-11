@@ -28,7 +28,7 @@ class ModelCreator(object, metaclass=abc.ABCMeta):
 
 class NoteeventsClassificationModelCreator(ModelCreator):
 
-    def __init__(self, input_shape, outputUnits, numOutputNeurons,
+    def __init__(self, input_shape, outputUnits, numOutputNeurons, embedding_size = None,
                  layersActivations=None, networkActivation='sigmoid',
                  loss='categorical_crossentropy', optimizer='adam', gru=False, use_dropout=False, dropout=0.5,
                  metrics=['accuracy']):
@@ -43,7 +43,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         self.use_dropout = use_dropout
         self.dropout = dropout
         self.metrics = metrics
-
+        self.embedding_size = embedding_size
         self.__check_parameters()
 
     def __check_parameters(self):
@@ -61,7 +61,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
 
     def build_network(self):
         input = Input(self.inputShape)
-        conv = Conv1D(3, 3, activation='relu')
+        conv = Conv1D(50, self.embedding_size, activation='relu')
         pooling = AveragePooling1D(pool_size=1)
         dropout = Dropout(0.5)
         dense = Dense(128, activation='tanh')

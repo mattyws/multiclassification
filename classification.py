@@ -118,7 +118,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
                                                          networkActivation=parameters['networkActivation'],
                                                          gru=parameters['gru'], use_dropout=parameters['useDropout'],
-                                                         dropout=parameters['dropout'],
+                                                         dropout=parameters['dropout'], kernel_regularizer=l1_l2(0.001, 0.001),
                                                          metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
         with open(parameters['modelCheckpointPath']+"parameters.json", 'w') as handler:
             json.dump(parameters, handler)

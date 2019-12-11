@@ -43,18 +43,20 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
             for column in bucket_events.columns:
                 if column == 'Unnamed: 0':
                     continue
-                if 'categorical' in column \
-                    or 'categorical' not in column and 'numeric' not in column and len(column.split('_')) >= 3:
-                    if 1 in bucket_events[column].tolist():
-                        bucket[column] = 1
-                    else:
-                        bucket[column] = 0
+                # if '_categorical' in column \
+                #     or '_categorical' not in column and '_numeric' not in column and len(column.split('_')) >= 3:
+                #     if 1 in bucket_events[column].tolist():
+                #         bucket[column] = 1
+                #     else:
+                #         bucket[column] = 0
+                # else:
+                values = bucket_events[column].dropna().tolist()
+                if len(values) != 0:
+                    bucket[column] = sum(values)/len(values)
+                    bucket[column + "_min"] = min(values)
+                    bucket[column + "_max"] = max(values)
                 else:
-                    values = bucket_events[column].dropna().tolist()
-                    if len(values) != 0:
-                        bucket[column] = sum(values)/len(values)
-                    else:
-                        bucket[column] = numpy.nan
+                    bucket[column] = numpy.nan
             buckets.append(bucket)
             starttime += timedelta(hours=1)
         buckets = pd.DataFrame(buckets)
@@ -69,8 +71,8 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
 
 
 parameters = functions.load_parameters_file()
-events_path =  parameters['mimic_data_path'] + "sepsis_all_features_raw_merged/"
-new_events_path = parameters['mimic_data_path'] + "sepsis_all_features_bucket/"
+events_path =  parameters['mimic_data_path'] + "sepsis_articles/"
+new_events_path = parameters['mimic_data_path'] + "sepsis_articles_bucket/"
 if not os.path.exists(new_events_path):
     os.mkdir(new_events_path)
 
