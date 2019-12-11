@@ -57,6 +57,8 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
                     bucket[column + "_max"] = max(values)
                 else:
                     bucket[column] = numpy.nan
+                    bucket[column + "_min"] = numpy.nan
+                    bucket[column + "_max"] = numpy.nan
             buckets.append(bucket)
             starttime += timedelta(hours=1)
         buckets = pd.DataFrame(buckets)

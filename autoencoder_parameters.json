@@ -1,5 +1,5 @@
 {
-    "datasetFilesPathBinary": "./mimic/sepsis_binary_merged/",
+    "datasetFilesPathBinary": "../mimic/sepsis_binary_merged/",
     "datasetCsvFilePath": "dataset_patients.csv",
     "modelCheckpointPath": "autoencoder_checkpoint/",
     "modelConfigPath": "autoencoder_checkpoint/config.json",
