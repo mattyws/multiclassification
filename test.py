@@ -32,7 +32,7 @@ data = [
 ]
 classes = [0, 1]
 
-input_shape = (None, 3, 3)
+input_shape = (None, None, 3)
 model_creator = NoteeventsClassificationModelCreator(input_shape, [64], 1, embedding_size=3,
                                                          loss='binary_crossentropy', layersActivations=["relu"],
                                                          gru=True, use_dropout=True,
