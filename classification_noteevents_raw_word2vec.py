@@ -121,10 +121,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTrainGenerator.create_batches()
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
         dataTestGenerator.create_batches()
-        print(test_sizes)
         for i in range(0, len(dataTestGenerator)):
             test = np.array(dataTestGenerator[i][0])
-            # print(test.shape)
+            print(test.shape)
             print(test[0].shape)
             # print(test[0])
             for note in test[0]:
@@ -132,7 +131,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                 print(note.shape)
                 print(note[0].shape)
             # print(test)
-            exit()
+            break
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
         #                                                classes[trainIndex], parameters['batchSize'],
         #                                                saved_batch_dir='training_batches_fold_{}'.format(i))
@@ -150,7 +149,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
         print_with_time("Training model")
-        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, batch_size=len(dataTrainGenerator))
+        kerasAdapter.fit(dataTrainGenerator, epochs=epochs)
         print_with_time("Testing model")
         metrics = test_model(kerasAdapter, dataTestGenerator, i)
         if dictWriter is None:
