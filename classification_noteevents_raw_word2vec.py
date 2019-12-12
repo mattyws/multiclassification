@@ -83,7 +83,7 @@ min_count = parameters['min_count']
 workers = parameters['workers']
 window = parameters['window']
 iterations = parameters['iterations']
-inputShape = (None, None, embedding_size)
+inputShape = (None, None, None, embedding_size)
 
 # print_with_time("Training Word2vec")
 # preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,

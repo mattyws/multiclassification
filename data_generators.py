@@ -43,7 +43,7 @@ class LengthLongitudinalDataGenerator(Sequence):
         for fileName in filesNames:
             with open(fileName, 'rb') as data_file:
                 data = pickle.load(data_file)
-            x.append(data[0])
+            x.append(data)
             # if max_len is None or len(data) > max_len:
             #     max_len = len(data)
             # if columns_len is None:
@@ -57,6 +57,8 @@ class LengthLongitudinalDataGenerator(Sequence):
         #     zeros[:value.shape[0], : value.shape[1]] = value
         #     zero_padding_x.append(zeros)
         x = np.array(x)
+        print("data generator: {}".format(filesNames))
+        print("data generator: {}".format(x.shape))
         return x
 
     def __iter__(self):
