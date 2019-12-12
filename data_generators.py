@@ -43,7 +43,7 @@ class LengthLongitudinalDataGenerator(Sequence):
         for fileName in filesNames:
             with open(fileName, 'rb') as data_file:
                 data = pickle.load(data_file)
-            x.append(data)
+            x.append(data[0])
             # if max_len is None or len(data) > max_len:
             #     max_len = len(data)
             # if columns_len is None:
