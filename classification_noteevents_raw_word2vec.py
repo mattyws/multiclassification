@@ -12,7 +12,6 @@ import keras
 from keras.utils import plot_model
 
 from sklearn.model_selection._split import StratifiedKFold
-from tensorflow.contrib.tfprof.model_analyzer import print_model_analysis
 
 from adapter import Word2VecTrainer
 from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataGenerator
