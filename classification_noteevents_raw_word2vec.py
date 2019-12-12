@@ -9,8 +9,10 @@ import pandas as pd
 import numpy as np
 
 import keras
+from keras.utils import plot_model
 
 from sklearn.model_selection._split import StratifiedKFold
+from tensorflow.contrib.tfprof.model_analyzer import print_model_analysis
 
 from adapter import Word2VecTrainer
 from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataGenerator
@@ -149,6 +151,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                          dropout=parameters['dropout'],
                                                          metrics=[keras.metrics.binary_accuracy])
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
+        plot_model(kerasAdapter.model, to_file='model.jpg')
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
         print_with_time("Training model")
