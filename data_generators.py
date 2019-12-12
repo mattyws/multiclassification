@@ -56,7 +56,7 @@ class LengthLongitudinalDataGenerator(Sequence):
         #     zeros = np.zeros((max_len, columns_len))
         #     zeros[:value.shape[0], : value.shape[1]] = value
         #     zero_padding_x.append(zeros)
-        # x = np.array(x)
+        x = np.array(x)
         return x
 
     def __iter__(self):
