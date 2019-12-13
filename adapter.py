@@ -49,6 +49,7 @@ class KerasGeneratorAdapter(ModelAdapter):
         for i in range(len(dataGenerator)):
             data = dataGenerator[i]
             for y in range(len(data[0])):
+                print(data[0][y])
                 self.model.fit(data[0][y], data[1][y])
 
     def predict(self, testDocs, batch_size=10):
