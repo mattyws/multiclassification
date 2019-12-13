@@ -62,7 +62,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
 
     def build_network(self):
         cnn_model = Sequential()
-        cnn_model.add(Conv1D(self.embedding_size, kernel_size=3, activation='relu', input_shape=self.inputShape[1:]))
+        cnn_model.add(LSTM(128, input_shape=self.inputShape[1:], return_sequences=True))
         # cnn_model.add(AveragePooling1D(pool_size=1))
         cnn_model.add(GlobalAveragePooling1D())
 
