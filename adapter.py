@@ -57,8 +57,8 @@ class KerasGeneratorAdapter(ModelAdapter):
                         print("x",word)
                         x.append(word)
                     notes.append(x)
-                print("OMG THE DATA OMG OM GOMGO MGOGM OGM", x)
-                self.model.fit(x, data[1][y])
+                print("OMG THE DATA OMG OM GOMGO MGOGM OGM", notes)
+                self.model.fit(notes, data[1][y])
 
     def predict(self, testDocs, batch_size=10):
         # result = self.model.predict(testDocs, batch_size, verbose=0)
