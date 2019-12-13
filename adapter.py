@@ -48,7 +48,8 @@ class KerasGeneratorAdapter(ModelAdapter):
         #                          callbacks=callbacks, use_multiprocessing=True)
         for i in range(len(dataGenerator)):
             data = dataGenerator[i]
-            self.model.train_on_batch(data[0], data[1])
+            for y in range(len(data[0])):
+                self.model.fot(data[0][y], data[1][y])
 
     def predict(self, testDocs, batch_size=10):
         # result = self.model.predict(testDocs, batch_size, verbose=0)
