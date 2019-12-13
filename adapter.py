@@ -58,6 +58,7 @@ class KerasGeneratorAdapter(ModelAdapter):
                         x.append(word)
                     notes.append(x)
                 print("OMG THE DATA OMG OM GOMGO MGOGM OGM", notes)
+                notes = np.array(notes)
                 self.model.fit(notes, data[1][y])
 
     def predict(self, testDocs, batch_size=10):
