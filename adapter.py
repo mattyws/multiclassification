@@ -54,7 +54,7 @@ class KerasGeneratorAdapter(ModelAdapter):
                     print("note", note)
                     x = []
                     for word in note:
-                        print("x",x)
+                        print("x",word)
                         x.append(word)
                     notes.append(x)
                 print("OMG THE DATA OMG OM GOMGO MGOGM OGM", x)
