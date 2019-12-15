@@ -8,6 +8,7 @@ data = [
     [
         [
             [1, 2, 3],
+            [1, 2, 3],
             [3, 2, 1],
             [4, 5, 6]
         ],
@@ -32,15 +33,16 @@ data = [
 ]
 classes = [0, 1]
 
-input_shape = (None, None, 3)
+input_shape = (1, None, None, 3)
 model_creator = NoteeventsClassificationModelCreator(input_shape, [64], 1, embedding_size=3,
                                                          loss='binary_crossentropy', layersActivations=["relu"],
                                                          gru=True, use_dropout=True,
                                                          dropout=.5,
                                                          metrics=[keras.metrics.binary_accuracy])
-model = model_creator.create().model
+adapter = model_creator.create()
+model = adapter.model
 print(model.summary())
 plot_model(model)
 data = np.array(data)
-model.fit(data, classes)
+model.fit(data[0], classes)
 
