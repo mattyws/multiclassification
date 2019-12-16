@@ -88,3 +88,11 @@ print("Sequences size mean {} and std {}. The longest sequence is {} and the sma
       .format(sequences_mean, sequences_std, max(sequences_sizes), min(sequences_sizes)))
 print("Texts size mean {} and std {}. The longest sequence is {} and the smallest is {}"
       .format(texts_mean, texts_std, max(texts_sizes), min(texts_sizes)))
+
+max_len = texts_mean + texts_std
+higher_than_mean_std = [x for x in texts_sizes_counter.keys() if x > max_len]
+total = 0
+for value in higher_than_mean_std:
+    total += texts_sizes_counter[value]
+print("From a total of {} texts, {} is higher than mean + std".format(len(texts_sizes), total))
+
