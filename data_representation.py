@@ -81,9 +81,7 @@ class TransformClinicalTextsRepresentations(object):
                 if preprocessing_pipeline is not None:
                     for func in preprocessing_pipeline:
                         note = func(note)
-                # self.lock.acquire()
                 new_representation = self.create_embedding_matrix(note)
-                # self.lock.release()
                 transformed_texts.append(new_representation)
             transformed_texts = numpy.array(transformed_texts)
             with open(transformed_doc_path, 'wb') as handler:
@@ -113,14 +111,49 @@ class TransformClinicalTextsRepresentations(object):
             for r in result:
                 self.new_paths.update(r)
 
+    def pad_sequence(self, value, pad_max_len):
+        if len(value) >= pad_max_len:
+            return value[:pad_max_len]
+        else:
+            zeros = np.zeros(shape=(pad_max_len, self.embedding_size))
+            zeros[: len(value)] = value
+            return zeros
+
+    def pad_patient_text(self, doc_paths, pad_max_len=None, pad_data_path=None, manager_queue=None):
+        new_paths = dict()
+        for path in doc_paths:
+            filename = path.split('/')[-1]
+            if manager_queue is not None:
+                manager_queue.put(path)
+            transformed_doc_path = pad_data_path + os.path.splitext(filename)[0] + '.pkl'
+            if os.path.exists(transformed_doc_path):
+                new_paths[path] = transformed_doc_path
+                continue
+            with open(path, 'rb') as fhandler:
+                data = pickle.load(fhandler)
+            padded_data = []
+            for value in data:
+                padded_value = self.pad_sequence(value, pad_max_len)
+                padded_data.append(padded_value)
+            padded_data = numpy.array(padded_data)
+            with open(transformed_doc_path, 'wb') as handler:
+                pickle.dump(padded_data, handler)
+            new_paths[path] = transformed_doc_path
+        return new_paths
+
+    def pad_new_representation(self, pad_max_len, pad_data_path=None):
+        #TODO: use multiprocessing to pad all new representation
+        return
+
+
     def get_new_paths(self, files_list):
-        if self.new_paths is not None:
+        if self.new_paths is not None and len(self.new_paths.keys()) != 0:
             new_list = []
             for file in files_list:
                 new_list.append(self.new_paths[file])
             return new_list
         else:
-            raise Exception("Data not normalized!")
+            raise Exception("Data not transformed!")
 
 
 class Word2VecEmbeddingCreator(object):

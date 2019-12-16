@@ -6,6 +6,7 @@ from math import ceil
 import numpy as np
 import os
 import pandas as pd
+from keras.preprocessing.sequence import pad_sequences
 from keras.utils import Sequence
 from ast import literal_eval
 
@@ -80,6 +81,38 @@ class LengthLongitudinalDataGenerator(Sequence):
 
     def __len__(self):
         return len(self.batches.keys())
+
+
+class NoteeventsLengthLongitudinalDataGenerator(LengthLongitudinalDataGenerator):
+    """
+    Same as LengthLongitudinalDataGenerator, but uses padding on texts
+    """
+    def __init__(self, sizes_data_paths, labels, max_batch_size=50, iterForever=False, pad_sequences=False,
+                 max_pad_len=None):
+        self.max_batch_size = max_batch_size
+        self.batches = sizes_data_paths
+        self.labels = labels
+        self.iterForever = iterForever
+        self.pad_sequences=pad_sequences
+        self.max_pad_len=max_pad_len
+        self.__iterPos = 0
+
+    def __load(self, filesNames):
+        x = []
+        max_len = None
+        columns_len = None
+        for fileName in filesNames:
+            with open(fileName, 'rb') as data_file:
+                data = pickle.load(data_file)
+            if self.pad_sequences:
+                new_data = []
+                for value in data:
+                    value = pad_sequences(value, maxlen=self.max_pad_len)
+                    new_data.append(value)
+                data = new_data
+            x.append(data)
+        x = np.array(x)
+        return x
 
 
 class LongitudinalDataGenerator(Sequence):
