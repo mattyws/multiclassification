@@ -142,8 +142,28 @@ class TransformClinicalTextsRepresentations(object):
         return new_paths
 
     def pad_new_representation(self, pad_max_len, pad_data_path=None):
-        #TODO: use multiprocessing to pad all new representation
-        return
+        with multiprocessing.Pool(processes=6) as pool:
+            manager = multiprocessing.Manager()
+            manager_queue = manager.Queue()
+            self.lock = manager.Lock()
+            partial_transform_docs = partial(self.pad_patient_text, pad_max_len=pad_max_len, pad_data_path=pad_data_path,
+                                             manager_queue=manager_queue)
+            docs_paths = self.new_paths.values()
+            data = numpy.array_split(docs_paths, 6)
+            total_files = len(docs_paths)
+            map_obj = pool.map_async(partial_transform_docs, data)
+            consumed = 0
+            while not map_obj.ready() or manager_queue.qsize() != 0:
+                for _ in range(manager_queue.qsize()):
+                    manager_queue.get()
+                    consumed += 1
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            print()
+            result = map_obj.get()
+            padded_paths = dict()
+            for r in result:
+                padded_paths.update(r)
+            self.new_paths = padded_paths
 
 
     def get_new_paths(self, files_list):

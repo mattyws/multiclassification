@@ -61,10 +61,10 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         return adapter.KerasGeneratorAdapter(model)
 
     def build_network(self):
-        # cnn_model = Sequential()
-        # cnn_model.add(LSTM(128, input_shape=self.inputShape[1:], return_sequences=True))
-        # # cnn_model.add(AveragePooling1D(pool_size=1))
-        # cnn_model.add(GlobalAveragePooling1D())
+        cnn_model = Sequential()
+        cnn_model.add(Conv1D(self.embedding_size, kernel_size=3, activation='relu'))
+        # cnn_model.add(AveragePooling1D(pool_size=1))
+        cnn_model.add(GlobalAveragePooling1D())
 
         input = Input(self.inputShape)
         # conv = Conv1D(self.embedding_size, kernel_size=3, activation='relu')
@@ -73,9 +73,9 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         # dropout = Dropout(0.5)
         # dense = Dense(128, activation='tanh')
         # flatten = Flatten()
-        # layer = TimeDistributed(cnn_model, name="cnn")(input)
-        layer = Conv3D(32, (1, 1, 150))(input)
-        layer = Reshape((-1, 32))(layer)
+        layer = TimeDistributed(cnn_model, name="cnn")(input)
+        # layer = Conv3D(32, (1, 1, 150))(input)
+        # layer = Reshape((-1, 32))(layer)
         # layer = TimeDistributed(pooling, name="pooling")(layer)
         # layer = TimeDistributed(gap, name="gap")(layer)
         # layer = dense(layer)

@@ -8,6 +8,10 @@ data = [
     [
         [
             [1, 2, 3],
+            [3, 2, 1],
+            [4, 5, 6]
+        ],
+        [
             [1, 2, 3],
             [3, 2, 1],
             [3, 2, 1],
@@ -34,7 +38,7 @@ data = [
 ]
 classes = [0, 1]
 
-input_shape = (1, None, None, 3)
+input_shape = (None, None, 3)
 model_creator = NoteeventsClassificationModelCreator(input_shape, [64], 1, embedding_size=3,
                                                          loss='binary_crossentropy', layersActivations=["relu"],
                                                          gru=True, use_dropout=True,
@@ -45,5 +49,5 @@ model = adapter.model
 print(model.summary())
 plot_model(model)
 data = np.array(data)
-model.fit(data[0], classes)
+model.fit(data, classes)
 
