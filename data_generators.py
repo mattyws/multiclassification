@@ -57,8 +57,8 @@ class LengthLongitudinalDataGenerator(Sequence):
         #     zeros[:value.shape[0], : value.shape[1]] = value
         #     zero_padding_x.append(zeros)
         x = np.array(x)
-        print("data generator: {}".format(filesNames))
-        print("data generator: {}".format(x.shape))
+        # print("data generator: {}".format(filesNames))
+        # print("data generator: {}".format(x.shape))
         return x
 
     def __iter__(self):

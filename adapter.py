@@ -43,23 +43,23 @@ class KerasGeneratorAdapter(ModelAdapter):
 
     def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator = None,
             validationSteps=None, callbacks=None):
-        # self.model.fit_generator(dataGenerator, len(dataGenerator), epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
-        #                          workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
-        #                          callbacks=callbacks, use_multiprocessing=True)
-        for i in range(len(dataGenerator)):
-            data = dataGenerator[i]
-            for y in range(len(data[0])):
-                notes = []
-                for note in data[0][y]:
-                    print("note", note)
-                    x = []
-                    for word in note:
-                        print("x",word)
-                        x.append(word)
-                    notes.append(x)
-                print("OMG THE DATA OMG OM GOMGO MGOGM OGM", notes)
-                notes = np.array(notes)
-                self.model.fit(notes, data[1][y])
+        self.model.fit_generator(dataGenerator, len(dataGenerator), epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
+                                 workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
+                                 callbacks=callbacks, use_multiprocessing=True)
+        # for i in range(len(dataGenerator)):
+        #     data = dataGenerator[i]
+        #     for y in range(len(data[0])):
+        #         notes = []
+        #         for note in data[0][y]:
+        #             print("note", note)
+        #             x = []
+        #             for word in note:
+        #                 print("x",word)
+        #                 x.append(word)
+        #             notes.append(x)
+        #         print("OMG THE DATA OMG OM GOMGO MGOGM OGM", notes)
+        #         notes = np.array(notes)
+        #         self.model.fit(notes, data[1][y])
 
     def predict(self, testDocs, batch_size=10):
         # result = self.model.predict(testDocs, batch_size, verbose=0)
