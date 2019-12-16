@@ -58,8 +58,8 @@ else:
             sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
         print()
         result = map_obj.get()
-        sequences_sizes = result[0]
-        texts_sizes = result[1]
+        sequences_sizes = [r[0] for r in result]
+        texts_sizes = [r[1] for r in result]
         sequences_sizes = numpy.concatenate(sequences_sizes, axis=0)
         texts_sizes = numpy.concatenate(texts_sizes, axis=0)
         with open(sequences_sizes_file_name, 'wb') as fhandler:
