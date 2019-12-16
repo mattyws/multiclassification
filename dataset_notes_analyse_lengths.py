@@ -56,6 +56,7 @@ else:
                 queue.get()
                 consumed += 1
             sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+        print()
         result = map_obj.get()
         sequences_sizes = result[0]
         texts_sizes = result[1]
@@ -71,6 +72,10 @@ texts_sizes_counter = Counter(texts_sizes)
 sequences_mean = numpy.mean(sequences_sizes)
 sequences_std = numpy.std(sequences_sizes)
 texts_mean = numpy.mean(texts_sizes)
+print(sequences_sizes_counter)
+print(texts_sizes_counter)
 texts_std = numpy.std(texts_sizes)
-print("Sequences size mean {} and std {}".format(sequences_mean, sequences_std))
-print("Texts size mean {} and std {}".format(texts_mean, texts_std))
+print("Sequences size mean {} and std {}. The longer sequence is {} and the smallest is {}"
+      .format(sequences_mean, sequences_std, max(sequences_sizes, min(sequences_sizes))))
+print("Texts size mean {} and std {}. The longer sequence is {} and the smallest is {}"
+      .format(texts_sizes, texts_sizes, max(texts_sizes.keys(), min(texts_sizes.keys()))))
