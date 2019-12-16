@@ -76,6 +76,6 @@ print(sequences_sizes_counter)
 print(texts_sizes_counter)
 texts_std = numpy.std(texts_sizes)
 print("Sequences size mean {} and std {}. The longer sequence is {} and the smallest is {}"
-      .format(sequences_mean, sequences_std, max(sequences_sizes, min(sequences_sizes))))
+      .format(sequences_mean, sequences_std, max(sequences_sizes), min(sequences_sizes)))
 print("Texts size mean {} and std {}. The longer sequence is {} and the smallest is {}"
-      .format(texts_sizes, texts_sizes, max(texts_sizes, min(texts_sizes))))
+      .format(texts_sizes, texts_sizes, max(texts_sizes), min(texts_sizes)))
