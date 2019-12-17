@@ -86,10 +86,11 @@ class TransformClinicalTextsRepresentations(object):
                 new_representation = self.create_embedding_matrix(note)
                 if new_representation is not None:
                     transformed_texts.append(new_representation)
-            transformed_texts = numpy.array(transformed_texts)
-            with open(transformed_doc_path, 'wb') as handler:
-                pickle.dump(transformed_texts, handler)
-            new_paths[path] = transformed_doc_path
+            if len(transformed_texts) != 0:
+                transformed_texts = numpy.array(transformed_texts)
+                with open(transformed_doc_path, 'wb') as handler:
+                    pickle.dump(transformed_texts, handler)
+                new_paths[path] = transformed_doc_path
         return new_paths
 
     def transform(self, docs_paths, preprocessing_pipeline=None):
@@ -132,7 +133,13 @@ class TransformClinicalTextsRepresentations(object):
                 manager_queue.put(path)
             transformed_doc_path = pad_data_path + os.path.splitext(filename)[0] + '.pkl'
             if os.path.exists(transformed_doc_path):
-                new_paths[path] = transformed_doc_path
+                # TODO: temporary code
+                with open(transformed_doc_path, 'wb') as handler:
+                    data = pickle.load(handler)
+                    if len(data) == 0:
+                        os.rmdir(transformed_doc_path)
+                    else:
+                        new_paths[path] = transformed_doc_path
                 continue
             with open(path, 'rb') as fhandler:
                 data = pickle.load(fhandler)
@@ -141,10 +148,11 @@ class TransformClinicalTextsRepresentations(object):
                 padded_value = self.pad_sequence(value, pad_max_len)
                 if padded_value is not None:
                     padded_data.append(padded_value)
-            padded_data = numpy.array(padded_data)
-            with open(transformed_doc_path, 'wb') as handler:
-                pickle.dump(padded_data, handler)
-            new_paths[path] = transformed_doc_path
+            if len(padded_data) != 0:
+                padded_data = numpy.array(padded_data)
+                with open(transformed_doc_path, 'wb') as handler:
+                    pickle.dump(padded_data, handler)
+                new_paths[path] = transformed_doc_path
         return new_paths
 
     def pad_new_representation(self, docs_paths, pad_max_len, pad_data_path=None):
