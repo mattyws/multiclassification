@@ -36,6 +36,8 @@ class TransformClinicalTextsRepresentations(object):
         """
         # x = np.zeros(shape=(len(text), embedding_size), dtype='float')
         x = []
+        if len(text) < 3:
+            return None
         for pos, w in enumerate(text):
             try:
                 # x[pos] = word2vec_model.wv[w]
@@ -82,7 +84,8 @@ class TransformClinicalTextsRepresentations(object):
                     for func in preprocessing_pipeline:
                         note = func(note)
                 new_representation = self.create_embedding_matrix(note)
-                transformed_texts.append(new_representation)
+                if new_representation is not None:
+                    transformed_texts.append(new_representation)
             transformed_texts = numpy.array(transformed_texts)
             with open(transformed_doc_path, 'wb') as handler:
                 pickle.dump(transformed_texts, handler)
@@ -112,6 +115,8 @@ class TransformClinicalTextsRepresentations(object):
                 self.new_paths.update(r)
 
     def pad_sequence(self, value, pad_max_len):
+        if len(value) < 3:
+            return None
         if len(value) >= pad_max_len:
             return value[:pad_max_len]
         else:
@@ -134,7 +139,8 @@ class TransformClinicalTextsRepresentations(object):
             padded_data = []
             for value in data:
                 padded_value = self.pad_sequence(value, pad_max_len)
-                padded_data.append(padded_value)
+                if padded_value is not None:
+                    padded_data.append(padded_value)
             padded_data = numpy.array(padded_data)
             with open(transformed_doc_path, 'wb') as handler:
                 pickle.dump(padded_data, handler)
