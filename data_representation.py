@@ -182,7 +182,8 @@ class TransformClinicalTextsRepresentations(object):
         if self.new_paths is not None and len(self.new_paths.keys()) != 0:
             new_list = []
             for file in files_list:
-                new_list.append(self.new_paths[file])
+                if file in self.new_paths.keys():
+                    new_list.append(self.new_paths[file])
             return new_list
         else:
             raise Exception("Data not transformed!")
