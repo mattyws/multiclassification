@@ -59,8 +59,9 @@ class LengthLongitudinalDataGenerator(Sequence):
         #     zero_padding_x.append(zeros)
         try:
             x = np.array(x)
-        except:
+        except Exception as e:
             print(x)
+            print(e)
             exit()
         # print("data generator: {}".format(filesNames))
         # print("data generator: {}".format(x.shape))
