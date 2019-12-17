@@ -133,16 +133,7 @@ class TransformClinicalTextsRepresentations(object):
                 manager_queue.put(path)
             transformed_doc_path = pad_data_path + os.path.splitext(filename)[0] + '.pkl'
             if os.path.exists(transformed_doc_path):
-                # TODO: temporary code
-                with open(transformed_doc_path, 'rb') as handler:
-                    try:
-                        data = pickle.load(handler)
-                        if len(data) == 0:
-                            os.remove(transformed_doc_path)
-                        else:
-                            new_paths[path] = transformed_doc_path
-                    except:
-                        os.remove(transformed_doc_path)
+                new_paths[path] = transformed_doc_path
                 continue
             with open(path, 'rb') as fhandler:
                 data = pickle.load(fhandler)
