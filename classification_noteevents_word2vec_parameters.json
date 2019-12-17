@@ -33,12 +33,14 @@
     ],
     "numOutputNeurons": 1,
     "loss": "binary_crossentropy",
+    "optimizer":"adam",
     "layersActivations": [
         "relu"
     ],
+    "networkActivation" : "softmax",
     "gru": true,
     "useDropout": true,
-    "dropout": 0.6,
+    "dropout": 0.5,
     "trainingEpochs": 40,
     "batchSize": 50
 }
