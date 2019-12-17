@@ -142,6 +142,8 @@ class TransformClinicalTextsRepresentations(object):
         return new_paths
 
     def pad_new_representation(self, pad_max_len, pad_data_path=None):
+        if not os.path.exists(pad_data_path):
+            os.mkdir(pad_data_path)
         with multiprocessing.Pool(processes=6) as pool:
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
