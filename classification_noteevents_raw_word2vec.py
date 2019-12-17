@@ -32,7 +32,7 @@ def sync_data_classes(data, classes):
         if d is not None:
             new_dataset.append(d)
             new_classes.append(c)
-    return new_dataset, new_classes
+    return np.array(new_dataset), np.array(new_classes)
 
 
 def train_word2vec(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None, preprocessing_pipeline=None):
