@@ -151,6 +151,8 @@ class TransformClinicalTextsRepresentations(object):
             partial_transform_docs = partial(self.pad_patient_text, pad_max_len=pad_max_len, pad_data_path=pad_data_path,
                                              manager_queue=manager_queue)
             docs_paths = self.new_paths.values()
+            print(docs_paths)
+            exit()
             data = numpy.array_split(docs_paths, 6)
             total_files = len(docs_paths)
             map_obj = pool.map_async(partial_transform_docs, data)
