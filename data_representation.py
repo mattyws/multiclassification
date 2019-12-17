@@ -141,7 +141,7 @@ class TransformClinicalTextsRepresentations(object):
             new_paths[path] = transformed_doc_path
         return new_paths
 
-    def pad_new_representation(self, pad_max_len, pad_data_path=None):
+    def pad_new_representation(self, docs_paths, pad_max_len, pad_data_path=None):
         if not os.path.exists(pad_data_path):
             os.mkdir(pad_data_path)
         with multiprocessing.Pool(processes=6) as pool:
@@ -150,9 +150,9 @@ class TransformClinicalTextsRepresentations(object):
             self.lock = manager.Lock()
             partial_transform_docs = partial(self.pad_patient_text, pad_max_len=pad_max_len, pad_data_path=pad_data_path,
                                              manager_queue=manager_queue)
-            docs_paths = self.new_paths.values()
-            print(docs_paths)
-            exit()
+            # docs_paths = self.new_paths.values()
+            # print(docs_paths)
+            # exit()
             data = numpy.array_split(docs_paths, 6)
             total_files = len(docs_paths)
             map_obj = pool.map_async(partial_transform_docs, data)

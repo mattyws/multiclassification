@@ -98,10 +98,12 @@ texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedd
                                                           representation_save_path=parameters['word2vec_representation_files_path'])
 word2vec_model = None
 texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
+normalized_data = np.array(texts_transformer.get_new_paths(data))
 print_with_time("Padding sequences")
 # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
-texts_transformer.pad_new_representation(228+224, pad_data_path=parameters['word2vec_padded_representation_files_path'])
-normalized_data = np.array(texts_transformer.get_new_paths(data))
+texts_transformer.pad_new_representation(normalized_data, 228+224,
+                                         pad_data_path=parameters['word2vec_padded_representation_files_path'])
+normalized_data = np.array(texts_transformer.get_new_paths(normalized_data))
 i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
