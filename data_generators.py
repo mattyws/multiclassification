@@ -38,7 +38,7 @@ class LengthLongitudinalDataGenerator(Sequence):
         # print(self.batches)
 
     def __load(self, filesNames):
-        x = np.array()
+        x = np.array([])
         max_len = None
         columns_len = None
         for fileName in filesNames:
