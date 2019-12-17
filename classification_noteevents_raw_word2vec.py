@@ -29,7 +29,7 @@ def sync_data_classes(data, classes):
     new_dataset = []
     new_classes = []
     for d, c in zip(data, classes):
-        if d is None:
+        if d is not None:
             new_dataset.append(d)
             new_classes.append(c)
     return new_dataset, new_classes
