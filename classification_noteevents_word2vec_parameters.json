@@ -37,7 +37,7 @@
     "layersActivations": [
         "relu"
     ],
-    "networkActivation" : "softmax",
+    "networkActivation" : "relu",
     "gru": true,
     "useDropout": true,
     "dropout": 0.5,
