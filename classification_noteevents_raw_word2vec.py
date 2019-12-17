@@ -13,7 +13,7 @@ from keras.utils import plot_model
 
 from sklearn.model_selection._split import StratifiedKFold
 
-from adapter import Word2VecTrainer
+from adapter import Word2VecTrainer, Doc2VecTrainer
 from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataGenerator
 
 from data_representation import TransformClinicalTextsRepresentations
@@ -35,21 +35,25 @@ def sync_data_classes(data, classes):
     return np.array(new_dataset), np.array(new_classes)
 
 
-def train_word2vec(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None, preprocessing_pipeline=None):
+def train_representation_model(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None,
+                               preprocessing_pipeline=None, word2vec=True):
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     if noteevents_iterator is None:
         noteevents_iterator = NoteeventsTextDataGenerator(files_paths, preprocessing_pipeline=preprocessing_pipeline)
     # for noteevent in noteevents_iterator:
     #     print(noteevent)
     #     exit()
-    word2vec_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
+    if word2vec:
+        model_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
+    else:
+        model_trainer = Doc2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
     if os.path.exists(saved_model_path):
-        model = word2vec_trainer.load_model(saved_model_path)
+        model = model_trainer.load_model(saved_model_path)
         return model
     else:
-        word2vec_trainer.train(noteevents_iterator)
-        word2vec_trainer.save(saved_model_path)
-        return word2vec_trainer.model
+        model_trainer.train(noteevents_iterator)
+        model_trainer.save(saved_model_path)
+        return model_trainer.model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
@@ -97,9 +101,9 @@ inputShape = (None, None, embedding_size)
 print_with_time("Training Word2vec")
 preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
                           whitespace_tokenize_text, remove_only_special_characters_tokens, remove_sepsis_mentions]
-word2vec_model = train_word2vec(word2vec_data,
-                                parameters['word2vecModelFileName'], min_count,
-                                embedding_size, workers, window, iterations)
+word2vec_model = train_representation_model(word2vec_data,
+                                            parameters['word2vecModelFileName'], min_count,
+                                            embedding_size, workers, window, iterations)
 print_with_time("Transforming representation")
 texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                           window=window, texts_path=parameters['dataPath'],
