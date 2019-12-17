@@ -25,6 +25,15 @@ from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassifi
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
+def sync_data_classes(data, classes):
+    new_dataset = []
+    new_classes = []
+    for d, c in zip(data, classes):
+        if d is None:
+            new_dataset.append(d)
+            new_classes.append(c)
+    return new_dataset, new_classes
+
 
 def train_word2vec(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None, preprocessing_pipeline=None):
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -75,7 +84,6 @@ word2vec_data = np.array([parameters['notes_word2vec_path'] + '{}.txt'.format(it
 data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
 print("========= Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
-classes_for_stratified = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
 # Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 
@@ -99,16 +107,18 @@ texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedd
 word2vec_model = None
 texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
 normalized_data = np.array(texts_transformer.get_new_paths(data))
+normalized_data, classes = sync_data_classes(normalized_data, classes)
 print_with_time("Padding sequences")
 # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
 texts_transformer.pad_new_representation(normalized_data, 228+224,
                                          pad_data_path=parameters['word2vec_padded_representation_files_path'])
 normalized_data = np.array(texts_transformer.get_new_paths(normalized_data))
+normalized_data, classes = sync_data_classes(normalized_data, classes)
 i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
     dictWriter = None
-    for trainIndex, testIndex in kf.split(data, classes):
+    for trainIndex, testIndex in kf.split(normalized_data, classes):
         if config is not None and config['fold'] > i:
             print("Pass fold {}".format(i))
             i += 1

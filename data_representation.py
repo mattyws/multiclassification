@@ -84,8 +84,7 @@ class TransformClinicalTextsRepresentations(object):
                     for func in preprocessing_pipeline:
                         note = func(note)
                 new_representation = self.create_embedding_matrix(note)
-                if new_representation is not None:
-                    transformed_texts.append(new_representation)
+                transformed_texts.append(new_representation)
             if len(transformed_texts) != 0:
                 transformed_texts = numpy.array(transformed_texts)
                 with open(transformed_doc_path, 'wb') as handler:
@@ -140,8 +139,7 @@ class TransformClinicalTextsRepresentations(object):
             padded_data = []
             for value in data:
                 padded_value = self.pad_sequence(value, pad_max_len)
-                if padded_value is not None:
-                    padded_data.append(padded_value)
+                padded_data.append(padded_value)
             if len(padded_data) != 0:
                 padded_data = numpy.array(padded_data)
                 with open(transformed_doc_path, 'wb') as handler:
