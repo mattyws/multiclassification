@@ -67,6 +67,14 @@ class LengthLongitudinalDataGenerator(Sequence):
             print(x)
             print(filesNames)
             print(e)
+            x = []
+            for fileName in filesNames:
+                print(fileName)
+                with open(fileName, 'rb') as data_file:
+                    data = pickle.load(data_file)
+                test = np.array(data)
+                x.append(data)
+                np.array(x)
             exit()
         # print("data generator: {}".format(filesNames))
         # print("data generator: {}".format(x.shape))
