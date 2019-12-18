@@ -39,8 +39,6 @@ class LengthLongitudinalDataGenerator(Sequence):
 
     def __load(self, filesNames):
         x = []
-        max_len = None
-        columns_len = None
         for fileName in filesNames:
             with open(fileName, 'rb') as data_file:
                 data = pickle.load(data_file)
@@ -61,6 +59,7 @@ class LengthLongitudinalDataGenerator(Sequence):
             x = np.array(x)
         except Exception as e:
             print(x)
+            print(filesNames)
             print(e)
             exit()
         # print("data generator: {}".format(filesNames))
