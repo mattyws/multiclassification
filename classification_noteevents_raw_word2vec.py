@@ -98,13 +98,13 @@ window = parameters['window']
 iterations = parameters['iterations']
 inputShape = (None, None, embedding_size)
 
-print_with_time("Training Word2vec")
+print_with_time("Training/Loading Word2vec")
 preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
                           whitespace_tokenize_text, remove_only_special_characters_tokens, remove_sepsis_mentions]
 word2vec_model = train_representation_model(word2vec_data,
                                             parameters['word2vecModelFileName'], min_count,
                                             embedding_size, workers, window, iterations)
-print_with_time("Transforming representation")
+print_with_time("Transforming/Retrieving representation")
 texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                           window=window, texts_path=parameters['dataPath'],
                                                           representation_save_path=parameters['word2vec_representation_files_path'])
@@ -112,7 +112,7 @@ word2vec_model = None
 texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
 normalized_data = np.array(texts_transformer.get_new_paths(data))
 normalized_data, classes = sync_data_classes(normalized_data, classes)
-print_with_time("Padding sequences")
+print_with_time("Padding/Retrieving sequences")
 # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
 texts_transformer.pad_new_representation(normalized_data, 228+224,
                                          pad_data_path=parameters['word2vec_padded_representation_files_path'])
@@ -136,9 +136,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         test_sizes, test_labels = divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
-        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels)
+        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, ndmin=4)
         dataTrainGenerator.create_batches()
-        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
+        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, ndmin=4)
         dataTestGenerator.create_batches()
         # for batch in dataTestGenerator.batches.keys():
         #     print(batch, len(dataTestGenerator.batches[batch]))

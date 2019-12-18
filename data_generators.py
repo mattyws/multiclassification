@@ -15,12 +15,15 @@ from nltk import WhitespaceTokenizer
 from data_representation import Word2VecEmbeddingCreator
 
 class LengthLongitudinalDataGenerator(Sequence):
-    def __init__(self, sizes_data_paths, labels, max_batch_size=50, iterForever=False):
+
+
+    def __init__(self, sizes_data_paths, labels, max_batch_size=50, iterForever=False, ndmin=None):
         self.max_batch_size = max_batch_size
         self.batches = sizes_data_paths
         self.labels = labels
         self.iterForever = iterForever
         self.__iterPos = 0
+        self.ndmin = ndmin
 
     def create_batches(self):
         new_batches = dict()
@@ -56,7 +59,10 @@ class LengthLongitudinalDataGenerator(Sequence):
         #     zeros[:value.shape[0], : value.shape[1]] = value
         #     zero_padding_x.append(zeros)
         try:
-            x = np.array(x)
+            if self.ndmin is not None:
+                x = np.array(x, ndmin=self.ndmin)
+            else:
+                x = np.array(x)
         except Exception as e:
             print(x)
             print(filesNames)
