@@ -74,7 +74,10 @@ class LengthLongitudinalDataGenerator(Sequence):
                     data = pickle.load(data_file)
                 test = np.array(data)
                 x.append(data)
-                np.array(x)
+                try:
+                    np.array(x)
+                except:
+                    print(data)
             exit()
         # print("data generator: {}".format(filesNames))
         # print("data generator: {}".format(x.shape))
