@@ -8,7 +8,7 @@ from keras.layers.core import Dense, Dropout, RepeatVector, Reshape
 from keras.layers.recurrent import LSTM, GRU
 from keras.models import Sequential
 from keras.layers import Lambda, Input, Dense, Flatten, Conv1D, AveragePooling1D, GlobalAveragePooling1D, Concatenate, \
-    GlobalAveragePooling2D, Masking
+    GlobalAveragePooling2D, Masking, LeakyReLU
 from keras.models import Model
 from keras.datasets import mnist
 from keras.losses import mse, binary_crossentropy
@@ -64,7 +64,8 @@ class NoteeventsClassificationModelCreator(ModelCreator):
     def build_network(self):
         representation_model = Sequential()
         representation_model.add(Masking(mask_value=0.))
-        representation_model.add(LSTM(64, activation='relu', dropout=.3))
+        representation_model.add(LSTM(64, dropout=.3))
+        representation_model.add(LeakyReLU(alpha=.3))
         representation_model.add(Dense(32))
         # cnn_model.add(AveragePooling1D(pool_size=1))
         # representation_model.add(GlobalAveragePooling1D())
