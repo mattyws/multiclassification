@@ -65,6 +65,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         representation_model = Sequential()
         representation_model.add(Masking(mask_value=0.))
         representation_model.add(LSTM(192, activation='relu'))
+        representation_model.add(Dropout(128))
         representation_model.add(Dense(128))
         # cnn_model.add(AveragePooling1D(pool_size=1))
         # representation_model.add(GlobalAveragePooling1D())
