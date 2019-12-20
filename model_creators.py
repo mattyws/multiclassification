@@ -64,8 +64,8 @@ class NoteeventsClassificationModelCreator(ModelCreator):
     def build_network(self):
         representation_model = Sequential()
         representation_model.add(Masking(mask_value=0.))
-        representation_model.add(LSTM(64, activation='relu', dropout=.3))
-        # representation_model.add(LeakyReLU(alpha=.3))
+        representation_model.add(LSTM(64, dropout=.3))
+        representation_model.add(LeakyReLU(alpha=.3))
         representation_model.add(Dense(32))
         # cnn_model.add(AveragePooling1D(pool_size=1))
         # representation_model.add(GlobalAveragePooling1D())
