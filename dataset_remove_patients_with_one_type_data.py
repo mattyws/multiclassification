@@ -22,4 +22,15 @@ dont_have_both = dont_have_chart.union(dont_have_notes)
 new_dataset = dataset[~dataset['icustay_id'].isin(list(dont_have_both))]
 print(len(dataset), len(new_dataset))
 
-new_dataset.to_csv(parameters['mimic_data_path']+'new_'+parameters['dataset_file_name'])
+new_dataset.loc[:, 'intime'] = pd.to_datetime(new_dataset['intime'], format=parameters['datetime_pattern'])
+new_dataset.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(new_dataset['sofa_increasing_time_poe'],
+                                                                format=parameters['datetime_pattern'])
+
+new_dataset['intime_diff'] = (new_dataset['sofa_increasing_time_poe'] - new_dataset['intime'])\
+    .apply(lambda x : x.seconds//3600)
+
+print(new_dataset['intime_diff'])
+filtered_dataset = new_dataset[new_dataset['intime_diff'].isna() & new_dataset['intime_diff'] >= 7]
+print(len(filtered_dataset))
+
+# new_dataset.to_csv(parameters['mimic_data_path']+'new_'+parameters['dataset_file_name'])
