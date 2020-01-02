@@ -30,7 +30,7 @@ new_dataset['intime_diff'] = (new_dataset['sofa_increasing_time_poe'] - new_data
     .apply(lambda x : x.seconds//3600)
 
 print(new_dataset['intime_diff'])
-filtered_dataset = new_dataset[new_dataset['intime_diff'].isna() & new_dataset['intime_diff'] >= 7]
+filtered_dataset = new_dataset[new_dataset['intime_diff'].isna() | new_dataset['intime_diff'] >= 7]
 print(len(filtered_dataset))
 
 # new_dataset.to_csv(parameters['mimic_data_path']+'new_'+parameters['dataset_file_name'])
