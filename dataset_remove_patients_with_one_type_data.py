@@ -31,7 +31,10 @@ new_dataset['intime_diff'] = (new_dataset['sofa_increasing_time_poe'] - new_data
 
 print(new_dataset['intime_diff'])
 print(len(new_dataset))
-filtered_dataset = new_dataset[new_dataset['intime_diff'] <= 7]
+filtered_dataset = new_dataset[new_dataset['intime_diff'] < 7]
+filtered_dataset = new_dataset[new_dataset['icustay_id'].notin(filtered_dataset['icustay_id'])]
 print(len(filtered_dataset))
+print(filtered_dataset['class'].value_counts())
+
 
 # new_dataset.to_csv(parameters['mimic_data_path']+'new_'+parameters['dataset_file_name'])
