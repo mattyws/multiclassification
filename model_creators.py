@@ -14,7 +14,6 @@ from keras.datasets import mnist
 from keras.losses import mse, binary_crossentropy
 from keras.utils import plot_model
 from keras import backend as K
-from sklearn.neural_network.multilayer_perceptron import MLPClassifier
 
 import adapter
 from adapter import KerasAutoencoderAdapter
@@ -63,28 +62,12 @@ class NoteeventsClassificationModelCreator(ModelCreator):
 
     def build_network(self):
         representation_model = Sequential()
-        representation_model.add(Masking(mask_value=0.))
-        representation_model.add(LSTM(64, dropout=.3))
-        representation_model.add(LeakyReLU(alpha=.3))
-        representation_model.add(Dense(32))
-        # cnn_model.add(AveragePooling1D(pool_size=1))
-        # representation_model.add(GlobalAveragePooling1D())
-
+        representation_model.add(Masking(mask_value=0., name="representation_masking"))
+        representation_model.add(LSTM(64, dropout=.3, name="representation_lstm"))
+        representation_model.add(LeakyReLU(alpha=.3, name="representation_leakyrelu"))
+        representation_model.add(Dense(32, name="representation_dense"))
         input = Input(self.inputShape)
-        # conv = Conv1D(self.embedding_size, kernel_size=3, activation='relu')
-        # pooling = AveragePooling1D(pool_size=1)
-        # gap = GlobalAveragePooling1D()
-        # dropout = Dropout(0.5)
-        # dense = Dense(128, activation='tanh')
-        # flatten = Flatten()
         layer = TimeDistributed(representation_model, name="representation_model")(input)
-        # layer = Conv3D(32, (1, 1, 150))(input)
-        # layer = Reshape((-1, 32))(layer)
-        # layer = TimeDistributed(pooling, name="pooling")(layer)
-        # layer = TimeDistributed(gap, name="gap")(layer)
-        # layer = dense(layer)
-        # layer = TimeDistributed(dense)(layer)
-        # layer = TimeDistributed(flatten,name="flatten")(layer)
         if len(self.outputUnits) == 1:
             layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False)(layer)
         else:
@@ -114,26 +97,42 @@ class NoteeventsClassificationModelCreator(ModelCreator):
                 return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
 
 
-class KerasCovolutionalNNCreator(ModelCreator):
+class EnsembleModelCreator(ModelCreator):
 
-    #TODO: Finish this class
-    def __init__(self, input_shape=None, num_class=8, loss='mse', optimizer='sgd'):
-        self.input_shape = input_shape
-        self.loss = loss
-        self.optimizer = optimizer
-        self.num_class=num_class
-
-    def __build_model(self):
-        model = Sequential()
-        model.add(Conv1D(256, kernel_size=8, activation='relu', padding='same', input_shape=self.input_shape))
-        model.add(AveragePooling1D(pool_size=1, padding="same"))
-        model.add(Flatten())
-        model.add(Dense(128, activation='tanh', return_sequences=True))
-        # model.compile(loss=self.loss, optimizer=self.optimizer)
-        return model
+    def __init__(self, level_zero_pmodels, pinput_shape, level_zero_smodels=None, sinput_shape=None):
+        if (level_zero_smodels is None and sinput_shape is not None) \
+                or (level_zero_smodels is not None and sinput_shape is None):
+            raise ValueError("") #todo error message
+        self.level_zero_pmodels = level_zero_pmodels
+        self.level_zero_smodels = level_zero_smodels
+        self.pinput_shape = pinput_shape
+        self.sinput_shape = sinput_shape
 
     def create(self):
-        return adapter.KerasGeneratorAdapter(self.__build_model())
+        return self.build_model()
+
+    def build_model(self):
+        # Inputs and outputs for the type of data
+        inputs = []
+        outputs = []
+        pinput, poutputs = self.__create_models_layer(self.level_zero_pmodels, self.pinput_shape)
+        inputs.append(pinput)
+        outputs.extend(poutputs)
+        if self.level_zero_smodels is not None and self.sinput_shape is not None:
+            sinput, soutputs = self.__create_models_layer(self.level_zero_smodels, self.sinput_shape)
+            inputs.append(sinput)
+            outputs.extend(soutputs)
+        concat = Concatenate(outputs)
+        # TODO: construir o resto do modelo
+
+    def __create_models_layer(self, models, input_shape):
+        input = Input(input_shape)
+        outputs = []
+        for model in self.level_zero_pmodels:
+            out = model(input)
+            new_model = Model(inputs=input, outputs=model.layers[-2].get_output_at(0))
+            outputs.append(new_model.output)
+        return input, outputs
 
 
 class MultilayerKerasRecurrentNNCreator(ModelCreator):
@@ -241,6 +240,7 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         model = load_model(filepath, custom_objects=custom_objects)
         return adapter.KerasGeneratorAdapter(model)
 
+
 def sampling(args):
     """Reparameterization trick by sampling from an isotropic unit Gaussian.
 
@@ -257,6 +257,7 @@ def sampling(args):
     # by default, random_normal has mean = 0 and std = 1.0
     epsilon = K.random_normal(shape=(batch, dim))
     return z_mean + K.exp(0.5 * z_log_var) * epsilon
+
 
 class KerasVariationalAutoencoder(ModelCreator):
     """
@@ -350,16 +351,3 @@ class KerasVariationalAutoencoder(ModelCreator):
         decoder = load_model('decoder_' + filename)
         vae = load_model(filename)
         return KerasAutoencoderAdapter(encoder, decoder, vae)
-
-
-class SklearnNeuralNetwork(ModelCreator):
-
-    def __init__(self, solver="lbfgs", alpha=1e-5, hidden_layer_sizes=10, random_state=1):
-        self.solver = solver
-        self.alpha = alpha
-        self.hidden_layer_sizes = hidden_layer_sizes
-        self.random_state = random_state
-
-    def create(self):
-        model = MLPClassifier(solver=self.solver, alpha=self.alpha, hidden_layer_sizes=self.hidden_layer_sizes, random_state=self.random_state)
-        return adapter.SklearnAdapter(model)
