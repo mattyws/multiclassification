@@ -9,6 +9,7 @@ import functions
 parameters = functions.load_parameters_file()
 
 dataset = pd.read_csv(parameters['mimic_data_path']+parameters['dataset_file_name'])
+print(dataset['class'].value_counts())
 noteevents_path = parameters['mimic_data_path'] + 'sepsis_noteevents/'
 chartevents_path = parameters['mimic_data_path'] + 'sepsis_raw_merged/'
 
@@ -29,7 +30,6 @@ new_dataset.loc[:, 'sofa_increasing_time_poe'] = pd.to_datetime(new_dataset['sof
 new_dataset['intime_diff'] = (new_dataset['sofa_increasing_time_poe'] - new_dataset['intime'])\
     .apply(lambda x : x.seconds//3600)
 
-print(new_dataset['intime_diff'])
 print(len(new_dataset))
 print(new_dataset['class'].value_counts())
 filtered_dataset = new_dataset[new_dataset['intime_diff'] < 7]
