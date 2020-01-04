@@ -38,4 +38,4 @@ print(len(filtered_dataset))
 print(filtered_dataset['class'].value_counts())
 
 
-# new_dataset.to_csv(parameters['mimic_data_path']+'new_'+parameters['dataset_file_name'])
+filtered_dataset.to_csv(parameters['mimic_data_path']+'new_'+parameters['dataset_file_name'])
