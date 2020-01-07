@@ -19,6 +19,18 @@ import adapter
 from adapter import KerasAutoencoderAdapter
 
 
+def create_recurrent_layer(self, outputUnit, activation, returnSequences, inputShape=None):
+    if self.gru:
+        if inputShape:
+            return GRU(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
+        else:
+            return GRU(outputUnit, activation=activation, return_sequences=returnSequences)
+    else:
+        if inputShape:
+            return LSTM(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
+        else:
+            return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
+
 class ModelCreator(object, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
@@ -99,7 +111,9 @@ class NoteeventsClassificationModelCreator(ModelCreator):
 
 class EnsembleModelCreator(ModelCreator):
 
-    def __init__(self, level_zero_pmodels, pinput_shape, level_zero_smodels=None, sinput_shape=None):
+    def __init__(self, level_zero_pmodels, pinput_shape, level_zero_smodels=None, sinput_shape=None,
+                 level_one_model_output_units=None, level_one_use_droupout=False, level_one_dropout=.5,
+                 level_one_model_layers_activation=None):
         if (level_zero_smodels is None and sinput_shape is not None) \
                 or (level_zero_smodels is not None and sinput_shape is None):
             raise ValueError("") #todo error message
@@ -107,6 +121,10 @@ class EnsembleModelCreator(ModelCreator):
         self.level_zero_smodels = level_zero_smodels
         self.pinput_shape = pinput_shape
         self.sinput_shape = sinput_shape
+        self.level_one_model_output_units = level_one_model_output_units
+        self.level_one_use_droupout = level_one_use_droupout
+        self.level_one_dropout = level_one_dropout
+        self.level_one_model_layers_activation = level_one_model_layers_activation
 
     def create(self):
         return self.build_model()
@@ -124,13 +142,34 @@ class EnsembleModelCreator(ModelCreator):
             outputs.extend(soutputs)
         concat = Concatenate(outputs)
         # TODO: construir o resto do modelo
+        if len(self.level_one_model_output_units) == 1:
+            layer = Dense(self.level_one_model_output_units[0], self.level_one_model_layers_activation[0], False)(input)
+        else:
+            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True)(input)
+        if len(self.outputUnits) > 1:
+            for i in range(1, len(self.outputUnits)):
+                if self.use_dropout:
+                    dropout = Dropout(self.dropout)(layer)
+                    layer = dropout
+                if i == len(self.outputUnits) - 1:
+                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], False)(layer)
+                else:
+                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)(layer)
+        if self.use_dropout:
+            dropout = Dropout(self.dropout)(layer)
+            layer = dropout
+
+        output = Dense(self.numOutputNeurons, activation=self.networkActivation,
+                       kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
+                       activity_regularizer=self.activity_regularizer)(layer)
+        return input, output
 
     def __create_models_layer(self, models, input_shape):
         input = Input(input_shape)
         outputs = []
-        for model in self.level_zero_pmodels:
+        for model in models:
             out = model(input)
-            new_model = Model(inputs=input, outputs=model.layers[-2].get_output_at(0))
+            new_model = Model(inputs=input, outputs=model.layers[-2].get_output_at(0), trainable=False)
             outputs.append(new_model.output)
         return input, outputs
 
