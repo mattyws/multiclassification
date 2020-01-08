@@ -110,68 +110,50 @@ class NoteeventsClassificationModelCreator(ModelCreator):
 
 
 class EnsembleModelCreator(ModelCreator):
+    # TODO: change model creating just to create the meta model, as the data creation is now separated from the model
+    def __init__(self, input_shape, num_output_neurons, output_units=None, use_dropout=False, dropout=.5,
+                 layers_activation=None, network_activation='sigmoid', loss='categorical_crossentropy', optimizer='adam',
+                 metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
+        self.input_shape = input_shape
+        self.num_output_neurons = num_output_neurons
+        self.output_units = output_units
+        self.use_dropout = use_dropout
+        self.dropout = dropout
+        self.layers_activation = layers_activation
+        self.network_activation = network_activation
+        self.loss = loss
+        self.optimizer = optimizer
+        self.metrics = metrics
+        self.kernel_regularizer = kernel_regularizer
+        self.bias_regularizer = bias_regularizer
+        self.activity_regularizer = activity_regularizer
 
-    def __init__(self, level_zero_pmodels, pinput_shape, level_zero_smodels=None, sinput_shape=None,
-                 level_one_model_output_units=None, level_one_use_droupout=False, level_one_dropout=.5,
-                 level_one_model_layers_activation=None):
-        if (level_zero_smodels is None and sinput_shape is not None) \
-                or (level_zero_smodels is not None and sinput_shape is None):
-            raise ValueError("") #todo error message
-        self.level_zero_pmodels = level_zero_pmodels
-        self.level_zero_smodels = level_zero_smodels
-        self.pinput_shape = pinput_shape
-        self.sinput_shape = sinput_shape
-        self.level_one_model_output_units = level_one_model_output_units
-        self.level_one_use_droupout = level_one_use_droupout
-        self.level_one_dropout = level_one_dropout
-        self.level_one_model_layers_activation = level_one_model_layers_activation
+    def create(self, model_summary_filename=None):
+        input, output = self.build_network()
+        model = Model(inputs=input, outputs=output)
+        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        if model_summary_filename is not None:
+            with open(model_summary_filename, 'w') as summary_file:
+                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
+        return adapter.KerasGeneratorAdapter(model)
 
-    def create(self):
-        return self.build_model()
-
-    def build_model(self):
-        # Inputs and outputs for the type of data
-        inputs = []
-        outputs = []
-        pinput, poutputs = self.__create_models_layer(self.level_zero_pmodels, self.pinput_shape)
-        inputs.append(pinput)
-        outputs.extend(poutputs)
-        if self.level_zero_smodels is not None and self.sinput_shape is not None:
-            sinput, soutputs = self.__create_models_layer(self.level_zero_smodels, self.sinput_shape)
-            inputs.append(sinput)
-            outputs.extend(soutputs)
-        concat = Concatenate(outputs)
-        # TODO: construir o resto do modelo
-        if len(self.level_one_model_output_units) == 1:
-            layer = Dense(self.level_one_model_output_units[0], self.level_one_model_layers_activation[0], False)(input)
-        else:
-            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True)(input)
-        if len(self.outputUnits) > 1:
-            for i in range(1, len(self.outputUnits)):
+    def build_network(self):
+        input = Input(self.input_shape)
+        layer = Dense(self.output_units[0], activation=self.layers_activation[0])(input)
+        if len(self.output_units) > 1:
+            for i in range(1, len(self.output_units)):
                 if self.use_dropout:
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
-                if i == len(self.outputUnits) - 1:
-                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], False)(layer)
-                else:
-                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)(layer)
+                layer = Dense(self.output_units[i], activation=self.layers_activation[i])(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
-
-        output = Dense(self.numOutputNeurons, activation=self.networkActivation,
+        output = Dense(self.num_output_neurons, activation=self.network_activation,
                        kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
                        activity_regularizer=self.activity_regularizer)(layer)
         return input, output
 
-    def __create_models_layer(self, models, input_shape):
-        input = Input(input_shape)
-        outputs = []
-        for model in models:
-            out = model(input)
-            new_model = Model(inputs=input, outputs=model.layers[-2].get_output_at(0), trainable=False)
-            outputs.append(new_model.output)
-        return input, outputs
 
 
 class MultilayerKerasRecurrentNNCreator(ModelCreator):

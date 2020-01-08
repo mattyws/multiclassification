@@ -1,6 +1,8 @@
 import os
 import pickle
+import types
 from functools import partial
+from keras.models import Model
 
 import multiprocessing
 
@@ -231,3 +233,114 @@ class Word2VecEmbeddingCreator(object):
                 word = self.word2vecModel.predict_output_word(text[begin:end])[0][0]
                 x[pos] = self.word2vecModel.wv[word]
         return x
+
+class EnsembleMetaLearnerDataCreator():
+
+    def __init__(self, dataset, weak_classifiers, use_class_prediction=False):
+        self.dataset = dataset
+        self.weak_classifiers = weak_classifiers
+        self.representation_length = None
+        self.new_paths = dict()
+        if not use_class_prediction:
+            self.__change_weak_classifiers()
+
+
+    def create_meta_learner_data(self, dataset, new_representation_path):
+        """
+        Transform representation from all dataset using the weak classifiers passed on constructor.
+        Do it using multiprocessing
+        :param dataset: the paths for the events as .csv files
+        :param new_representation_path: the path where the new representations will be saved
+        :return: None
+        """
+        if not os.path.exists(new_representation_path):
+            os.mkdir(new_representation_path)
+        with multiprocessing.Pool(processes=4) as pool:
+            dataset = np.array_split(dataset, 10)
+            manager = multiprocessing.Manager()
+            manager_queue = manager.Queue()
+            partial_transform_representation = partial(self.__transform_representations,
+                                                       new_representation_path=new_representation_path,
+                                                        manager_queue=manager_queue)
+            data = numpy.array_split(dataset, 6)
+            total_files = len(dataset)
+            map_obj = pool.map_async(partial_transform_representation, data)
+            consumed = 0
+            while not map_obj.ready() or manager_queue.qsize() != 0:
+                for _ in range(manager_queue.qsize()):
+                    manager_queue.get()
+                    consumed += 1
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            print()
+            result = map_obj.get()
+            padded_paths = dict()
+            for r in result:
+                padded_paths.update(r)
+            self.new_paths = padded_paths
+
+    def __transform_representations(self, dataset, new_representation_path=None, manager_queue=None):
+        """
+        Do the actual transformation
+        :param dataset: the paths for the events as .csv files
+        :param new_representation_path: the path where the new representations will be saved
+        :param manager_queue: the multiprocessing.Manager.Queue to use for progress checking
+        :return: dictionary {old_path : new_path}
+        """
+        new_paths = dict()
+        for path in dataset:
+            filename = path.split('/')[-1]
+            if manager_queue is not None:
+                manager_queue.put(path)
+            transformed_doc_path = new_representation_path + os.path.splitext(filename)[0] + '.pkl'
+            if os.path.exists(transformed_doc_path):
+                new_paths[path] = transformed_doc_path
+                continue
+            data = self.__load_data(path)
+            new_representation = self.__transform(data)
+            if self.representation_length is None:
+                self.representation_length = len(new_representation)
+            with open(transformed_doc_path, 'wb') as fhandler:
+                pickle.dump(new_representation, fhandler)
+            new_paths[path] = transformed_doc_path
+        return new_paths
+
+    def __load_data(self, path):
+        if isinstance(path, tuple):
+            data = []
+            for p in path:
+                if 'pkl' in p.split('.')[-1]:
+                    with open(p, 'rb') as fhandler:
+                        data.append(pickle.load(fhandler))
+                elif 'csv' in p.split('.')[-1]:
+                    data.append(pandas.read_csv(p))
+            return data
+        elif isinstance(path, str):
+            if 'pkl' in path.split('.')[-1]:
+                with open(path, 'rb') as fhandler:
+                    return pickle.load(fhandler)
+            elif 'csv' in path.split('.')[-1]:
+                return pandas.read_csv(path)
+
+    def __transform(self, data):
+        new_representation = []
+        for model in self.weak_classifiers:
+            if isinstance(model, tuple):
+                data_index = model[1]
+                model = model[0]
+                prediction = model.predict(data[data_index])
+                new_representation.extend(prediction)
+            else:
+                prediction = model.predict(data)
+                new_representation.extend(prediction)
+        return new_representation
+
+    def __change_weak_classifiers(self):
+        new_weak_classifiers = []
+        for model in self.weak_classifiers:
+            if isinstance(model, tuple):
+                new_model = Model(inputs=model[0].input, outputs=model[0].layers[-2].output)
+                new_model = (new_model, model[1])
+            else:
+                new_model = Model(inputs=model.input, outputs=model.layers[-2].output)
+            new_weak_classifiers.append(new_model)
+        self.weak_classifiers = new_weak_classifiers
