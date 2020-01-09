@@ -16,7 +16,8 @@ from sklearn.model_selection._split import StratifiedKFold
 
 import functions
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator
-from ensemble_training import TrainEnsembleAdaBoosting
+from data_representation import EnsembleMetaLearnerDataCreator
+from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging
 from functions import test_model, print_with_time
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator
@@ -25,7 +26,7 @@ from normalization import Normalization, NormalizationValues
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
-parametersFilePath = "./classification_parameters.json"
+parametersFilePath = "./classification_ensemble_parameters.json"
 
 #Loading parameters file
 print("========= Loading Parameters")
@@ -95,13 +96,21 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         print_with_time("Generating level 0 models")
 
         #### START ADABOOSTING ####
-        ensemble = TrainEnsembleAdaBoosting()
-        ensemble.fit()
+        # ensemble = TrainEnsembleAdaBoosting()
+        # ensemble.fit()
         ### END ADABOOSTING ####
+
+        #### START BAGGING ####
+        ensemble = TrainEnsembleBagging(normalized_data[trainIndex], classes[trainIndex])
+        ensemble.fit(epochs=parameters['level_0_epochs'])
+        ### END ADABOOSTING ####
+
         ### START CLUSTERING ENSEMBLE ###
         ### END CLUSTERING ENSEMBLE ###
         level_zero_models = ensemble.get_classifiers()
 
+        meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
+        meta_data_creator.create_meta_learner_data(normalized_data, parameters['meta_representation_path'])
 
 
 
@@ -109,22 +118,47 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
 
 
-        print_with_time("Creating generators")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        print_with_time("Creating level 0 generators")
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
         #                                                classes[trainIndex], parameters['batchSize'])
         # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
         #                                               classes[testIndex], parameters['batchSize'])
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
-                                                                      , sizes_filename=parameters['training_events_sizes_file'].format(i)
-                                                                      , classes_filename=parameters['training_events_sizes_labels_file'].format(i))
+                                                                      , sizes_filename=parameters[
+                'training_events_sizes_file'].format(i)
+                                                                      , classes_filename=parameters[
+                'training_events_sizes_labels_file'].format(i))
         test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
-                                                            , sizes_filename = parameters['testing_events_sizes_file'].format(i)
-                                                            , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
-        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
+                                                                    , sizes_filename=parameters[
+                'testing_events_sizes_file'].format(i)
+                                                                    , classes_filename=parameters[
+                'testing_events_sizes_labels_file'].format(i))
+        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
+                                                             max_batch_size=parameters['batchSize'])
         dataTrainGenerator.create_batches()
-        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
+        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
+                                                            max_batch_size=parameters['batchSize'])
         dataTestGenerator.create_batches()
+
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
                                                          networkActivation=parameters['networkActivation'],

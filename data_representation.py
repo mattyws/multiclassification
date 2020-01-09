@@ -236,8 +236,7 @@ class Word2VecEmbeddingCreator(object):
 
 class EnsembleMetaLearnerDataCreator():
 
-    def __init__(self, dataset, weak_classifiers, use_class_prediction=False):
-        self.dataset = dataset
+    def __init__(self, weak_classifiers, use_class_prediction=False):
         self.weak_classifiers = weak_classifiers
         self.representation_length = None
         self.new_paths = dict()
@@ -344,3 +343,13 @@ class EnsembleMetaLearnerDataCreator():
                 new_model = Model(inputs=model.input, outputs=model.layers[-2].output)
             new_weak_classifiers.append(new_model)
         self.weak_classifiers = new_weak_classifiers
+
+    def get_new_paths(self, files_list):
+        if self.new_paths is not None and len(self.new_paths.keys()) != 0:
+            new_list = []
+            for file in files_list:
+                if file in self.new_paths.keys():
+                    new_list.append(self.new_paths[file])
+            return new_list
+        else:
+            raise Exception("Data not transformed!")

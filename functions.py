@@ -180,7 +180,7 @@ def get_event_itemid_and_value(event_label, event):
     return itemid, event_value
 
 
-def divide_by_events_lenght(data_list, classes, sizes_filename="sizes.pkl", classes_filename="sizes_labels.pkl"):
+def divide_by_events_lenght(data_list, classes, sizes_filename=None, classes_filename=None):
     """
     Divide a dataset based on their number of timesteps
     :param data_list: list of data
@@ -191,12 +191,13 @@ def divide_by_events_lenght(data_list, classes, sizes_filename="sizes.pkl", clas
     """
     sizes = None
     labels = None
-    if os.path.exists(sizes_filename):
-        with open(sizes_filename, 'rb') as sizes_handler:
-            sizes = pickle.load(sizes_handler)
-    if os.path.exists(classes_filename):
-        with open(classes_filename, 'rb') as sizes_handler:
-            labels = pickle.load(sizes_handler)
+    if sizes_filename is not None and classes_filename is not None:
+        if os.path.exists(sizes_filename):
+            with open(sizes_filename, 'rb') as sizes_handler:
+                sizes = pickle.load(sizes_handler)
+        if os.path.exists(classes_filename):
+            with open(classes_filename, 'rb') as sizes_handler:
+                labels = pickle.load(sizes_handler)
     if sizes is None and labels is None:
         sizes = dict()
         labels = dict()
@@ -217,10 +218,11 @@ def divide_by_events_lenght(data_list, classes, sizes_filename="sizes.pkl", clas
                     labels[len(values)] = []
                 sizes[len(values)].append(d)
                 labels[len(values)].append(c)
-        with open(sizes_filename, 'wb') as sizes_handler:
-            pickle.dump(sizes, sizes_handler)
-        with open(classes_filename, 'wb') as sizes_handler:
-            pickle.dump(labels, sizes_handler)
+        if sizes_filename is not None and classes_filename is not None:
+            with open(sizes_filename, 'wb') as sizes_handler:
+                pickle.dump(sizes, sizes_handler)
+            with open(classes_filename, 'wb') as sizes_handler:
+                pickle.dump(labels, sizes_handler)
     return sizes, labels
 
 
