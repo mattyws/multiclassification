@@ -14,22 +14,19 @@ from keras.datasets import mnist
 from keras.losses import mse, binary_crossentropy
 from keras.utils import plot_model
 from keras import backend as K
+from tcn import TCN
 
 import adapter
 from adapter import KerasAutoencoderAdapter
 
 
-def create_recurrent_layer(self, outputUnit, activation, returnSequences, inputShape=None):
-    if self.gru:
-        if inputShape:
-            return GRU(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
-        else:
-            return GRU(outputUnit, activation=activation, return_sequences=returnSequences)
+def create_recurrent_layer(outputUnit, activation, returnSequences, gru=False, tcn=False):
+    if gru:
+        return GRU(outputUnit, activation=activation, return_sequences=returnSequences)
+    elif tcn:
+        return TCN(outputUnit, activation=activation, return_sequences=returnSequences)
     else:
-        if inputShape:
-            return LSTM(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
-        else:
-            return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
+        return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
 
 class ModelCreator(object, metaclass=abc.ABCMeta):
 
@@ -110,7 +107,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
 
 
 class EnsembleModelCreator(ModelCreator):
-    # TODO: change model creating just to create the meta model, as the data creation is now separated from the model
+
     def __init__(self, input_shape, num_output_neurons, output_units=None, use_dropout=False, dropout=.5,
                  layers_activation=None, network_activation='sigmoid', loss='categorical_crossentropy', optimizer='adam',
                  metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
@@ -159,7 +156,7 @@ class EnsembleModelCreator(ModelCreator):
 class MultilayerKerasRecurrentNNCreator(ModelCreator):
     def __init__(self, input_shape, outputUnits, numOutputNeurons,
                  layersActivations=None, networkActivation='sigmoid',
-                 loss='categorical_crossentropy', optimizer='adam', gru=False, use_dropout=False, dropout=0.5,
+                 loss='categorical_crossentropy', optimizer='adam',gru=False, tcn=False, use_dropout=False, dropout=0.5,
                  metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
         self.inputShape = input_shape
         self.outputUnits = outputUnits
@@ -169,13 +166,13 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         self.loss = loss
         self.optimizer = optimizer
         self.gru = gru
+        self.tcn = tcn
         self.use_dropout = use_dropout
         self.dropout = dropout
         self.metrics = metrics
         self.kernel_regularizer = kernel_regularizer
         self.bias_regularizer = bias_regularizer
         self.activity_regularizer = activity_regularizer
-
         self.__check_parameters()
 
     def __check_parameters(self):
@@ -185,18 +182,22 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
     def build_network(self):
         input = Input(self.inputShape)
         if len(self.outputUnits) == 1:
-            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False)(input)
+            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False, tcn=self.tcn
+                                           , gru=self.gru)(input)
         else:
-            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True)(input)
+            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True, tcn=self.tcn
+                                           , gru=self.gru)(input)
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
                 if self.use_dropout:
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
                 if i == len(self.outputUnits) - 1:
-                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], False)(layer)
+                    layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False, tcn=self.tcn
+                                                   , gru=self.gru)(layer)
                 else:
-                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)(layer)
+                    layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True, tcn=self.tcn
+                                                   , gru=self.gru)(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
@@ -205,52 +206,10 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
                        activity_regularizer=self.activity_regularizer)(layer)
         return input, output
 
-    def __create_recurrent_layer(self, outputUnit, activation, returnSequences, inputShape=None):
-        if self.gru:
-            if inputShape:
-                return GRU(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
-            else:
-                return GRU(outputUnit, activation=activation, return_sequences=returnSequences)
-        else:
-            if inputShape:
-                return LSTM(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
-            else:
-                return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
-
     def create(self, model_summary_filename=None):
         input, output = self.build_network()
         model = Model(inputs=input, outputs=output)
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
-        if model_summary_filename is not None:
-            with open(model_summary_filename, 'w') as summary_file:
-                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
-        return adapter.KerasGeneratorAdapter(model)
-
-    def __build_model(self):
-        model = Sequential()
-        if len(self.outputUnits) > 1:
-            for i in range(0, len(self.outputUnits)-1):
-                if i == 0:
-                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True,
-                                                          inputShape=self.inputShape)
-                else:
-                    layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)
-                model.add(layer)
-                if self.use_dropout:
-                    model.add(Dropout(self.dropout))
-        if len(self.outputUnits) == 1:
-            model.add(self.__create_recurrent_layer(self.outputUnits[-1], self.layersActivations[-1], False,
-                                                    inputShape=self.inputShape))
-        else:
-            model.add(self.__create_recurrent_layer(self.outputUnits[-1], self.layersActivations[-1], False))
-        if self.use_dropout:
-            model.add(Dropout(self.dropout))
-        model.add(Dense(self.numOutputNeurons, activation=self.networkActivation))
-        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
-        return model
-
-    def create_sequential(self, model_summary_filename=None):
-        model = self.__build_model()
         if model_summary_filename is not None:
             with open(model_summary_filename, 'w') as summary_file:
                 model.summary(print_fn=lambda x: summary_file.write(x + '\n'))

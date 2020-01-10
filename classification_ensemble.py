@@ -15,12 +15,13 @@ from keras.regularizers import l1_l2
 from sklearn.model_selection._split import StratifiedKFold
 
 import functions
-from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator
+from adapter import KerasGeneratorAdapter
+from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator
 from data_representation import EnsembleMetaLearnerDataCreator
 from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging
 from functions import test_model, print_with_time
 from keras_callbacks import Metrics
-from model_creators import MultilayerKerasRecurrentNNCreator
+from model_creators import MultilayerKerasRecurrentNNCreator, EnsembleModelCreator
 from normalization import Normalization, NormalizationValues
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -75,20 +76,22 @@ if 'starttime' in aux.columns:
 if 'endtime' in aux.columns:
     aux = aux.drop(columns=['endtime'])
 inputShape = (None, len(aux.columns))
-i = 0
+fold = 0
 # ====================== Script that start training new models
-with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
+with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
+        open(parameters['level_zero_result_file_path']) as level_zero_csv_file_handler: # where the results for each fold are appended
     dictWriter = None
+    level_zero_dict_writer = None
     for trainIndex, testIndex in kf.split(data, classes):
-        if config is not None and config['fold'] > i:
-            print("Pass fold {}".format(i))
-            i += 1
+        if config is not None and config['fold'] > fold:
+            print("Pass fold {}".format(fold))
+            fold += 1
             continue
-        print_with_time("Fold {}".format(i))
+        print_with_time("Fold {}".format(fold))
         print_with_time("Getting values for normalization")
         values = normalization_values.get_normalization_values(data[trainIndex],
-                                                               saved_file_name=parameters['normalization_data_path'].format(i))
-        normalizer = Normalization(values, temporary_path=parameters['temporary_data_path'].format(i))
+                                                               saved_file_name=parameters['normalization_data_path'].format(fold))
+        normalizer = Normalization(values, temporary_path=parameters['temporary_data_path'].format(fold))
         print_with_time("Normalizing fold data")
         normalizer.normalize_files(data)
         normalized_data = np.array(normalizer.get_new_paths(data))
@@ -107,77 +110,57 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
 
         ### START CLUSTERING ENSEMBLE ###
         ### END CLUSTERING ENSEMBLE ###
+        print_with_time("Testing level 0 models")
         level_zero_models = ensemble.get_classifiers()
+        #TODO: test classifiers on testing fold
+        test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex])
+        data_test_generator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
+                                                            max_batch_size=parameters['batchSize'])
+        data_test_generator.create_batches()
+        for level_zero_model in level_zero_models:
+            adpter = KerasGeneratorAdapter.load_model(level_zero_model)
+
+            metrics = test_model(adpter, data_test_generator, fold)
+            if level_zero_dict_writer is None:
+                level_zero_dict_writer = csv.DictWriter(level_zero_csv_file_handler, metrics.keys())
+            if fold == 0 :
+                level_zero_dict_writer.writeheader()
+            level_zero_dict_writer.writerow(metrics)
+
+        print_with_time("Creating meta model data")
 
         meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
         meta_data_creator.create_meta_learner_data(normalized_data, parameters['meta_representation_path'])
 
+        meta_data = meta_data_creator.get_new_paths(normalized_data)
 
 
+        print_with_time("Creating meta data generators")
+
+        training_meta_data_generator = MetaLearnerDataGenerator(meta_data[trainIndex], classes[trainIndex],
+                                                       batchSize=parameters['meta_learner_batch_size'])
+        testing_meta_data_generator = MetaLearnerDataGenerator(meta_data[testIndex], classes[testIndex],
+                                                                batchSize=parameters['meta_learner_batch_size'])
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        print_with_time("Creating level 0 generators")
-        # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
-        #                                                classes[trainIndex], parameters['batchSize'])
-        # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
-        #                                               classes[testIndex], parameters['batchSize'])
-        train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
-                                                                      , classes[trainIndex]
-                                                                      , sizes_filename=parameters[
-                'training_events_sizes_file'].format(i)
-                                                                      , classes_filename=parameters[
-                'training_events_sizes_labels_file'].format(i))
-        test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
-                                                                    , sizes_filename=parameters[
-                'testing_events_sizes_file'].format(i)
-                                                                    , classes_filename=parameters[
-                'testing_events_sizes_labels_file'].format(i))
-        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
-                                                             max_batch_size=parameters['batchSize'])
-        dataTrainGenerator.create_batches()
-        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
-                                                            max_batch_size=parameters['batchSize'])
-        dataTestGenerator.create_batches()
-
-        modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
-                                                         loss=parameters['loss'], layersActivations=parameters['layersActivations'],
-                                                         networkActivation=parameters['networkActivation'],
-                                                         gru=parameters['gru'], use_dropout=parameters['useDropout'],
-                                                         dropout=parameters['dropout'], kernel_regularizer=l1_l2(0.001, 0.001),
+        modelCreator = EnsembleModelCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
+                                                         loss=parameters['loss'], layers_activation=parameters['layersActivations'],
+                                                         network_activation=parameters['networkActivation'],
+                                                         use_dropout=parameters['useDropout'],
+                                                         dropout=parameters['dropout'],
                                                          metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
         with open(parameters['modelCheckpointPath']+"parameters.json", 'w') as handler:
             json.dump(parameters, handler)
-        kerasAdapter = modelCreator.create_sequential(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
+        kerasAdapter = modelCreator.create()
         epochs = parameters['trainingEpochs']
-        metrics_callback = Metrics(dataTestGenerator)
         print_with_time("Training model")
-        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None)
+        kerasAdapter.fit(training_meta_data_generator, epochs=epochs, callbacks=None)
         print_with_time("Testing model")
-        metrics = test_model(kerasAdapter, dataTestGenerator, i)
+        metrics = test_model(kerasAdapter, testing_meta_data_generator, fold)
         if dictWriter is None:
             dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
-        if metrics['fold'] == 0:
+        if fold == 0:
             dictWriter.writeheader()
         dictWriter.writerow(metrics)
-        kerasAdapter.save(parameters['modelCheckpointPath'] + 'trained_{}.model'.format(i))
-        i += 1
+        kerasAdapter.save(parameters['modelCheckpointPath'] + 'trained_{}.model'.format(fold))
+        fold += 1

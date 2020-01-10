@@ -57,6 +57,7 @@ data_csv = data_csv.sort_values(['icustay_id'])
 data = np.array([itemid for itemid in list(data_csv['icustay_id'])
                  if os.path.exists(parameters['dataPath'] + '{}.csv'.format(itemid))])
 data_csv = data_csv[data_csv['icustay_id'].isin(data)]
+print_with_time(data_csv['class'].values_count())
 data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
 print_with_time("Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
@@ -117,12 +118,12 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
                                                          networkActivation=parameters['networkActivation'],
-                                                         gru=parameters['gru'], use_dropout=parameters['useDropout'],
+                                                         gru=parameters['gru'], tcn=parameters['tcn'], use_dropout=parameters['useDropout'],
                                                          dropout=parameters['dropout'], kernel_regularizer=l1_l2(0.001, 0.001),
                                                          metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
         with open(parameters['modelCheckpointPath']+"parameters.json", 'w') as handler:
             json.dump(parameters, handler)
-        kerasAdapter = modelCreator.create_sequential(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
+        kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
         print_with_time("Training model")

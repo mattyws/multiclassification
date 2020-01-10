@@ -84,6 +84,10 @@ class KerasGeneratorAdapter(ModelAdapter):
     def save(self, filename):
         self.model.save(filename)
 
+    @staticmethod
+    def load_model(self, model_path):
+        return KerasGeneratorAdapter(load_model(model_path))
+
     def predict_generator(self, generator):
         predicted = []
         trueClasses = []

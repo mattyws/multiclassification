@@ -321,25 +321,32 @@ class Word2VecTextEmbeddingGenerator(Sequence):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
 
-class NoteeventsTextDataGenerator(object):
+class MetaLearnerDataGenerator(object):
 
-    def __init__(self, data_paths, preprocessing_pipeline=None):
-        self.data_paths = data_paths
-        self.preprocessing_pipeline = preprocessing_pipeline
+    def __init__(self, dataPaths, labels, batchSize, iterForever=False):
+        self.batchSize = batchSize
+        self.__labels = labels
+        self.__filesList = dataPaths
+        self.iterForever = iterForever
+        self.__iterPos = 0
+
+    def __load(self, files_names):
+        x = []
+        for fileName in files_names:
+            with open(fileName, 'rb') as data_file:
+                data = pickle.load(data_file)
+            x.append(data)
+        x = np.array(x)
+        return x
 
     def __iter__(self):
-        tokenizer = WhitespaceTokenizer()
-        for path in self.data_paths:
-            with open(path, 'r') as handler:
-                for line in handler:
-                    yield tokenizer.tokenize(line)
-            # noteevents = pd.read_csv(path)
-            # noteevents = noteevents['Note'].apply(literal_eval).tolist()
-            # for note in noteevents:
-            #     if self.preprocessing_pipeline is not None and isinstance(self.preprocessing_pipeline, list):
-            #         for preprocessing_func in self.preprocessing_pipeline:
-            #             note = preprocessing_func(note)
-            #     for sentence in note:
-            #         # print(sentence)
-            #         yield sentence
-            #     # yield note
+        return self
+
+    def __getitem__(self, idx):
+        batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
+        batch_x = self.__load(batch_x)
+        batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
+        return batch_x, batch_y
+
+    def __len__(self):
+        return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
