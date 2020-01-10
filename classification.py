@@ -57,7 +57,7 @@ data_csv = data_csv.sort_values(['icustay_id'])
 data = np.array([itemid for itemid in list(data_csv['icustay_id'])
                  if os.path.exists(parameters['dataPath'] + '{}.csv'.format(itemid))])
 data_csv = data_csv[data_csv['icustay_id'].isin(data)]
-print_with_time(data_csv['class'].values_count())
+print_with_time(data_csv['class'].value_counts())
 data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
 print_with_time("Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
