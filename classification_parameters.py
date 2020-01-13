@@ -34,6 +34,6 @@ parameters = {
     "tcn": True,
     "useDropout": True,
     "dropout": 0.5,
-    "trainingEpochs": 2,
+    "trainingEpochs": 1,
     "batchSize": 50
 }

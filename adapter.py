@@ -41,7 +41,7 @@ class KerasGeneratorAdapter(ModelAdapter):
     def __init__(self, model):
         self.model = model
 
-    def fit(self, dataGenerator, epochs=1, batch_size=10, workers=2, validationDataGenerator = None,
+    def fit(self, dataGenerator, epochs=1, batch_size=10, workers=4, validationDataGenerator = None,
             validationSteps=None, callbacks=None):
         self.model.fit_generator(dataGenerator, len(dataGenerator), epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
                                  workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
@@ -67,7 +67,7 @@ class KerasGeneratorAdapter(ModelAdapter):
         # result = self.model.predict_generator(testDocs)
         result = self.model.predict_on_batch(testDocs)
         print(result)
-        result = (result < 0.5).astyper(np.int)
+        result = (result < 0.5).astype(np.int)
         print(result)
         # result = result.argmax(axis=-1)
         return result
