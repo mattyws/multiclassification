@@ -218,6 +218,73 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         return adapter.KerasGeneratorAdapter(model)
 
 
+class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
+    def __init__(self, input_shape, outputUnits, numOutputNeurons,
+                 layersActivations=None, networkActivation='sigmoid',
+                 loss='categorical_crossentropy', optimizer='adam',gru=False, use_dropout=False, dropout=0.5,
+                 metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
+        self.inputShape = input_shape
+        self.outputUnits = outputUnits
+        self.numOutputNeurons = numOutputNeurons
+        self.networkActivation = networkActivation
+        self.layersActivations = layersActivations
+        self.loss = loss
+        self.optimizer = optimizer
+        self.gru = gru
+        self.use_dropout = use_dropout
+        self.dropout = dropout
+        self.metrics = metrics
+        self.kernel_regularizer = kernel_regularizer
+        self.bias_regularizer = bias_regularizer
+        self.activity_regularizer = activity_regularizer
+        self.__check_parameters()
+
+    def __check_parameters(self):
+        if self.layersActivations is not None and len(self.layersActivations) != len(self.outputUnits):
+            raise ValueError("Output units must have the same size as activations!")
+
+    def build_network(self):
+        input = Input(self.inputShape)
+        if len(self.outputUnits) == 1:
+            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False
+                                           , gru=self.gru)(input)
+        else:
+            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True
+                                           , gru=self.gru)(input)
+        if len(self.outputUnits) > 1:
+            for i in range(1, len(self.outputUnits)):
+                if self.use_dropout:
+                    dropout = Dropout(self.dropout)(layer)
+                    layer = dropout
+                if i == len(self.outputUnits) - 1:
+                    layer = create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], False
+                                                   , gru=self.gru)(layer)
+                else:
+                    layer = create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True
+                                                   , gru=self.gru)(layer)
+        if self.use_dropout:
+            dropout = Dropout(self.dropout)(layer)
+            layer = dropout
+        output = Dense(self.numOutputNeurons, activation=self.networkActivation,
+                       kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
+                       activity_regularizer=self.activity_regularizer)(layer)
+        return input, output
+
+    def create(self, model_summary_filename=None):
+        input, output = self.build_network()
+        model = Model(inputs=input, outputs=output)
+        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        if model_summary_filename is not None:
+            with open(model_summary_filename, 'w') as summary_file:
+                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
+        return adapter.KerasGeneratorAdapter(model)
+
+    @staticmethod
+    def create_from_path(filepath, custom_objects=None):
+        model = load_model(filepath, custom_objects=custom_objects)
+        return adapter.KerasGeneratorAdapter(model)
+
+
 def sampling(args):
     """Reparameterization trick by sampling from an isotropic unit Gaussian.
 
