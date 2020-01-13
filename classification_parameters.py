@@ -37,7 +37,7 @@ parameters = {
     },
     "networkActivation" : "sigmoid",
     "gru": True,
-    "tcn": True,
+    "tcn": False,
     "useDropout": True,
     "dropout": 0.3,
     "trainingEpochs": 1,
