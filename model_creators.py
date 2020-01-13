@@ -8,7 +8,7 @@ from keras.layers.core import Dense, Dropout, RepeatVector, Reshape
 from keras.layers.recurrent import LSTM, GRU
 from keras.models import Sequential
 from keras.layers import Lambda, Input, Dense, Flatten, Conv1D, AveragePooling1D, GlobalAveragePooling1D, Concatenate, \
-    GlobalAveragePooling2D, Masking, LeakyReLU
+    GlobalAveragePooling2D, Masking, LeakyReLU, MaxPool1D
 from keras.models import Model
 from keras.datasets import mnist
 from keras.losses import mse, binary_crossentropy
@@ -179,8 +179,7 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
     def build_network(self):
         input = Input(self.inputShape)
         if len(self.outputUnits) == 1:
-            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False
-                                           , gru=self.gru)(input)
+            layer = TCN(self.outputUnits[0], activation=self.layersActivations[0], return_sequences=False)(input)
         else:
             layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True
                                            , gru=self.gru)(input)
@@ -220,17 +219,18 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
 
 class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
     def __init__(self, input_shape, outputUnits, numOutputNeurons,
-                 layersActivations=None, networkActivation='sigmoid',
-                 loss='categorical_crossentropy', optimizer='adam',gru=False, use_dropout=False, dropout=0.5,
+                 layersActivations=None, networkActivation='sigmoid', pooling=None, kernel_sizes=None,
+                 loss='categorical_crossentropy', optimizer='adam', use_dropout=False, dropout=0.5,
                  metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
         self.inputShape = input_shape
         self.outputUnits = outputUnits
         self.numOutputNeurons = numOutputNeurons
         self.networkActivation = networkActivation
         self.layersActivations = layersActivations
+        self.kernel_sizes = kernel_sizes
         self.loss = loss
+        self.pooling = pooling
         self.optimizer = optimizer
-        self.gru = gru
         self.use_dropout = use_dropout
         self.dropout = dropout
         self.metrics = metrics
@@ -246,22 +246,25 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
     def build_network(self):
         input = Input(self.inputShape)
         if len(self.outputUnits) == 1:
-            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False
-                                           , gru=self.gru)(input)
+            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0], activation=self.layersActivations[0],
+                        return_sequences=False)(input)
         else:
-            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True
-                                           , gru=self.gru)(input)
+            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0], activation=self.layersActivations[0],
+                        return_sequences=True)(input)
+        if self.pooling[0]:
+            layer = MaxPool1D()(layer)
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
-                if self.use_dropout:
-                    dropout = Dropout(self.dropout)(layer)
-                    layer = dropout
                 if i == len(self.outputUnits) - 1:
-                    layer = create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], False
-                                                   , gru=self.gru)(layer)
+                    layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i],
+                                activation=self.layersActivations[i],
+                                return_sequences=False)(input)
                 else:
-                    layer = create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True
-                                                   , gru=self.gru)(layer)
+                    layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i],
+                                activation=self.layersActivations[i],
+                                return_sequences=True)(input)
+                if self.pooling[i]:
+                    layer = MaxPool1D()(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout

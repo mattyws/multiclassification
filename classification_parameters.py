@@ -29,6 +29,12 @@ parameters = {
     "layersActivations": [
         LeakyReLU()
     ],
+    "kernel_sizes": [
+        3
+    ],
+    "pooling" : {
+        False
+    },
     "networkActivation" : "sigmoid",
     "gru": True,
     "tcn": True,

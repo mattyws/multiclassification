@@ -20,7 +20,7 @@ import functions
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator
 from functions import test_model, print_with_time
 from keras_callbacks import Metrics
-from model_creators import MultilayerKerasRecurrentNNCreator
+from model_creators import MultilayerKerasRecurrentNNCreator, MultilayerTemporalConvolutionalNNCreator
 from normalization import Normalization, NormalizationValues
 
 def focal_loss(y_true, y_pred):
@@ -114,12 +114,28 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dataTrainGenerator.create_batches()
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])
         dataTestGenerator.create_batches()
-        modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
-                                                         loss=parameters['loss'], layersActivations=parameters['layersActivations'],
-                                                         networkActivation=parameters['networkActivation'],
-                                                         gru=parameters['gru'], use_dropout=parameters['useDropout'],
-                                                         dropout=parameters['dropout'], kernel_regularizer=None,
-                                                         metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
+
+        if parameters['tcn'] and parameters['gru']:
+            raise Exception("You have to decide wich model to use :)")
+        if not parameters['tcn']:
+            modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
+                                                             loss=parameters['loss'], layersActivations=parameters['layersActivations'],
+                                                             networkActivation=parameters['networkActivation'],
+                                                             gru=parameters['gru'], use_dropout=parameters['useDropout'],
+                                                             dropout=parameters['dropout'], kernel_regularizer=None,
+                                                             metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
+        else:
+            modelCreator = MultilayerTemporalConvolutionalNNCreator(inputShape, parameters['outputUnits'],
+                                                             parameters['numOutputNeurons'],
+                                                             loss=parameters['loss'],
+                                                             layersActivations=parameters['layersActivations'],
+                                                             networkActivation=parameters['networkActivation'],
+                                                             pooling=parameters['pooling'],
+                                                            kernel_sizes= parameters['kernel_sizes'],
+                                                             use_dropout=parameters['useDropout'],
+                                                             dropout=parameters['dropout'], kernel_regularizer=None,
+                                                             metrics=[keras.metrics.binary_accuracy],
+                                                             optimizer=parameters['optimizer'])
         with open(parameters['modelCheckpointPath']+"parameters.pkl", 'wb') as handler:
             pickle.dump(parameters, handler)
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
