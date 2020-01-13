@@ -1,4 +1,6 @@
-{
+from keras.layers import LeakyReLU
+
+parameters = {
     "datasetCsvFilePath": "../mimic/new_dataset_patients.csv",
     "modelCheckpointPath": "../mimic/new_filtered_training/checkpoint_gru/",
     "modelConfigPath": "../mimic/new_filtered_training/checkpoint_gru/config.json",
@@ -25,13 +27,13 @@
     "loss": "binary_crossentropy",
     "optimizer":"adam",
     "layersActivations": [
-        "relu"
+        LeakyReLU()
     ],
     "networkActivation" : "sigmoid",
-    "gru": true,
-    "tcn": false,
-    "useDropout": true,
+    "gru": True,
+    "tcn": True,
+    "useDropout": True,
     "dropout": 0.5,
-    "trainingEpochs": 40,
+    "trainingEpochs": 2,
     "batchSize": 50
 }

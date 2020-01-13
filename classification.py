@@ -13,6 +13,7 @@ import tensorflow as tf
 from keras.regularizers import l1_l2
 
 from sklearn.model_selection._split import StratifiedKFold
+from classification_parameters import parameters
 
 import functions
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator
@@ -31,13 +32,10 @@ def focal_loss(y_true, y_pred):
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
-parametersFilePath = "./classification_parameters.json"
+parametersFilePath = "./classification_parameters.py"
 
 #Loading parameters file
 print("========= Loading Parameters")
-parameters = None
-with open(parametersFilePath, 'r') as parametersFileHandler:
-    parameters = json.load(parametersFileHandler)
 if parameters is None:
     exit(1)
 

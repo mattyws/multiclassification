@@ -65,7 +65,10 @@ class KerasGeneratorAdapter(ModelAdapter):
         # result = self.model.predict(testDocs, batch_size, verbose=0)
         # result = result.argmax(axis=-1)
         # result = self.model.predict_generator(testDocs)
-        result = self.model.predict_classes(testDocs, batch_size, verbose=0)
+        result = self.model.predict_on_batch(testDocs)
+        print(result)
+        exit()
+        # result = result.argmax(axis=-1)
         return result
 
     def predict_one(self, doc):
@@ -85,7 +88,7 @@ class KerasGeneratorAdapter(ModelAdapter):
         self.model.save(filename)
 
     @staticmethod
-    def load_model(self, model_path):
+    def load_model(model_path):
         return KerasGeneratorAdapter(load_model(model_path))
 
     def predict_generator(self, generator):

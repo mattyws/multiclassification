@@ -20,11 +20,9 @@ import adapter
 from adapter import KerasAutoencoderAdapter
 
 
-def create_recurrent_layer(outputUnit, activation, returnSequences, gru=False, tcn=False):
+def create_recurrent_layer(outputUnit, activation, returnSequences, gru=False):
     if gru:
         return GRU(outputUnit, activation=activation, return_sequences=returnSequences)
-    elif tcn:
-        return TCN(outputUnit, activation=activation, return_sequences=returnSequences)
     else:
         return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
 
@@ -156,7 +154,7 @@ class EnsembleModelCreator(ModelCreator):
 class MultilayerKerasRecurrentNNCreator(ModelCreator):
     def __init__(self, input_shape, outputUnits, numOutputNeurons,
                  layersActivations=None, networkActivation='sigmoid',
-                 loss='categorical_crossentropy', optimizer='adam',gru=False, tcn=False, use_dropout=False, dropout=0.5,
+                 loss='categorical_crossentropy', optimizer='adam',gru=False, use_dropout=False, dropout=0.5,
                  metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
         self.inputShape = input_shape
         self.outputUnits = outputUnits
@@ -166,7 +164,6 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         self.loss = loss
         self.optimizer = optimizer
         self.gru = gru
-        self.tcn = tcn
         self.use_dropout = use_dropout
         self.dropout = dropout
         self.metrics = metrics
@@ -182,10 +179,10 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
     def build_network(self):
         input = Input(self.inputShape)
         if len(self.outputUnits) == 1:
-            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False, tcn=self.tcn
+            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False
                                            , gru=self.gru)(input)
         else:
-            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True, tcn=self.tcn
+            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True
                                            , gru=self.gru)(input)
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
@@ -193,10 +190,10 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
                 if i == len(self.outputUnits) - 1:
-                    layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False, tcn=self.tcn
+                    layer = create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], False
                                                    , gru=self.gru)(layer)
                 else:
-                    layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True, tcn=self.tcn
+                    layer = create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True
                                                    , gru=self.gru)(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
