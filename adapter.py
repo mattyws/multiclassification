@@ -67,6 +67,7 @@ class KerasGeneratorAdapter(ModelAdapter):
         # result = self.model.predict_generator(testDocs)
         result = self.model.predict_on_batch(testDocs)
         print(result)
+        print(result.argmax(axis=-1))
         exit()
         # result = result.argmax(axis=-1)
         return result
