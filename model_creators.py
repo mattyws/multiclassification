@@ -20,7 +20,7 @@ import adapter
 from adapter import KerasAutoencoderAdapter
 
 
-def create_recurrent_layer(outputUnit, activation, returnSequences, gru=False):
+def create_recurrent_layer(outputUnit, activation='tanh', returnSequences=None, gru=False):
     if gru:
         return GRU(outputUnit, activation=activation, return_sequences=returnSequences)
     else:
@@ -179,21 +179,24 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
     def build_network(self):
         input = Input(self.inputShape)
         if len(self.outputUnits) == 1:
-            layer = TCN(self.outputUnits[0], activation=self.layersActivations[0], return_sequences=False)(input)
-        else:
-            layer = create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True
+            layer = create_recurrent_layer(self.outputUnits[0], returnSequences=False
                                            , gru=self.gru)(input)
+        else:
+            layer = create_recurrent_layer(self.outputUnits[0], returnSequences=True
+                                           , gru=self.gru)(input)
+        layer = self.layersActivations[0](layer)
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
                 if self.use_dropout:
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
                 if i == len(self.outputUnits) - 1:
-                    layer = create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], False
+                    layer = create_recurrent_layer(self.outputUnits[i], returnSequences=False
                                                    , gru=self.gru)(layer)
                 else:
-                    layer = create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True
+                    layer = create_recurrent_layer(self.outputUnits[i], returnSequences=True
                                                    , gru=self.gru)(layer)
+                layer = self.layersActivations[i](layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
@@ -246,23 +249,23 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
     def build_network(self):
         input = Input(self.inputShape)
         if len(self.outputUnits) == 1:
-            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0], activation=self.layersActivations[0],
+            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0],
                         return_sequences=False)(input)
         else:
-            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0], activation=self.layersActivations[0],
+            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0],
                         return_sequences=True)(input)
+        layer = self.layersActivations[0](layer)
         if self.pooling[0]:
             layer = MaxPool1D()(layer)
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
                 if i == len(self.outputUnits) - 1:
                     layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i],
-                                activation=self.layersActivations[i],
                                 return_sequences=False)(input)
                 else:
                     layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i],
-                                activation=self.layersActivations[i],
                                 return_sequences=True)(input)
+                layer = self.layersActivations[i](layer)
                 if self.pooling[i]:
                     layer = MaxPool1D()(layer)
         if self.use_dropout:
