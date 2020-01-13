@@ -120,7 +120,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                          gru=parameters['gru'], use_dropout=parameters['useDropout'],
                                                          dropout=parameters['dropout'], kernel_regularizer=l1_l2(0.001, 0.001),
                                                          metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
-        with open(parameters['modelCheckpointPath']+"parameters.pkl", 'w') as handler:
+        with open(parameters['modelCheckpointPath']+"parameters.pkl", 'wb') as handler:
             pickle.dump(parameters, handler)
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
         epochs = parameters['trainingEpochs']
