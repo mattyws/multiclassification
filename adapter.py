@@ -67,8 +67,8 @@ class KerasGeneratorAdapter(ModelAdapter):
         # result = self.model.predict_generator(testDocs)
         result = self.model.predict_on_batch(testDocs)
         print(result)
-        print(result.argmax(axis=-1))
-        exit()
+        result = (result < 0.5).astyper(np.int)
+        print(result)
         # result = result.argmax(axis=-1)
         return result
 
@@ -100,6 +100,8 @@ class KerasGeneratorAdapter(ModelAdapter):
             data = generator[i]
             r = self.predict(data[0])
             r = r.flatten()
+            print(data[1], r)
+            exit()
             predicted.extend(r)
             trueClasses.extend(data[1])
         return trueClasses, predicted
