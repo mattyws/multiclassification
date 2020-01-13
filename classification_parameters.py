@@ -33,7 +33,7 @@ parameters = {
     "gru": True,
     "tcn": True,
     "useDropout": True,
-    "dropout": 0.5,
+    "dropout": 0.3,
     "trainingEpochs": 40,
     "batchSize": 50
 }
