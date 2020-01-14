@@ -1,4 +1,5 @@
 import abc
+import copy
 
 import keras
 from keras.layers.convolutional import Conv2D, Conv3D
@@ -184,7 +185,8 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         else:
             layer = create_recurrent_layer(self.outputUnits[0], returnSequences=True
                                            , gru=self.gru)(input)
-        layer = self.layersActivations[0](layer)
+        activation = copy.deepcopy(self.layersActivations[0])
+        layer = activation(layer)
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
                 if self.use_dropout:
@@ -196,7 +198,8 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
                 else:
                     layer = create_recurrent_layer(self.outputUnits[i], returnSequences=True
                                                    , gru=self.gru)(layer)
-                layer = self.layersActivations[i](layer)
+                activation = copy.deepcopy(self.layersActivations[i])
+                layer = activation(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
@@ -254,7 +257,8 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
         else:
             layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0],
                         return_sequences=True)(input)
-        layer = self.layersActivations[0](layer)
+        activation = copy.deepcopy(self.layersActivations[0])
+        layer = activation(layer)
         if self.pooling[0]:
             layer = MaxPool1D()(layer)
         if len(self.outputUnits) > 1:
@@ -265,7 +269,8 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
                 else:
                     layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i],
                                 return_sequences=True)(input)
-                layer = self.layersActivations[i](layer)
+                activation = copy.deepcopy(self.layersActivations[i])
+                layer = activation(layer)
                 if self.pooling[i]:
                     layer = MaxPool1D()(layer)
         if self.use_dropout:
