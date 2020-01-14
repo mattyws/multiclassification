@@ -85,7 +85,7 @@ i = 0
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
     dictWriter = None
     for trainIndex, testIndex in kf.split(data, classes):
-        if config is not None and config['fold'] > i:
+        if os.path.exists(parameters['modelCheckpointPath'] + 'trained_{}.model'.format(i)):
             print("Pass fold {}".format(i))
             i += 1
             continue
