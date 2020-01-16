@@ -227,6 +227,7 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
     def __init__(self, input_shape, outputUnits, numOutputNeurons,
                  layersActivations=None, networkActivation='sigmoid', pooling=None, kernel_sizes=None,
                  loss='categorical_crossentropy', optimizer='adam', use_dropout=False, dropout=0.5,
+                 dilations=[[1, 2, 4]],
                  metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
         self.inputShape = input_shape
         self.outputUnits = outputUnits
@@ -235,6 +236,7 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
         self.layersActivations = layersActivations
         self.kernel_sizes = kernel_sizes
         self.loss = loss
+        self.dilatations = dilations
         self.pooling = pooling
         self.optimizer = optimizer
         self.use_dropout = use_dropout
@@ -252,10 +254,10 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
     def build_network(self):
         input = Input(self.inputShape)
         if len(self.outputUnits) == 1:
-            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0],
+            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0], dilations=self.dilatations[0],
                         return_sequences=False)(input)
         else:
-            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0],
+            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0], dilations=self.dilatations[0],
                         return_sequences=True)(input)
         activation = copy.deepcopy(self.layersActivations[0])
         layer = activation(layer)
@@ -264,10 +266,10 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
                 if i == len(self.outputUnits) - 1:
-                    layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i],
+                    layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i], dilations=self.dilatations[i],
                                 return_sequences=False)(input)
                 else:
-                    layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i],
+                    layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i], dilations=self.dilatations[i],
                                 return_sequences=True)(input)
                 activation = copy.deepcopy(self.layersActivations[i])
                 layer = activation(layer)

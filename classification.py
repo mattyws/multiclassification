@@ -133,6 +133,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                              pooling=parameters['pooling'],
                                                             kernel_sizes= parameters['kernel_sizes'],
                                                              use_dropout=parameters['useDropout'],
+                                                            dilations=parameters['dilations'],
                                                              dropout=parameters['dropout'], kernel_regularizer=None,
                                                              metrics=[keras.metrics.binary_accuracy],
                                                              optimizer=parameters['optimizer'])
