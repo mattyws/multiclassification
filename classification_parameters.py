@@ -2,16 +2,16 @@ from keras.layers import LeakyReLU
 
 parameters = {
     "datasetCsvFilePath": "../mimic/new_dataset_patients.csv",
-    "modelCheckpointPath": "../mimic/new_filtered_training/checkpoint_tcn/",
-    "modelConfigPath": "../mimic/new_filtered_training/checkpoint_tcn/config.json",
+    "modelCheckpointPath": "../mimic/new_filtered_training/checkpoint_tcn_1/",
+    "modelConfigPath": "../mimic/new_filtered_training/checkpoint_tcn_1/config.json",
     "dataPath" : "../mimic/structured_data/",
     "trainingDataPath" :  "../mimic/new_filtered_training/dataTraining/",
     "testingDataPath" : "../mimic/new_filtered_training/dataTest/",
     "datasetFilesFileName": "../mimic/new_filtered_training/datasetFiles.pkl",
     "datasetLabelsFileName": "../mimic/new_filtered_training/datasetLabels.pkl",
-    "trainingGeneratorPath": "../mimic/new_filtered_training/checkpoint_tcn/dataTrainGenerator.pkl",
-    "testingGeneratorPath": "../mimic/new_filtered_training/checkpoint_tcn/dataTestGenerator.pkl",
-    "resultFilePath": "../mimic/new_filtered_training/checkpoint_tcn/result.csv",
+    "trainingGeneratorPath": "../mimic/new_filtered_training/checkpoint_tcn_1/dataTrainGenerator.pkl",
+    "testingGeneratorPath": "../mimic/new_filtered_training/checkpoint_tcn_1/dataTestGenerator.pkl",
+    "resultFilePath": "../mimic/new_filtered_training/checkpoint_tcn_1/result.csv",
     "temporary_data_path" : "../mimic/new_filtered_training/data_tmp_{}/",
     "normalization_data_path": "../mimic/new_filtered_training/normalization_values_{}.pkl",
     "normalization_value_counts_path" : "../mimic/new_filtered_training/value_counts/",
@@ -46,5 +46,8 @@ parameters = {
     ],
     "dilations": [
         [1, 2, 4]
+    ],
+    "nb_stacks": [
+        1
     ]
 }

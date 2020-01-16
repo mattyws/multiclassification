@@ -126,17 +126,18 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                              metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
         else:
             modelCreator = MultilayerTemporalConvolutionalNNCreator(inputShape, parameters['outputUnits'],
-                                                             parameters['numOutputNeurons'],
-                                                             loss=parameters['loss'],
-                                                             layersActivations=parameters['layersActivations'],
-                                                             networkActivation=parameters['networkActivation'],
-                                                             pooling=parameters['pooling'],
-                                                            kernel_sizes= parameters['kernel_sizes'],
-                                                             use_dropout=parameters['useDropout'],
-                                                            dilations=parameters['dilations'],
-                                                             dropout=parameters['dropout'], kernel_regularizer=None,
-                                                             metrics=[keras.metrics.binary_accuracy],
-                                                             optimizer=parameters['optimizer'])
+                                                                parameters['numOutputNeurons'],
+                                                                loss=parameters['loss'],
+                                                                layersActivations=parameters['layersActivations'],
+                                                                networkActivation=parameters['networkActivation'],
+                                                                pooling=parameters['pooling'],
+                                                                kernel_sizes= parameters['kernel_sizes'],
+                                                                use_dropout=parameters['useDropout'],
+                                                                dilations=parameters['dilations'],
+                                                                nb_stacks=parameters['nb_stacks'],
+                                                                dropout=parameters['dropout'], kernel_regularizer=None,
+                                                                metrics=[keras.metrics.binary_accuracy],
+                                                                optimizer=parameters['optimizer'])
         with open(parameters['modelCheckpointPath']+"parameters.pkl", 'wb') as handler:
             pickle.dump(parameters, handler)
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
@@ -153,3 +154,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         dictWriter.writerow(metrics)
         kerasAdapter.save(parameters['modelCheckpointPath'] + 'trained_{}.model'.format(i))
         i += 1
+
+# Evaluating k-fold
+results = pd.read_csv(parameters['resultFilePath'])
+print(results.describe())
