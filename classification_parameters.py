@@ -45,6 +45,6 @@ parameters = {
         False
     },
     "dilations": {
-        [1, 2, 4]
+        tuple([1, 2, 4])
     }
 }
