@@ -41,10 +41,10 @@ parameters = {
     "kernel_sizes": [
         3
     ],
-    "pooling": {
+    "pooling": [
         False
-    },
-    "dilations": {
-        tuple([1, 2, 4])
-    }
+    ],
+    "dilations": [
+        [1, 2, 4]
+    ]
 }
