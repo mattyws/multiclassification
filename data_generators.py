@@ -350,3 +350,17 @@ class MetaLearnerDataGenerator(object):
 
     def __len__(self):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
+
+class NoteeventsTextDataGenerator(object):
+
+    def __init__(self, data_paths, preprocessing_pipeline=None):
+        self.data_paths = data_paths
+        self.preprocessing_pipeline = preprocessing_pipeline
+
+    def __iter__(self):
+        tokenizer = WhitespaceTokenizer()
+        for path in self.data_paths:
+            with open(path, 'r') as handler:
+                for line in handler:
+                    yield tokenizer.tokenize(line)
+        return self
