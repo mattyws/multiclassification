@@ -19,11 +19,12 @@ class TransformClinicalTextsRepresentations(object):
     Changes the representation for patients notes using a word2vec model.
     The patients notes must be into different csv.
     """
-    def __init__(self, word2vec_model, embedding_size=200, window=2, texts_path=None, representation_save_path=None):
+    def __init__(self, word2vec_model, embedding_size=200, text_max_len=None,  window=2, texts_path=None, representation_save_path=None):
         self.word2vec_model = word2vec_model
         self.embedding_size = embedding_size
         self.window = window
         self.texts_path = texts_path
+        self.text_max_len = text_max_len
         self.representation_save_path = representation_save_path
         if not os.path.exists(representation_save_path):
             os.mkdir(representation_save_path)
@@ -36,31 +37,32 @@ class TransformClinicalTextsRepresentations(object):
         :param text: the tokenized text
         :return: the 3 dimensional array representing the content of the tokenized text
         """
-        # x = np.zeros(shape=(len(text), embedding_size), dtype='float')
-        x = []
-        if len(text) < 3:
-            return None
+        x = np.zeros(shape=(self.text_max_len, self.embedding_size), dtype='float')
+        # x = []
+        # if len(text) < 3:
+        #     return None
         for pos, w in enumerate(text):
             try:
-                # x[pos] = word2vec_model.wv[w]
-                x.append(self.word2vec_model.wv[w])
+                x[pos] = self.word2vec_model.wv[w]
+                # x.append(self.word2vec_model.wv[w])
             except:
-                # x[pos] = np.zeros(shape=self.embeddingSize)
-                if pos - self.window < 0:
-                    begin = 0
-                else:
-                    begin = pos - self.window
-                if pos + self.window > len(text):
-                    end = len(text)
-                else:
-                    end = pos + self.window
                 try:
+                    # x[pos] = np.zeros(shape=self.embeddingSize)
+                    if pos - self.window < 0:
+                        begin = 0
+                    else:
+                        begin = pos - self.window
+                    if pos + self.window > len(text):
+                        end = len(text)
+                    else:
+                        end = pos + self.window
                     word = self.word2vec_model.predict_output_word(text[begin:end])[0][0]
-                    # x[pos] = word2vec_model.wv[word]
-                    x.append(self.word2vec_model.wv[word])
+                    x[pos] = self.word2vec_model.wv[word]
+                    # x.append(self.word2vec_model.wv[word])
                 except:
-                    # x[pos] = np.zeros(shape=embedding_size)
-                    x.append(np.zeros(shape=self.embedding_size))
+                    continue
+                    # x[pos] = np.zeros(shape=self.embedding_size)
+                    # x.append(np.zeros(shape=self.embedding_size))
         x = np.array(x)
         return x
 
