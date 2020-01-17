@@ -27,7 +27,8 @@ class TrainEnsembleAdaBoosting():
 
 
 class TrainEnsembleBagging():
-    def __init__(self, data, classes, model_creator, n_estimators=15, batch_size=30):
+
+    def __init__(self, data, classes, model_creator, n_estimators=15, batch_size=50):
         self.data = data
         self.classes = classes
         self.model_creator = model_creator
