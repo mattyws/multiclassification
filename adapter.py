@@ -36,7 +36,7 @@ class ModelAdapter(object, metaclass=abc.ABCMeta):
     def evaluate(self, testDocs, batch_size=10):
         raise NotImplementedError('users must define \'evaluate\' to use this base class')
 
-class KerasGeneratorAdapter(ModelAdapter):
+class KerasAdapter(ModelAdapter):
 
     def __init__(self, model):
         self.model = model
@@ -88,7 +88,7 @@ class KerasGeneratorAdapter(ModelAdapter):
 
     @staticmethod
     def load_model(model_path):
-        return KerasGeneratorAdapter(load_model(model_path))
+        return KerasAdapter(load_model(model_path))
 
     def predict_generator(self, generator):
         predicted = []

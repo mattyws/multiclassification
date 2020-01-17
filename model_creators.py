@@ -66,7 +66,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         if model_summary_filename is not None:
             with open(model_summary_filename, 'w') as summary_file:
                 model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
-        return adapter.KerasGeneratorAdapter(model)
+        return adapter.KerasAdapter(model)
 
     def build_network(self):
         representation_model = Sequential()
@@ -131,7 +131,7 @@ class EnsembleModelCreator(ModelCreator):
         if model_summary_filename is not None:
             with open(model_summary_filename, 'w') as summary_file:
                 model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
-        return adapter.KerasGeneratorAdapter(model)
+        return adapter.KerasAdapter(model)
 
     def build_network(self):
         input = Input(self.input_shape)
@@ -215,12 +215,12 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         if model_summary_filename is not None:
             with open(model_summary_filename, 'w') as summary_file:
                 model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
-        return adapter.KerasGeneratorAdapter(model)
+        return adapter.KerasAdapter(model)
 
     @staticmethod
     def create_from_path(filepath, custom_objects=None):
         model = load_model(filepath, custom_objects=custom_objects)
-        return adapter.KerasGeneratorAdapter(model)
+        return adapter.KerasAdapter(model)
 
 
 class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
@@ -291,12 +291,12 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
         if model_summary_filename is not None:
             with open(model_summary_filename, 'w') as summary_file:
                 model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
-        return adapter.KerasGeneratorAdapter(model)
+        return adapter.KerasAdapter(model)
 
     @staticmethod
     def create_from_path(filepath, custom_objects=None):
         model = load_model(filepath, custom_objects=custom_objects)
-        return adapter.KerasGeneratorAdapter(model)
+        return adapter.KerasAdapter(model)
 
 
 def sampling(args):

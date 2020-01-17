@@ -1,9 +1,12 @@
+import os
+
 from keras.engine.saving import load_model
 from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier
 from sklearn.utils import resample
 
 import functions
+from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator
 from functions import print_with_time
 
@@ -71,6 +74,7 @@ class TrainEnsembleBagging():
     def get_classifiers(self):
         classifiers = []
         for classifier in self.__classifiers:
-            model = load_model(classifier)
+            adapter = KerasAdapter.load_model(classifier)
+            model = adapter.model
             classifiers.append(model)
         return classifiers

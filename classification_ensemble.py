@@ -15,7 +15,7 @@ from keras.regularizers import l1_l2
 from sklearn.model_selection._split import StratifiedKFold
 
 import functions
-from adapter import KerasGeneratorAdapter
+from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator
 from data_representation import EnsembleMetaLearnerDataCreator
 from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging
@@ -27,7 +27,7 @@ from normalization import Normalization, NormalizationValues
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
-parametersFilePath = "./classification_ensemble_parameters.json"
+parametersFilePath = "./classification_ensemble_parameters.py"
 
 #Loading parameters file
 print("========= Loading Parameters")
@@ -107,7 +107,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
         ensemble = TrainEnsembleBagging(normalized_data[trainIndex], classes[trainIndex])
         ensemble.fit(epochs=parameters['level_0_epochs'])
         ### END ADABOOSTING ####
-
+        exit()
         ### START CLUSTERING ENSEMBLE ###
         ### END CLUSTERING ENSEMBLE ###
         print_with_time("Testing level 0 models")
@@ -118,7 +118,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                                                             max_batch_size=parameters['batchSize'])
         data_test_generator.create_batches()
         for level_zero_model in level_zero_models:
-            adpter = KerasGeneratorAdapter.load_model(level_zero_model)
+            adpter = KerasAdapter.load_model(level_zero_model)
 
             metrics = test_model(adpter, data_test_generator, fold)
             if level_zero_dict_writer is None:

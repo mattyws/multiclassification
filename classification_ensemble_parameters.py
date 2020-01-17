@@ -1,4 +1,4 @@
-{
+parameters = {
     "datasetCsvFilePath": "../mimic/dataset_patients.csv",
     "modelCheckpointPath": "../mimic/articles_features_training/checkpoint_1/",
     "modelConfigPath": "../mimic/articles_features_training/checkpoint_1/config.json",
@@ -28,8 +28,8 @@
         "relu"
     ],
     "networkActivation" : "sigmoid",
-    "gru": true,
-    "useDropout": true,
+    "gru": True,
+    "useDropout": True,
     "dropout": 0.5,
     "trainingEpochs": 40,
     "batchSize": 50
