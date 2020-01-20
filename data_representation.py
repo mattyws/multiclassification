@@ -37,14 +37,14 @@ class TransformClinicalTextsRepresentations(object):
         :param text: the tokenized text
         :return: the 3 dimensional array representing the content of the tokenized text
         """
-        x = np.zeros(shape=(self.text_max_len, self.embedding_size), dtype='float')
-        # x = []
+        # x = np.zeros(shape=(self.text_max_len, self.embedding_size), dtype='float')
+        x = []
         # if len(text) < 3:
         #     return None
         for pos, w in enumerate(text):
             try:
-                x[pos] = self.word2vec_model.wv[w]
-                # x.append(self.word2vec_model.wv[w])
+                # x[pos] = self.word2vec_model.wv[w]
+                x.append(self.word2vec_model.wv[w])
             except:
                 try:
                     # x[pos] = np.zeros(shape=self.embeddingSize)
@@ -57,12 +57,12 @@ class TransformClinicalTextsRepresentations(object):
                     else:
                         end = pos + self.window
                     word = self.word2vec_model.predict_output_word(text[begin:end])[0][0]
-                    x[pos] = self.word2vec_model.wv[word]
-                    # x.append(self.word2vec_model.wv[word])
+                    # x[pos] = self.word2vec_model.wv[word]
+                    x.append(self.word2vec_model.wv[word])
                 except:
-                    continue
+                    # continue
                     # x[pos] = np.zeros(shape=self.embedding_size)
-                    # x.append(np.zeros(shape=self.embedding_size))
+                    x.append(np.zeros(shape=self.embedding_size))
         x = np.array(x)
         return x
 
