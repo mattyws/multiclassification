@@ -31,7 +31,7 @@ class TrainEnsembleAdaBoosting():
 
 class TrainEnsembleBagging():
 
-    def __init__(self, data, classes, model_creator, n_estimators=15, batch_size=50):
+    def __init__(self, data, classes, model_creator, n_estimators=10, batch_size=50):
         self.data = data
         self.classes = classes
         self.model_creator = model_creator
@@ -44,7 +44,7 @@ class TrainEnsembleBagging():
         self.__testing_data_samples = []
         self.__testing_classes_samples = []
 
-    def fit(self, epochs=10, saved_model_prefix="bagging_{}.model"):
+    def fit(self, epochs=10, saved_model_path="bagging_{}.model"):
         indexes = [i for i in range(len(self.data))]
         for n in range(self.trained_estimators, self.n_estimators):
             print_with_time("Estimator {} of {}".format(n, self.n_estimators))
@@ -57,8 +57,8 @@ class TrainEnsembleBagging():
             data_train_generator = self.__create_generator(train_samples, train_classes)
             adapter = self.model_creator.create()
             adapter.fit(data_train_generator, epochs=epochs)
-            adapter.save(saved_model_prefix.format(n))
-            self.__classifiers.append(saved_model_prefix.format(n))
+            adapter.save(saved_model_path.format(n))
+            self.__classifiers.append(saved_model_path.format(n))
             self.__training_data_samples.append(train_samples)
             self.__training_classes_samples.append(train_samples)
             self.__testing_data_samples.append(test_samples)
@@ -75,6 +75,5 @@ class TrainEnsembleBagging():
         classifiers = []
         for classifier in self.__classifiers:
             adapter = KerasAdapter.load_model(classifier)
-            model = adapter.model
-            classifiers.append(model)
+            classifiers.append(adapter)
         return classifiers

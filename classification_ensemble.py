@@ -17,25 +17,38 @@ from sklearn.model_selection._split import StratifiedKFold
 import functions
 from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator
-from data_representation import EnsembleMetaLearnerDataCreator
+from data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
 from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging
-from functions import test_model, print_with_time
+from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+    text_to_lower, remove_sepsis_mentions, remove_only_special_characters_tokens, whitespace_tokenize_text, \
+    train_representation_model
 from keras_callbacks import Metrics
-from model_creators import MultilayerKerasRecurrentNNCreator, EnsembleModelCreator
+from model_creators import MultilayerKerasRecurrentNNCreator, EnsembleModelCreator, \
+    MultilayerTemporalConvolutionalNNCreator, NoteeventsClassificationModelCreator
 from normalization import Normalization, NormalizationValues
+# TODO: check sync from dataset lists
+
+def train_level_zero_classifiers(data, classes, model_creator, method="bagging"):
+    if method == "bagging":
+        #### START BAGGING ####
+        ensemble = TrainEnsembleBagging(data, classes,
+                                        model_creator=model_creator)
+        ensemble.fit(epochs=parameters['level_0_epochs'])
+        ### END ADABOOSTING ####
+    elif method == "clustering":
+        ### START CLUSTERING ENSEMBLE ###
+        ensemble = None
+        ### END CLUSTERING ENSEMBLE ###
+    else:
+        raise ValueError("Either bagginng or clustering")
+    return ensemble
+
+def test_level_zero_classifiers
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
-
-parametersFilePath = "./classification_ensemble_parameters.py"
-
-#Loading parameters file
-print("========= Loading Parameters")
-parameters = None
-with open(parametersFilePath, 'r') as parametersFileHandler:
-    parameters = json.load(parametersFileHandler)
-if parameters is None:
-    exit(1)
+from classification_ensemble_parameters import parameters
 
 if not os.path.exists(parameters['modelCheckpointPath']):
     os.mkdir(parameters['modelCheckpointPath'])
@@ -47,85 +60,177 @@ if os.path.exists(parameters['modelConfigPath']):
 
 # Loading csv
 print_with_time("Loading data")
-data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
+data_csv = pd.read_csv(parameters['dataset_csv_file_path'])
 data_csv = data_csv.sort_values(['icustay_id'])
-# Get the values in data_csv that have events saved
-data = np.array([itemid for itemid in list(data_csv['icustay_id'])
-                 if os.path.exists(parameters['dataPath'] + '{}.csv'.format(itemid))])
-data_csv = data_csv[data_csv['icustay_id'].isin(data)]
-data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
+
+# If script is using structured data, do the preparation for it (normalization and get input shape)
+structured_data = None
+normalization_values = None
+if parameters['use_structured_data']:
+    print_with_time("Preparing structured data")
+    structured_data = np.array([itemid for itemid in list(data_csv['icustay_id'])
+                            if os.path.exists(parameters['structured_data_path'] + '{}.csv'.format(itemid))])
+    print_with_time("Preparing normalization values")
+    normalization_values = NormalizationValues(structured_data,
+                                               pickle_object_path=parameters['normalization_value_counts_path'])
+    normalization_values.prepare()
+    # Get input shape
+    aux = pd.read_csv(structured_data[0])
+    if 'Unnamed: 0' in aux.columns:
+        aux = aux.drop(columns=['Unnamed: 0'])
+    if 'chartevents_Unnamed: 0' in aux.columns:
+        aux = aux.drop(columns=['chartevents_Unnamed: 0'])
+    if 'labevents_Unnamed: 0' in aux.columns:
+        aux = aux.drop(columns=['labevents_Unnamed: 0'])
+    if 'starttime' in aux.columns:
+        aux = aux.drop(columns=['starttime'])
+    if 'endtime' in aux.columns:
+        aux = aux.drop(columns=['endtime'])
+    structured_input_shape = (None, len(aux.columns))
+
+# If script is using textual data, do the preparations (train word2vec)
+textual_data = None
+if parameters['use_textual_data']:
+    print_with_time("Preparing textual data")
+    textual_data = np.array([itemid for itemid in list(data_csv['icustay_id'])
+                            if os.path.exists(parameters['textual_data_path'] + '{}.csv'.format(itemid))])
+    word2vec_data = np.array([parameters['notes_word2vec_path'] + '{}.txt'.format(itemid) for itemid in textual_data])
+    embedding_size = parameters['embedding_size']
+    min_count = parameters['min_count']
+    workers = parameters['workers']
+    window = parameters['window']
+    iterations = parameters['iterations']
+    textual_input_shape = (None, None, embedding_size)
+
+    print_with_time("Training/Loading Word2vec")
+    preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
+                              whitespace_tokenize_text, remove_only_special_characters_tokens, remove_sepsis_mentions]
+    word2vec_model = train_representation_model(word2vec_data,
+                                                parameters['word2vec_model_file_name'], min_count,
+                                                embedding_size, workers, window, iterations)
+    print_with_time("Transforming/Retrieving representation")
+    texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
+                                                              window=window, texts_path=parameters['dataPath'],
+                                                              representation_save_path=parameters['word2vec_representation_files_path'],
+                                                              text_max_len=228+224 # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
+                                                              )
+    word2vec_model = None
+    texts_transformer.transform(textual_data, preprocessing_pipeline=preprocessing_pipeline)
+    textual_transformed_data = np.array(texts_transformer.get_new_paths(textual_data))
+
+
+# Using a seed always will get the same data split even if the training stops
 print_with_time("Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
-classes_for_stratified = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
-# Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
-
-print_with_time("Preparing normalization values")
-normalization_values = NormalizationValues(data, pickle_object_path=parameters['normalization_value_counts_path'])
-normalization_values.prepare()
-# Get input shape
-aux = pd.read_csv(data[0])
-if 'Unnamed: 0' in aux.columns:
-    aux = aux.drop(columns=['Unnamed: 0'])
-if 'chartevents_Unnamed: 0' in aux.columns:
-    aux = aux.drop(columns=['chartevents_Unnamed: 0'])
-if 'labevents_Unnamed: 0' in aux.columns:
-    aux = aux.drop(columns=['labevents_Unnamed: 0'])
-if 'starttime' in aux.columns:
-    aux = aux.drop(columns=['starttime'])
-if 'endtime' in aux.columns:
-    aux = aux.drop(columns=['endtime'])
-inputShape = (None, len(aux.columns))
 fold = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
         open(parameters['level_zero_result_file_path']) as level_zero_csv_file_handler: # where the results for each fold are appended
     dictWriter = None
     level_zero_dict_writer = None
-    for trainIndex, testIndex in kf.split(data, classes):
+    for trainIndex, testIndex in kf.split(structured_data, classes):
         if config is not None and config['fold'] > fold:
             print("Pass fold {}".format(fold))
             fold += 1
             continue
         print_with_time("Fold {}".format(fold))
-        print_with_time("Getting values for normalization")
-        values = normalization_values.get_normalization_values(data[trainIndex],
-                                                               saved_file_name=parameters['normalization_data_path'].format(fold))
-        normalizer = Normalization(values, temporary_path=parameters['temporary_data_path'].format(fold))
-        print_with_time("Normalizing fold data")
-        normalizer.normalize_files(data)
-        normalized_data = np.array(normalizer.get_new_paths(data))
 
-        print_with_time("Generating level 0 models")
+        structured_ensemble = None
+        if parameters['use_structured_data']:
+            print_with_time("Getting values for normalization")
+            values = normalization_values.get_normalization_values(structured_data[trainIndex],
+                                                                   saved_file_name=parameters['normalization_data_path'].format(fold))
+            normalizer = Normalization(values, temporary_path=parameters['temporary_data_path'].format(fold))
+            print_with_time("Normalizing fold data")
+            normalizer.normalize_files(structured_data)
+            normalized_data = np.array(normalizer.get_new_paths(structured_data))
+            if not parameters['tcn']:
+                modelCreator = MultilayerKerasRecurrentNNCreator(structured_input_shape, parameters['outputUnits'],
+                                                                 parameters['numOutputNeurons'],
+                                                                 loss=parameters['loss'],
+                                                                 layersActivations=parameters['layersActivations'],
+                                                                 networkActivation=parameters['networkActivation'],
+                                                                 gru=parameters['gru'],
+                                                                 use_dropout=parameters['useDropout'],
+                                                                dropout=parameters['dropout'], kernel_regularizer=None,
+                                                                 metrics=[keras.metrics.binary_accuracy],
+                                                                 optimizer=parameters['optimizer'])
+            else:
+                modelCreator = MultilayerTemporalConvolutionalNNCreator(structured_input_shape, parameters['outputUnits'],
+                                                                        parameters['numOutputNeurons'],
+                                                                        loss=parameters['loss'],
+                                                                        layersActivations=parameters[
+                                                                            'layersActivations'],
+                                                                        networkActivation=parameters[
+                                                                            'networkActivation'],
+                                                                        pooling=parameters['pooling'],
+                                                                        kernel_sizes=parameters['kernel_sizes'],
+                                                                        use_dropout=parameters['useDropout'],
+                                                                        dilations=parameters['dilations'],
+                                                                        nb_stacks=parameters['nb_stacks'],
+                                                                        dropout=parameters['dropout'],
+                                                                        kernel_regularizer=None,
+                                                                        metrics=[keras.metrics.binary_accuracy],
+                                                                        optimizer=parameters['optimizer'])
+            print_with_time("Training level 0 models for structured data")
+            structured_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
+                                                               modelCreator)
 
-        #### START ADABOOSTING ####
-        # ensemble = TrainEnsembleAdaBoosting()
-        # ensemble.fit()
-        ### END ADABOOSTING ####
+            test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
+                                                                        , sizes_filename=parameters[
+                    'testing_events_sizes_file'].format(fold)
+                                                                        , classes_filename=parameters[
+                    'testing_events_sizes_labels_file'].format(fold))
+            dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
+                                                                max_batch_size=parameters['batchSize'])
+            dataTestGenerator.create_batches()
+            print_with_time("Testing level 0 models for structured data")
+            level_zero_models = structured_ensemble.get_classifiers()
+            for model in level_zero_models:
+                metrics = test_model(model, dataTestGenerator, fold)
+                metrics['data_type'] = "structured"
+                if level_zero_dict_writer is None:
+                    level_zero_dict_writer = csv.DictWriter(level_zero_csv_file_handler, metrics.keys())
+                if fold == 0:
+                    level_zero_dict_writer.writeheader()
+                level_zero_dict_writer.writerow(metrics)
 
-        #### START BAGGING ####
-        ensemble = TrainEnsembleBagging(normalized_data[trainIndex], classes[trainIndex])
-        ensemble.fit(epochs=parameters['level_0_epochs'])
-        ### END ADABOOSTING ####
-        exit()
-        ### START CLUSTERING ENSEMBLE ###
-        ### END CLUSTERING ENSEMBLE ###
-        print_with_time("Testing level 0 models")
-        level_zero_models = ensemble.get_classifiers()
-        #TODO: test classifiers on testing fold
-        test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex])
-        data_test_generator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
-                                                            max_batch_size=parameters['batchSize'])
-        data_test_generator.create_batches()
-        for level_zero_model in level_zero_models:
-            adpter = KerasAdapter.load_model(level_zero_model)
 
-            metrics = test_model(adpter, data_test_generator, fold)
-            if level_zero_dict_writer is None:
-                level_zero_dict_writer = csv.DictWriter(level_zero_csv_file_handler, metrics.keys())
-            if fold == 0 :
-                level_zero_dict_writer.writeheader()
-            level_zero_dict_writer.writerow(metrics)
+        if parameters['use_textual_data']:
+            #TODO: finish him
+            modelCreator = NoteeventsClassificationModelCreator(textual_input_shape, parameters['outputUnits'],
+                                                                parameters['numOutputNeurons'],
+                                                                embedding_size=parameters['embedding_size'],
+                                                                optimizer=parameters['optimizer'],
+                                                                loss=parameters['loss'],
+                                                                layersActivations=parameters['layersActivations'],
+                                                                gru=parameters['gru'],
+                                                                use_dropout=parameters['useDropout'],
+                                                                dropout=parameters['dropout'],
+                                                                networkActivation=parameters['networkActivation'],
+                                                                metrics=[keras.metrics.binary_accuracy])
+            print_with_time("Training level 0 models for textual data")
+            textual_ensemble = train_level_zero_classifiers(textual_data[trainIndex], classes[trainIndex],
+                                                               modelCreator)
+            test_sizes, test_labels = functions.divide_by_events_lenght(textual_data[testIndex], classes[testIndex]
+                                                                        , sizes_filename=parameters[
+                    'testing_events_sizes_file'].format(fold)
+                                                                        , classes_filename=parameters[
+                    'testing_events_sizes_labels_file'].format(fold))
+            dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
+                                                                max_batch_size=parameters['batchSize'])
+            dataTestGenerator.create_batches()
+            print_with_time("Testing level 0 models for textual data")
+            level_zero_models = textual_ensemble.get_classifiers()
+            for model in level_zero_models:
+                metrics = test_model(model, dataTestGenerator, fold)
+                metrics['data_type'] = "textual"
+                if level_zero_dict_writer is None:
+                    level_zero_dict_writer = csv.DictWriter(level_zero_csv_file_handler, metrics.keys())
+                if fold == 0:
+                    level_zero_dict_writer.writeheader()
+                level_zero_dict_writer.writerow(metrics)
 
 
 
@@ -148,12 +253,12 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                                                                 batchSize=parameters['meta_learner_batch_size'])
 
 
-        modelCreator = EnsembleModelCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
-                                                         loss=parameters['loss'], layers_activation=parameters['layersActivations'],
-                                                         network_activation=parameters['networkActivation'],
-                                                         use_dropout=parameters['useDropout'],
-                                                         dropout=parameters['dropout'],
-                                                         metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
+        modelCreator = EnsembleModelCreator(structured_input_shape, parameters['outputUnits'], parameters['numOutputNeurons'],
+                                            loss=parameters['loss'], layers_activation=parameters['layersActivations'],
+                                            network_activation=parameters['networkActivation'],
+                                            use_dropout=parameters['useDropout'],
+                                            dropout=parameters['dropout'],
+                                            metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
         with open(parameters['modelCheckpointPath']+"parameters.json", 'w') as handler:
             json.dump(parameters, handler)
         kerasAdapter = modelCreator.create()

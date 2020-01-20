@@ -21,6 +21,10 @@ from nltk import WhitespaceTokenizer
 from sklearn.metrics.classification import f1_score, precision_score, recall_score, cohen_kappa_score, accuracy_score, \
     confusion_matrix, classification_report
 from sklearn.metrics.ranking import roc_auc_score
+
+from adapter import Word2VecTrainer, Doc2VecTrainer
+from data_generators import NoteeventsTextDataGenerator
+
 DATE_PATTERN = "%Y-%m-%d"
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
@@ -36,6 +40,26 @@ def chunk_lst(data, SIZE=10000):
     for i in range(0, len(data), SIZE):
         yield [k for k in islice(it, SIZE)]
 
+
+def train_representation_model(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None,
+                               preprocessing_pipeline=None, word2vec=True):
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    if noteevents_iterator is None:
+        noteevents_iterator = NoteeventsTextDataGenerator(files_paths, preprocessing_pipeline=preprocessing_pipeline)
+    # for noteevent in noteevents_iterator:
+    #     print(noteevent)
+    #     exit()
+    if word2vec:
+        model_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
+    else:
+        model_trainer = Doc2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
+    if os.path.exists(saved_model_path):
+        model = model_trainer.load_model(saved_model_path)
+        return model
+    else:
+        model_trainer.train(noteevents_iterator)
+        model_trainer.save(saved_model_path)
+        return model_trainer.model
 
 def filter_events_before_infection(events, admittime, infection_time, preceding_time,
                                    datetime_pattern=DATETIME_PATTERN, time_key="charttime"):

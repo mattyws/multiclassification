@@ -19,12 +19,11 @@ from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataG
 from data_representation import TransformClinicalTextsRepresentations
 from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, tokenize_text, remove_only_special_characters_tokens, whitespace_tokenize_text, \
-    divide_by_events_lenght, remove_sepsis_mentions
+    divide_by_events_lenght, remove_sepsis_mentions, train_representation_model
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-
 def sync_data_classes(data, classes):
     new_dataset = []
     new_classes = []
@@ -33,27 +32,6 @@ def sync_data_classes(data, classes):
             new_dataset.append(d)
             new_classes.append(c)
     return np.array(new_dataset), np.array(new_classes)
-
-
-def train_representation_model(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None,
-                               preprocessing_pipeline=None, word2vec=True):
-    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-    if noteevents_iterator is None:
-        noteevents_iterator = NoteeventsTextDataGenerator(files_paths, preprocessing_pipeline=preprocessing_pipeline)
-    # for noteevent in noteevents_iterator:
-    #     print(noteevent)
-    #     exit()
-    if word2vec:
-        model_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
-    else:
-        model_trainer = Doc2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
-    if os.path.exists(saved_model_path):
-        model = model_trainer.load_model(saved_model_path)
-        return model
-    else:
-        model_trainer.train(noteevents_iterator)
-        model_trainer.save(saved_model_path)
-        return model_trainer.model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
