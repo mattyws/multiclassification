@@ -120,8 +120,8 @@ class TransformClinicalTextsRepresentations(object):
                 self.new_paths.update(r)
 
     def pad_sequence(self, value, pad_max_len):
-        if len(value) < 3:
-            return None
+        # if len(value) < 3:
+        #     return None
         if len(value) >= pad_max_len:
             return value[:pad_max_len]
         else:
