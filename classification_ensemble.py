@@ -43,9 +43,6 @@ def train_level_zero_classifiers(data, classes, model_creator, method="bagging")
         raise ValueError("Either bagginng or clustering")
     return ensemble
 
-def test_level_zero_classifiers
-
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 from classification_ensemble_parameters import parameters
@@ -111,12 +108,18 @@ if parameters['use_textual_data']:
     print_with_time("Transforming/Retrieving representation")
     texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
                                                               window=window, texts_path=parameters['dataPath'],
-                                                              representation_save_path=parameters['word2vec_representation_files_path'],
+                                                              representation_save_path=parameters['textual_representation_data_path'],
                                                               text_max_len=228+224 # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
                                                               )
     word2vec_model = None
     texts_transformer.transform(textual_data, preprocessing_pipeline=preprocessing_pipeline)
     textual_transformed_data = np.array(texts_transformer.get_new_paths(textual_data))
+    # IN CASE THAT YOU ALREADY HAVE THE REPRESENTATIONS CREATED
+    print_with_time("Padding/Retrieving sequences")
+    # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
+    texts_transformer.pad_new_representation(textual_transformed_data, 228 + 224,
+                                             pad_data_path=parameters['textual_padded_representation_data_path'])
+    textual_transformed_data = np.array(texts_transformer.get_new_paths(textual_transformed_data))
 
 
 # Using a seed always will get the same data split even if the training stops
@@ -140,8 +143,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
         if parameters['use_structured_data']:
             print_with_time("Getting values for normalization")
             values = normalization_values.get_normalization_values(structured_data[trainIndex],
-                                                                   saved_file_name=parameters['normalization_data_path'].format(fold))
-            normalizer = Normalization(values, temporary_path=parameters['temporary_data_path'].format(fold))
+                                                                   saved_file_name=parameters['normalized_data_path'].format(fold))
+            normalizer = Normalization(values, temporary_path=parameters['normalized_structured_data_path'].format(fold))
             print_with_time("Normalizing fold data")
             normalizer.normalize_files(structured_data)
             normalized_data = np.array(normalizer.get_new_paths(structured_data))
@@ -186,8 +189,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                                                                 max_batch_size=parameters['batchSize'])
             dataTestGenerator.create_batches()
             print_with_time("Testing level 0 models for structured data")
-            level_zero_models = structured_ensemble.get_classifiers()
-            for model in level_zero_models:
+            structured_level_zero_models = structured_ensemble.get_classifiers()
+            for model in structured_level_zero_models:
                 metrics = test_model(model, dataTestGenerator, fold)
                 metrics['data_type'] = "structured"
                 if level_zero_dict_writer is None:
@@ -198,7 +201,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
 
 
         if parameters['use_textual_data']:
-            #TODO: finish him
             modelCreator = NoteeventsClassificationModelCreator(textual_input_shape, parameters['outputUnits'],
                                                                 parameters['numOutputNeurons'],
                                                                 embedding_size=parameters['embedding_size'],
@@ -211,7 +213,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                                                                 networkActivation=parameters['networkActivation'],
                                                                 metrics=[keras.metrics.binary_accuracy])
             print_with_time("Training level 0 models for textual data")
-            textual_ensemble = train_level_zero_classifiers(textual_data[trainIndex], classes[trainIndex],
+            textual_ensemble = train_level_zero_classifiers(textual_transformed_data[trainIndex], classes[trainIndex],
                                                                modelCreator)
             test_sizes, test_labels = functions.divide_by_events_lenght(textual_data[testIndex], classes[testIndex]
                                                                         , sizes_filename=parameters[
@@ -222,8 +224,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                                                                 max_batch_size=parameters['batchSize'])
             dataTestGenerator.create_batches()
             print_with_time("Testing level 0 models for textual data")
-            level_zero_models = textual_ensemble.get_classifiers()
-            for model in level_zero_models:
+            textual_level_zero_models = textual_ensemble.get_classifiers()
+            for model in textual_level_zero_models:
                 metrics = test_model(model, dataTestGenerator, fold)
                 metrics['data_type'] = "textual"
                 if level_zero_dict_writer is None:
@@ -233,16 +235,37 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                 level_zero_dict_writer.writerow(metrics)
 
 
+        print_with_time("Preparing data to change their representation")
+        if parameters['use_structured_data'] and parameters['use_textual_data']:
+            meta_data = [ (parameters['normalized_data_path'] + itemid + '.csv',
+                           parameters['textual_padded_representation_data_path'] + itemid + '.pkl')  for itemid in data_csv['icustay_id'] ]
+            level_zero_models = []
+            for model in structured_level_zero_models:
+                level_zero_models.append((model, 0))
+            for model in textual_level_zero_models:
+                level_zero_models.append((model, 1))
+        elif parameters['use_structured_data']:
+            meta_data = normalized_data
+            level_zero_models = structured_level_zero_models
+        elif parameters['use_textual_data']:
+            meta_data = textual_transformed_data
+            level_zero_models = textual_level_zero_models
 
-
+        print_with_time("Get model from adapters")
+        aux_level_zero_models = []
+        for adapter in level_zero_models:
+            if isinstance(adapter, tuple):
+                aux_level_zero_models.append((adapter[0].model, adapter[1]))
+            else:
+                aux_level_zero_models.append(adapter.model)
 
 
         print_with_time("Creating meta model data")
 
         meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
-        meta_data_creator.create_meta_learner_data(normalized_data, parameters['meta_representation_path'])
+        meta_data_creator.create_meta_learner_data(meta_data, parameters['meta_representation_path'])
 
-        meta_data = meta_data_creator.get_new_paths(normalized_data)
+        meta_data = meta_data_creator.get_new_paths(meta_data)
 
 
         print_with_time("Creating meta data generators")
@@ -252,8 +275,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
         testing_meta_data_generator = MetaLearnerDataGenerator(meta_data[testIndex], classes[testIndex],
                                                                 batchSize=parameters['meta_learner_batch_size'])
 
-
-        modelCreator = EnsembleModelCreator(structured_input_shape, parameters['outputUnits'], parameters['numOutputNeurons'],
+        meta_data_input_shape = (meta_data_creator.representation_length)
+        modelCreator = EnsembleModelCreator(meta_data_input_shape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                             loss=parameters['loss'], layers_activation=parameters['layersActivations'],
                                             network_activation=parameters['networkActivation'],
                                             use_dropout=parameters['useDropout'],

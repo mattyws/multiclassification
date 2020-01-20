@@ -10,6 +10,17 @@ from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator
 from functions import print_with_time
 
+def split_classes(classes):
+    positive_indexes = []
+    negative_indexes = []
+    for index in range(len(classes)):
+        if classes[index] == 0:
+            negative_indexes.append(index)
+        else:
+            positive_indexes.append(index)
+    return positive_indexes, negative_indexes
+
+
 
 class TrainEnsembleAdaBoosting():
     def __init__(self, data, classes, model_build_fn, epochs=100, batch_size=10, verbose=0, n_estimators=15):
@@ -41,19 +52,17 @@ class TrainEnsembleBagging():
         self.__classifiers = []
         self.__training_data_samples = []
         self.__training_classes_samples = []
-        self.__testing_data_samples = []
-        self.__testing_classes_samples = []
+        self.__positive_indexes, self.negative_indexes = split_classes(self.classes)
+
 
     def fit(self, epochs=10, saved_model_path="bagging_{}.model"):
-        indexes = [i for i in range(len(self.data))]
+        indexes = self.negative_indexes
         for n in range(self.trained_estimators, self.n_estimators):
             print_with_time("Estimator {} of {}".format(n, self.n_estimators))
             train_indexes = resample(indexes, replace=True, n_samples=int(len(self.data) * .4))
-            test_indexes = [i for i in indexes if i not in train_indexes]
+            train_indexes.extend(self.__positive_indexes)
             train_samples = self.data[train_indexes]
             train_classes = self.classes[train_indexes]
-            test_samples = self.data[test_indexes]
-            test_classes = self.classes[test_indexes]
             data_train_generator = self.__create_generator(train_samples, train_classes)
             adapter = self.model_creator.create()
             adapter.fit(data_train_generator, epochs=epochs)
@@ -61,8 +70,6 @@ class TrainEnsembleBagging():
             self.__classifiers.append(saved_model_path.format(n))
             self.__training_data_samples.append(train_samples)
             self.__training_classes_samples.append(train_samples)
-            self.__testing_data_samples.append(test_samples)
-            self.__testing_classes_samples.append(test_classes)
             self.trained_estimators += 1
 
     def __create_generator(self, data, classes):

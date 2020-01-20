@@ -289,10 +289,13 @@ class EnsembleMetaLearnerDataCreator():
         """
         new_paths = dict()
         for path in dataset:
-            filename = path.split('/')[-1]
+            if isinstance(path, tuple):
+                icustayid = os.path.splitext(path[0].split('/')[-1])[0]
+            else:
+                icustayid = os.path.splitext(path.split('/')[-1])[0]
             if manager_queue is not None:
                 manager_queue.put(path)
-            transformed_doc_path = new_representation_path + os.path.splitext(filename)[0] + '.pkl'
+            transformed_doc_path = new_representation_path + icustayid + '.pkl'
             if os.path.exists(transformed_doc_path):
                 new_paths[path] = transformed_doc_path
                 continue
@@ -302,7 +305,7 @@ class EnsembleMetaLearnerDataCreator():
                 self.representation_length = len(new_representation)
             with open(transformed_doc_path, 'wb') as fhandler:
                 pickle.dump(new_representation, fhandler)
-            new_paths[path] = transformed_doc_path
+            new_paths[icustayid] = transformed_doc_path
         return new_paths
 
     def __load_data(self, path):
@@ -347,11 +350,16 @@ class EnsembleMetaLearnerDataCreator():
         self.weak_classifiers = new_weak_classifiers
 
     def get_new_paths(self, files_list):
+        # TODO: considerar os tipos de dados
         if self.new_paths is not None and len(self.new_paths.keys()) != 0:
             new_list = []
             for file in files_list:
-                if file in self.new_paths.keys():
-                    new_list.append(self.new_paths[file])
+                if isinstance(file, tuple):
+                    icustayid = os.path.splitext(file[0].split('/')[-1])[0]
+                else:
+                    icustayid = os.path.splitext(file.split('/')[-1])[0]
+                if icustayid in self.new_paths.keys():
+                    new_list.append(self.new_paths[icustayid])
             return new_list
         else:
             raise Exception("Data not transformed!")
