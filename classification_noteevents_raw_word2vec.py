@@ -93,12 +93,12 @@ texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
 normalized_data = np.array(texts_transformer.get_new_paths(data))
 normalized_data, classes = sync_data_classes(normalized_data, classes)
 # IN CASE THAT YOU ALREADY HAVE THE REPRESENTATIONS CREATED
-# print_with_time("Padding/Retrieving sequences")
-# # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
-# texts_transformer.pad_new_representation(normalized_data, 228+224,
-#                                          pad_data_path=parameters['word2vec_padded_representation_files_path'])
-# normalized_data = np.array(texts_transformer.get_new_paths(normalized_data))
-# normalized_data, classes = sync_data_classes(normalized_data, classes)
+print_with_time("Padding/Retrieving sequences")
+# Valores com base na média + desvio padrão do tamanho dos textos já pre processados
+texts_transformer.pad_new_representation(normalized_data, 228+224,
+                                         pad_data_path=parameters['word2vec_padded_representation_files_path'])
+normalized_data = np.array(texts_transformer.get_new_paths(normalized_data))
+normalized_data, classes = sync_data_classes(normalized_data, classes)
 i = 0
 # ====================== Script that start training new models
 with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
