@@ -47,17 +47,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 from classification_ensemble_parameters import parameters
 
-if not os.path.exists(parameters['modelCheckpointPath']):
-    os.mkdir(parameters['modelCheckpointPath'])
+if not os.path.exists(parameters['training_directory_path']):
+    os.mkdir(parameters['training_directory_path'])
 
-config = None
-if os.path.exists(parameters['modelConfigPath']):
-    with open(parameters['modelConfigPath'], 'r') as configHandler:
-        config = json.load(configHandler)
+if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint']):
+    os.mkdir(parameters['training_directory_path'] + parameters['checkpoint'])
 
 # Loading csv
 print_with_time("Loading data")
-data_csv = pd.read_csv(parameters['dataset_csv_file_path'])
+data_csv = pd.read_csv(parameters['training_directory_path'] + parameters['dataset_csv_file_path'])
 data_csv = data_csv.sort_values(['icustay_id'])
 
 # If script is using structured data, do the preparation for it (normalization and get input shape)
@@ -69,7 +67,8 @@ if parameters['use_structured_data']:
                             if os.path.exists(parameters['structured_data_path'] + '{}.csv'.format(itemid))])
     print_with_time("Preparing normalization values")
     normalization_values = NormalizationValues(structured_data,
-                                               pickle_object_path=parameters['normalization_value_counts_path'])
+                                               pickle_object_path=parameters['training_directory_path']
+                                                                  + parameters['normalization_value_counts_dir'])
     normalization_values.prepare()
     # Get input shape
     aux = pd.read_csv(structured_data[0])
@@ -103,13 +102,15 @@ if parameters['use_textual_data']:
     preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
                               whitespace_tokenize_text, remove_only_special_characters_tokens, remove_sepsis_mentions]
     word2vec_model = train_representation_model(word2vec_data,
-                                                parameters['word2vec_model_file_name'], min_count,
+                                                parameters['training_directory_path'] +
+                                                parameters['word2vec_model_file_name'],
+                                                min_count,
                                                 embedding_size, workers, window, iterations)
     print_with_time("Transforming/Retrieving representation")
     texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
-                                                              window=window, texts_path=parameters['dataPath'],
-                                                              representation_save_path=parameters['textual_representation_data_path'],
-                                                              text_max_len=228+224 # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
+                                                              window=window, texts_path=parameters['textual_data_path'],
+                                                              representation_save_path=parameters['training_directory_path']
+                                                                                       + parameters['word2vec_representation_data_path']
                                                               )
     word2vec_model = None
     texts_transformer.transform(textual_data, preprocessing_pipeline=preprocessing_pipeline)
@@ -118,7 +119,8 @@ if parameters['use_textual_data']:
     print_with_time("Padding/Retrieving sequences")
     # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
     texts_transformer.pad_new_representation(textual_transformed_data, 228 + 224,
-                                             pad_data_path=parameters['textual_padded_representation_data_path'])
+                                             pad_data_path=parameters['training_directory_path'] +
+                                                           parameters['word2vec_padded_representation_files_path'])
     textual_transformed_data = np.array(texts_transformer.get_new_paths(textual_transformed_data))
 
 
@@ -133,7 +135,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
     dictWriter = None
     level_zero_dict_writer = None
     for trainIndex, testIndex in kf.split(structured_data, classes):
-        if config is not None and config['fold'] > fold:
+        # TODO: check if fold model is saved
+        if os.path.exists(parameters['training_directory_path'] + parameters['checkpoint'] + parameters['meta_model_file_name'].format(fold)):
             print("Pass fold {}".format(fold))
             fold += 1
             continue
@@ -143,50 +146,52 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
         if parameters['use_structured_data']:
             print_with_time("Getting values for normalization")
             values = normalization_values.get_normalization_values(structured_data[trainIndex],
-                                                                   saved_file_name=parameters['normalized_data_path'].format(fold))
-            normalizer = Normalization(values, temporary_path=parameters['normalized_structured_data_path'].format(fold))
+                                                                   saved_file_name=parameters['training_directory_path']
+                                                                                   + parameters['normalization_data_path'].format(fold))
+            normalizer = Normalization(values, temporary_path=parameters['training_directory_path']
+                                                              + parameters['normalized_structured_data_path'].format(fold))
             print_with_time("Normalizing fold data")
             normalizer.normalize_files(structured_data)
             normalized_data = np.array(normalizer.get_new_paths(structured_data))
-            if not parameters['tcn']:
-                modelCreator = MultilayerKerasRecurrentNNCreator(structured_input_shape, parameters['outputUnits'],
-                                                                 parameters['numOutputNeurons'],
-                                                                 loss=parameters['loss'],
-                                                                 layersActivations=parameters['layersActivations'],
-                                                                 networkActivation=parameters['networkActivation'],
-                                                                 gru=parameters['gru'],
-                                                                 use_dropout=parameters['useDropout'],
-                                                                dropout=parameters['dropout'], kernel_regularizer=None,
+            if not parameters['structured_tcn']:
+                modelCreator = MultilayerKerasRecurrentNNCreator(structured_input_shape, parameters['structured_output_units'],
+                                                                 parameters['structured_output_neurons'],
+                                                                 loss=parameters['structured_loss'],
+                                                                 layersActivations=parameters['structured_layers_activations'],
+                                                                 networkActivation=parameters['structured_network_activation'],
+                                                                 gru=parameters['structured_gru'],
+                                                                 use_dropout=parameters['structured_use_dropout'],
+                                                                dropout=parameters['structured_dropout'], kernel_regularizer=None,
                                                                  metrics=[keras.metrics.binary_accuracy],
-                                                                 optimizer=parameters['optimizer'])
+                                                                 optimizer=parameters['structured_optimizer'])
             else:
-                modelCreator = MultilayerTemporalConvolutionalNNCreator(structured_input_shape, parameters['outputUnits'],
-                                                                        parameters['numOutputNeurons'],
-                                                                        loss=parameters['loss'],
+                modelCreator = MultilayerTemporalConvolutionalNNCreator(structured_input_shape, parameters['structured_output_units'],
+                                                                        parameters['structured_output_neurons'],
+                                                                        loss=parameters['structured_loss'],
                                                                         layersActivations=parameters[
-                                                                            'layersActivations'],
+                                                                            'structured_layers_activations'],
                                                                         networkActivation=parameters[
-                                                                            'networkActivation'],
-                                                                        pooling=parameters['pooling'],
-                                                                        kernel_sizes=parameters['kernel_sizes'],
-                                                                        use_dropout=parameters['useDropout'],
-                                                                        dilations=parameters['dilations'],
-                                                                        nb_stacks=parameters['nb_stacks'],
-                                                                        dropout=parameters['dropout'],
+                                                                            'structured_network_activation'],
+                                                                        pooling=parameters['structured_pooling'],
+                                                                        kernel_sizes=parameters['structured_kernel_sizes'],
+                                                                        use_dropout=parameters['structured_use_dropout'],
+                                                                        dilations=parameters['structured_dilations'],
+                                                                        nb_stacks=parameters['structured_nb_stacks'],
+                                                                        dropout=parameters['structured_dropout'],
                                                                         kernel_regularizer=None,
                                                                         metrics=[keras.metrics.binary_accuracy],
-                                                                        optimizer=parameters['optimizer'])
+                                                                        optimizer=parameters['structured_optimizer'])
             print_with_time("Training level 0 models for structured data")
             structured_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
                                                                modelCreator)
 
-            test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
-                                                                        , sizes_filename=parameters[
-                    'testing_events_sizes_file'].format(fold)
-                                                                        , classes_filename=parameters[
-                    'testing_events_sizes_labels_file'].format(fold))
+            test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex],
+                                                                        sizes_filename= parameters['training_directory_path'] +
+                                                                            parameters['testing_events_sizes_file'].format(fold)
+                                                                        , classes_filename=parameters['training_directory_path'] +
+                                                                                           parameters['testing_events_sizes_labels_file'].format(fold))
             dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
-                                                                max_batch_size=parameters['batchSize'])
+                                                                max_batch_size=parameters['structured_batch_size'])
             dataTestGenerator.create_batches()
             print_with_time("Testing level 0 models for structured data")
             structured_level_zero_models = structured_ensemble.get_classifiers()
