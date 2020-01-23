@@ -28,12 +28,15 @@ from model_creators import MultilayerKerasRecurrentNNCreator, EnsembleModelCreat
 from normalization import Normalization, NormalizationValues
 # TODO: check sync from dataset lists
 
-def train_level_zero_classifiers(data, classes, model_creator, method="bagging"):
+def train_level_zero_classifiers(data, classes, model_creator, training_data_samples=None, training_classes_samples=None,
+                                 level_zero_epochs=20, n_estimators=10, batch_size=30, method="bagging",
+                                 saved_model_path="level_zero_model_{}.model"):
     if method == "bagging":
         #### START BAGGING ####
-        ensemble = TrainEnsembleBagging(data, classes,
-                                        model_creator=model_creator)
-        ensemble.fit(epochs=parameters['level_0_epochs'])
+        ensemble = TrainEnsembleBagging()
+        ensemble.fit(data, classes, model_creator, training_data_samples=training_data_samples,
+                     training_classes_samples=training_classes_samples, epochs=level_zero_epochs,
+                     batch_size=batch_size, n_estimators=n_estimators, saved_model_path=saved_model_path)
         ### END ADABOOSTING ####
     elif method == "clustering":
         ### START CLUSTERING ENSEMBLE ###
@@ -135,7 +138,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
     dictWriter = None
     level_zero_dict_writer = None
     for trainIndex, testIndex in kf.split(structured_data, classes):
-        # TODO: check if fold model is saved
         if os.path.exists(parameters['training_directory_path'] + parameters['checkpoint'] + parameters['meta_model_file_name'].format(fold)):
             print("Pass fold {}".format(fold))
             fold += 1
@@ -182,8 +184,15 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                                                                         metrics=[keras.metrics.binary_accuracy],
                                                                         optimizer=parameters['structured_optimizer'])
             print_with_time("Training level 0 models for structured data")
+            level_zero_models_saving_path = parameters['training_directory_path'] + parameters['ensenble_models_path'].format(fold)
+            if not os.path.exists(level_zero_models_saving_path):
+                os.mkdir(level_zero_models_saving_path)
             structured_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
-                                                               modelCreator)
+                                                               modelCreator, level_zero_epochs=parameters['structured_training_epochs'],
+                                                               n_estimators=parameters['structured_n_estimators'],
+                                                               batch_size=parameters['structured_batch_size'],
+                                                               saved_model_path=level_zero_models_saving_path +
+                                                                                parameters['structured_ensemble_models_name_prefix'])
 
             test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex],
                                                                         sizes_filename= parameters['training_directory_path'] +
@@ -218,8 +227,23 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                                                                 networkActivation=parameters['textual_network_activation'],
                                                                 metrics=[keras.metrics.binary_accuracy])
             print_with_time("Training level 0 models for textual data")
-            textual_ensemble = train_level_zero_classifiers(textual_transformed_data[trainIndex], classes[trainIndex],
-                                                               modelCreator)
+            training_data_samples = None
+            training_classes_samples = None,
+            if parameters['use_structured_data']:
+                # TODO: change the path to the structured data path
+                training_data_samples = structured_ensemble.training_data_samples
+                training_classes_samples = structured_ensemble.training_classes_samples
+            level_zero_models_saving_path = parameters['training_directory_path'] \
+                                            + parameters['ensenble_models_path'].format(fold)
+            if not os.path.exists(level_zero_models_saving_path):
+                os.mkdir(level_zero_models_saving_path)
+            textual_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
+                                                               modelCreator, level_zero_epochs=parameters['textual_training_epochs'],
+                                                               n_estimators=parameters['textual_n_estimators'],
+                                                               batch_size=parameters['textual_batch_size'],
+                                                               saved_model_path=level_zero_models_saving_path
+                                                                                + parameters['textual_ensemble_models_name_prefix'],
+                                                            training_data_samples=training_data_samples, training_classes_samples=training_classes_samples)
             test_sizes, test_labels = functions.divide_by_events_lenght(textual_data[testIndex], classes[testIndex]
                                                                         , sizes_filename=parameters['training_directory_path'] +
                                                                                          parameters['textual_testing_events_sizes_file'].format(fold)
@@ -239,7 +263,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                     level_zero_dict_writer.writeheader()
                 level_zero_dict_writer.writerow(metrics)
 
-
+        # TODO: prepare to train with multiple size of models
         print_with_time("Preparing data to change their representation")
         if parameters['use_structured_data'] and parameters['use_textual_data']:
             meta_data = [ (parameters['normalized_data_path'] + itemid + '.csv',

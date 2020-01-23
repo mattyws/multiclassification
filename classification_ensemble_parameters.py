@@ -1,6 +1,7 @@
 parameters = {
     "training_directory_path" : "../mimic/ensemble_training/",
     "dataset_csv_file_path": "../mimic/new_dataset_patients.csv",
+    "ensemble_training_method" : "bagging",
     "use_structured_data" : True,
     "use_textual_data": False,
 
@@ -19,6 +20,7 @@ parameters = {
     "checkpoint" : "checkpoint_only_structured/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
+    "textual_ensemble_models_name_prefix" : "textual_bagging_level_zero_{}.model",
 
     "training_config_file_name" : "config.pkl",
     'word2vec_model_file_name': "word2vec.model",
@@ -44,8 +46,9 @@ parameters = {
     "structured_tcn": True,
     "structured_use_dropout": True,
     "structured_dropout": 0.5,
-    "structured_training_epochs": 40,
-    "structured_batch_size": 50,
+    "structured_training_epochs": 15,
+    "structured_n_estimators": 15,
+    "structured_batch_size": 30,
     # Temporal convolutional network parameters only
     "structured_kernel_sizes": [
         3
