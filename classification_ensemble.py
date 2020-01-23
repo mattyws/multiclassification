@@ -91,11 +91,11 @@ if parameters['use_textual_data']:
     textual_data = np.array([itemid for itemid in list(data_csv['icustay_id'])
                             if os.path.exists(parameters['textual_data_path'] + '{}.csv'.format(itemid))])
     word2vec_data = np.array([parameters['notes_word2vec_path'] + '{}.txt'.format(itemid) for itemid in textual_data])
-    embedding_size = parameters['embedding_size']
-    min_count = parameters['min_count']
-    workers = parameters['workers']
-    window = parameters['window']
-    iterations = parameters['iterations']
+    embedding_size = parameters['textual_embedding_size']
+    min_count = parameters['textual_min_count']
+    workers = parameters['textual_workers']
+    window = parameters['textual_window']
+    iterations = parameters['textual_iterations']
     textual_input_shape = (None, None, embedding_size)
 
     print_with_time("Training/Loading Word2vec")
@@ -187,9 +187,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
 
             test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex],
                                                                         sizes_filename= parameters['training_directory_path'] +
-                                                                            parameters['testing_events_sizes_file'].format(fold)
+                                                                            parameters['structured_testing_events_sizes_file'].format(fold)
                                                                         , classes_filename=parameters['training_directory_path'] +
-                                                                                           parameters['testing_events_sizes_labels_file'].format(fold))
+                                                                                           parameters['structured_testing_events_sizes_labels_file'].format(fold))
             dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
                                                                 max_batch_size=parameters['structured_batch_size'])
             dataTestGenerator.create_batches()
@@ -206,27 +206,27 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
 
 
         if parameters['use_textual_data']:
-            modelCreator = NoteeventsClassificationModelCreator(textual_input_shape, parameters['outputUnits'],
-                                                                parameters['numOutputNeurons'],
-                                                                embedding_size=parameters['embedding_size'],
-                                                                optimizer=parameters['optimizer'],
-                                                                loss=parameters['loss'],
-                                                                layersActivations=parameters['layersActivations'],
-                                                                gru=parameters['gru'],
-                                                                use_dropout=parameters['useDropout'],
-                                                                dropout=parameters['dropout'],
-                                                                networkActivation=parameters['networkActivation'],
+            #TODO: try to use same samples from the structured training
+            modelCreator = NoteeventsClassificationModelCreator(textual_input_shape, parameters['textual_output_units'],
+                                                                parameters['textual_output_neurons'],
+                                                                embedding_size=parameters['textual_embedding_size'],
+                                                                optimizer=parameters['textual_optimizer'],
+                                                                loss=parameters['textual_loss'],
+                                                                layersActivations=parameters['textual_layers_activations'],
+                                                                use_dropout=parameters['textual_use_dropout'],
+                                                                dropout=parameters['textual_dropout'],
+                                                                networkActivation=parameters['textual_network_activation'],
                                                                 metrics=[keras.metrics.binary_accuracy])
             print_with_time("Training level 0 models for textual data")
             textual_ensemble = train_level_zero_classifiers(textual_transformed_data[trainIndex], classes[trainIndex],
                                                                modelCreator)
             test_sizes, test_labels = functions.divide_by_events_lenght(textual_data[testIndex], classes[testIndex]
-                                                                        , sizes_filename=parameters[
-                    'testing_events_sizes_file'].format(fold)
-                                                                        , classes_filename=parameters[
-                    'testing_events_sizes_labels_file'].format(fold))
+                                                                        , sizes_filename=parameters['training_directory_path'] +
+                                                                                         parameters['textual_testing_events_sizes_file'].format(fold)
+                                                                        , classes_filename=parameters['training_directory_path'] +
+                                                                                            parameters['textual_testing_events_sizes_labels_file'].format(fold))
             dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
-                                                                max_batch_size=parameters['batchSize'])
+                                                                max_batch_size=parameters['textual_batch_size'])
             dataTestGenerator.create_batches()
             print_with_time("Testing level 0 models for textual data")
             textual_level_zero_models = textual_ensemble.get_classifiers()

@@ -145,7 +145,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         modelCreator = NoteeventsClassificationModelCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                          embedding_size=embedding_size, optimizer=parameters['optimizer'],
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
-                                                         gru=parameters['gru'], use_dropout=parameters['useDropout'],
+                                                         use_dropout=parameters['useDropout'],
                                                          dropout=parameters['dropout'], networkActivation=parameters['networkActivation'],
                                                          metrics=[keras.metrics.binary_accuracy])
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')

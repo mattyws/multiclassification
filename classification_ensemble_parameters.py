@@ -24,18 +24,12 @@ parameters = {
     'word2vec_model_file_name': "word2vec.model",
     'meta_model_file_name': 'meta_model_{}.pkl',
     "normalization_values_file_name": "normalization_values_{}.pkl",
-    "training_events_sizes_file" : "training_sizes_{}.pkl",
-    "training_events_sizes_labels_file" : "training_sizes_labels_{}.pkl",
-    "testing_events_sizes_file" : "testing_sizes_{}.pkl",
-    "testing_events_sizes_labels_file" : "testing_sizes_labels_{}.pkl",
 
-    "embedding_size" : 150,
-    "min_count" : 1,
-    "workers" : 4,
-    "window" : 3,
-    "iterations" : 30,
+    "structured_testing_events_sizes_file" : "structured_testing_sizes_{}.pkl",
+    "structured_testing_events_sizes_labels_file" : "structured_testing_sizes_labels_{}.pkl",
+    "textual_testing_events_sizes_file" : "textual_testing_sizes_{}.pkl",
+    "textual_testing_events_sizes_labels_file" : "textual_testing_sizes_labels_{}.pkl",
 
-    "structured_data_length" : 12,
     "structured_output_units": [
         64
     ],
@@ -64,7 +58,24 @@ parameters = {
     ],
     "structured_nb_stacks": [
         1
-    ]
+    ],
+
+    "textual_embedding_size" : 150,
+    "textual_min_count" : 1,
+    "textual_workers" : 4,
+    "textual_window" : 3,
+    "textual_iterations" : 30,
+
+    "textual_output_units": [
+        64
+    ],
+    "textual_output_neurons": 1,
+    "textual_loss": "binary_crossentropy",
+    "textual_optimizer":"adam",
+    "textual_layers_activations": [
+        "relu"
+    ],
+    "textual_network_activation" : "sigmoid",
 
     "modelCheckpointPath": "../mimic/ensemble_training/checkpoint/",
     "modelConfigPath": "../mimic/ensemble_training/checkpoint/config.json",
