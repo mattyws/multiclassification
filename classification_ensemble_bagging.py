@@ -215,7 +215,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
 
 
         if parameters['use_textual_data']:
-            #TODO: try to use same samples from the structured training
             modelCreator = NoteeventsClassificationModelCreator(textual_input_shape, parameters['textual_output_units'],
                                                                 parameters['textual_output_neurons'],
                                                                 embedding_size=parameters['textual_embedding_size'],
@@ -231,6 +230,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
             training_classes_samples = None,
             if parameters['use_structured_data']:
                 # TODO: change the path to the structured data path
+                [ [path.replace()] ]
                 training_data_samples = structured_ensemble.training_data_samples
                 training_classes_samples = structured_ensemble.training_classes_samples
             level_zero_models_saving_path = parameters['training_directory_path'] \
