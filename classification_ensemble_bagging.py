@@ -189,7 +189,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                 os.mkdir(level_zero_models_saving_path)
             structured_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
                                                                modelCreator, level_zero_epochs=parameters['structured_training_epochs'],
-                                                               n_estimators=parameters['structured_n_estimators'],
+                                                               n_estimators=parameters['n_estimators'],
                                                                batch_size=parameters['structured_batch_size'],
                                                                saved_model_path=level_zero_models_saving_path +
                                                                                 parameters['structured_ensemble_models_name_prefix'])
@@ -229,9 +229,10 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
             training_data_samples = None
             training_classes_samples = None,
             if parameters['use_structured_data']:
-                # TODO: change the path to the structured data path
-                [ [path.replace()] ]
                 training_data_samples = structured_ensemble.training_data_samples
+                training_data_samples = [ [path.replace(parameters['normalized_structured_data_path'].format(fold),
+                                parameters['word2vec_padded_representation_files_path']) for path in samples ]
+                  for samples in training_data_samples ]
                 training_classes_samples = structured_ensemble.training_classes_samples
             level_zero_models_saving_path = parameters['training_directory_path'] \
                                             + parameters['ensenble_models_path'].format(fold)
@@ -239,7 +240,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                 os.mkdir(level_zero_models_saving_path)
             textual_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
                                                                modelCreator, level_zero_epochs=parameters['textual_training_epochs'],
-                                                               n_estimators=parameters['textual_n_estimators'],
+                                                               n_estimators=parameters['n_estimators'],
                                                                batch_size=parameters['textual_batch_size'],
                                                                saved_model_path=level_zero_models_saving_path
                                                                                 + parameters['textual_ensemble_models_name_prefix'],
@@ -264,65 +265,71 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                 level_zero_dict_writer.writerow(metrics)
 
         # TODO: prepare to train with multiple size of models
-        print_with_time("Preparing data to change their representation")
-        if parameters['use_structured_data'] and parameters['use_textual_data']:
-            meta_data = [ (parameters['normalized_data_path'] + itemid + '.csv',
-                           parameters['textual_padded_representation_data_path'] + itemid + '.pkl')  for itemid in data_csv['icustay_id'] ]
-            level_zero_models = []
-            for model in structured_level_zero_models:
-                level_zero_models.append((model, 0))
-            for model in textual_level_zero_models:
-                level_zero_models.append((model, 1))
-        elif parameters['use_structured_data']:
-            meta_data = normalized_data
-            level_zero_models = structured_level_zero_models
-        elif parameters['use_textual_data']:
-            meta_data = textual_transformed_data
-            level_zero_models = textual_level_zero_models
+        # TODO: fix statistics, metrics and time to train
+        for num_models in range(1, parameters['n_estimators']):
+            print_with_time("Preparing data to change their representation")
+            if parameters['use_structured_data'] and parameters['use_textual_data']:
+                meta_data = [ (parameters['training_directory_path'] + parameters['normalized_data_path'] + itemid + '.csv',
+                               parameters['training_directory_path'] + parameters['textual_padded_representation_data_path'] + itemid + '.pkl')
+                              for itemid in data_csv['icustay_id'] ]
+                level_zero_models = []
+                for model_num, model in enumerate(structured_level_zero_models):
+                    level_zero_models.append((model, 0))
+                    if model_num == num_models:
+                        break
+                for model_num, model in enumerate(textual_level_zero_models):
+                    level_zero_models.append((model, 1))
+                    if model_num == num_models:
+                        break
+            elif parameters['use_structured_data']:
+                meta_data = normalized_data
+                level_zero_models = structured_level_zero_models[: num_models]
+            elif parameters['use_textual_data']:
+                meta_data = textual_transformed_data
+                level_zero_models = textual_level_zero_models[: num_models]
 
-        print_with_time("Get model from adapters")
-        aux_level_zero_models = []
-        for adapter in level_zero_models:
-            if isinstance(adapter, tuple):
-                aux_level_zero_models.append((adapter[0].model, adapter[1]))
-            else:
-                aux_level_zero_models.append(adapter.model)
+            print_with_time("Get model from adapters")
+            aux_level_zero_models = []
+            for adapter in level_zero_models:
+                if isinstance(adapter, tuple):
+                    aux_level_zero_models.append((adapter[0].model, adapter[1]))
+                else:
+                    aux_level_zero_models.append(adapter.model)
 
 
-        print_with_time("Creating meta model data")
+            print_with_time("Creating meta model data")
 
-        meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
-        meta_data_creator.create_meta_learner_data(meta_data, parameters['meta_representation_path'])
+            meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
+            meta_data_creator.create_meta_learner_data(meta_data, parameters['meta_representation_path'])
 
-        meta_data = meta_data_creator.get_new_paths(meta_data)
+            meta_data = meta_data_creator.get_new_paths(meta_data)
 
+            print_with_time("Creating meta data generators")
 
-        print_with_time("Creating meta data generators")
+            training_meta_data_generator = MetaLearnerDataGenerator(meta_data[trainIndex], classes[trainIndex],
+                                                           batchSize=parameters['meta_learner_batch_size'])
+            testing_meta_data_generator = MetaLearnerDataGenerator(meta_data[testIndex], classes[testIndex],
+                                                                    batchSize=parameters['meta_learner_batch_size'])
 
-        training_meta_data_generator = MetaLearnerDataGenerator(meta_data[trainIndex], classes[trainIndex],
-                                                       batchSize=parameters['meta_learner_batch_size'])
-        testing_meta_data_generator = MetaLearnerDataGenerator(meta_data[testIndex], classes[testIndex],
-                                                                batchSize=parameters['meta_learner_batch_size'])
-
-        meta_data_input_shape = (meta_data_creator.representation_length)
-        modelCreator = EnsembleModelCreator(meta_data_input_shape, parameters['outputUnits'], parameters['numOutputNeurons'],
-                                            loss=parameters['loss'], layers_activation=parameters['layersActivations'],
-                                            network_activation=parameters['networkActivation'],
-                                            use_dropout=parameters['useDropout'],
-                                            dropout=parameters['dropout'],
-                                            metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
-        with open(parameters['modelCheckpointPath']+"parameters.json", 'w') as handler:
-            json.dump(parameters, handler)
-        kerasAdapter = modelCreator.create()
-        epochs = parameters['trainingEpochs']
-        print_with_time("Training model")
-        kerasAdapter.fit(training_meta_data_generator, epochs=epochs, callbacks=None)
-        print_with_time("Testing model")
-        metrics = test_model(kerasAdapter, testing_meta_data_generator, fold)
-        if dictWriter is None:
-            dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
-        if fold == 0:
-            dictWriter.writeheader()
-        dictWriter.writerow(metrics)
-        kerasAdapter.save(parameters['modelCheckpointPath'] + 'trained_{}.model'.format(fold))
-        fold += 1
+            meta_data_input_shape = (meta_data_creator.representation_length)
+            modelCreator = EnsembleModelCreator(meta_data_input_shape, parameters['outputUnits'], parameters['numOutputNeurons'],
+                                                loss=parameters['loss'], layers_activation=parameters['layersActivations'],
+                                                network_activation=parameters['networkActivation'],
+                                                use_dropout=parameters['useDropout'],
+                                                dropout=parameters['dropout'],
+                                                metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
+            with open(parameters['modelCheckpointPath']+"parameters.json", 'w') as handler:
+                json.dump(parameters, handler)
+            kerasAdapter = modelCreator.create()
+            epochs = parameters['trainingEpochs']
+            print_with_time("Training model")
+            kerasAdapter.fit(training_meta_data_generator, epochs=epochs, callbacks=None)
+            print_with_time("Testing model")
+            metrics = test_model(kerasAdapter, testing_meta_data_generator, fold)
+            if dictWriter is None:
+                dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
+            if fold == 0:
+                dictWriter.writeheader()
+            dictWriter.writerow(metrics)
+            kerasAdapter.save(parameters['modelCheckpointPath'] + 'trained_{}.model'.format(fold))
+            fold += 1

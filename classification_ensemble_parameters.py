@@ -32,6 +32,8 @@ parameters = {
     "textual_testing_events_sizes_file" : "textual_testing_sizes_{}.pkl",
     "textual_testing_events_sizes_labels_file" : "textual_testing_sizes_labels_{}.pkl",
 
+    "n_estimators": 15,
+
     "structured_output_units": [
         64
     ],
