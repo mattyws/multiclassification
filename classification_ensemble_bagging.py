@@ -59,7 +59,7 @@ if not os.path.exists(parameters['training_directory_path'] + parameters['checkp
 
 # Loading csv
 print_with_time("Loading data")
-data_csv = pd.read_csv(parameters['training_directory_path'] + parameters['dataset_csv_file_path'])
+data_csv = pd.read_csv(parameters['dataset_csv_file_path'])
 data_csv = data_csv.sort_values(['icustay_id'])
 
 # If script is using structured data, do the preparation for it (normalization and get input shape)
@@ -67,8 +67,7 @@ structured_data = None
 normalization_values = None
 if parameters['use_structured_data']:
     print_with_time("Preparing structured data")
-    structured_data = np.array([itemid for itemid in list(data_csv['icustay_id'])
-                            if os.path.exists(parameters['structured_data_path'] + '{}.csv'.format(itemid))])
+    structured_data = np.array([parameters['structured_data_path'] + '{}.csv'.format(itemid) for itemid in list(data_csv['icustay_id'])])
     print_with_time("Preparing normalization values")
     normalization_values = NormalizationValues(structured_data,
                                                pickle_object_path=parameters['training_directory_path']
@@ -93,8 +92,7 @@ textual_data = None
 textual_transformed_data = None
 if parameters['use_textual_data']:
     print_with_time("Preparing textual data")
-    textual_data = np.array([itemid for itemid in list(data_csv['icustay_id'])
-                            if os.path.exists(parameters['textual_data_path'] + '{}.csv'.format(itemid))])
+    textual_data = np.array([parameters['textual_data_path'] + '{}.csv'.format(itemid) for itemid in list(data_csv['icustay_id'])])
     word2vec_data = np.array([parameters['notes_word2vec_path'] + '{}.txt'.format(itemid) for itemid in textual_data])
     embedding_size = parameters['textual_embedding_size']
     min_count = parameters['textual_min_count']
@@ -135,8 +133,9 @@ classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 fold = 0
 # ====================== Script that start training new models
-with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
-        open(parameters['level_zero_result_file_path']) as level_zero_csv_file_handler: # where the results for each fold are appended
+with open(parameters['training_directory_path'] + parameters['checkpoint'] + parameters['results_file_name'], 'a+') as cvsFileHandler, \
+        open(parameters['training_directory_path'] + parameters['checkpoint'] + parameters['level_zero_result_file_name'], 'a+')\
+                as level_zero_csv_file_handler: # where the results for each fold are appended
     dictWriter = None
     level_zero_dict_writer = None
     for trainIndex, testIndex in kf.split(structured_data, classes):

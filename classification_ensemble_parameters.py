@@ -26,6 +26,8 @@ parameters = {
     'word2vec_model_file_name': "word2vec.model",
     'meta_model_file_name': 'meta_model_{}.pkl',
     "normalization_values_file_name": "normalization_values_{}.pkl",
+    "results_file_name": "result.csv",
+    "level_zero_result_file_name": "level_zero_result.csv",
 
     "structured_testing_events_sizes_file" : "structured_testing_sizes_{}.pkl",
     "structured_testing_events_sizes_labels_file" : "structured_testing_sizes_labels_{}.pkl",
@@ -90,7 +92,7 @@ parameters = {
     "datasetLabelsFileName": "../mimic/ensemble_training/datasetLabels.pkl",
     "trainingGeneratorPath": "../mimic/ensemble_training/checkpoint/dataTrainGenerator.pkl",
     "testingGeneratorPath": "../mimic/ensemble_training/checkpoint/dataTestGenerator.pkl",
-    "resultFilePath": "../mimic/ensemble_training/checkpoint/result.csv",
+
     "temporary_data_path" : "../mimic/ensemble_training/data_tmp_{}/",
     "normalization_data_path": "../mimic/ensemble_training/normalization_values_{}.pkl",
 
