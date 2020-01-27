@@ -14,8 +14,8 @@ print(dataset['class'].value_counts())
 noteevents_path = parameters['mimic_data_path'] + 'sepsis_noteevents/'
 chartevents_path = parameters['mimic_data_path'] + 'structured_data/'
 
-has_noteevents = set([x.split('.')[0] for x in os.listdir(noteevents_path)])
-has_chartevents = set([x.split('.')[0] for x in os.listdir(chartevents_path)])
+has_noteevents = set([int(x.split('.')[0]) for x in os.listdir(noteevents_path)])
+has_chartevents = set([int(x.split('.')[0]) for x in os.listdir(chartevents_path)])
 
 dont_have_notes = icustays.difference(has_noteevents)
 dont_have_chart = icustays.difference(has_chartevents)
