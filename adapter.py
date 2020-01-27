@@ -42,10 +42,10 @@ class KerasAdapter(ModelAdapter):
         self.model = model
 
     def fit(self, dataGenerator, epochs=1, batch_size=10, workers=4, validationDataGenerator = None,
-            validationSteps=None, callbacks=None):
+            validationSteps=None, callbacks=None, use_multiprocessing=True):
         self.model.fit_generator(dataGenerator, len(dataGenerator), epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
                                  workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
-                                 callbacks=callbacks, use_multiprocessing=True)
+                                 callbacks=callbacks, use_multiprocessing=use_multiprocessing)
         # for i in range(len(dataGenerator)):
         #     data = dataGenerator[i]
         #     for y in range(len(data[0])):

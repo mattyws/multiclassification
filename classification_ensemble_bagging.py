@@ -29,15 +29,19 @@ from model_creators import MultilayerKerasRecurrentNNCreator, EnsembleModelCreat
     MultilayerTemporalConvolutionalNNCreator, NoteeventsClassificationModelCreator
 from normalization import Normalization, NormalizationValues
 
+# TODO: check resuming weak model training
+# TODO: check saving path
+
 def train_level_zero_classifiers(data, classes, model_creator, training_data_samples=None, training_classes_samples=None,
-                                 level_zero_epochs=20, n_estimators=10, batch_size=30, method="bagging",
-                                 saved_model_path="level_zero_model_{}.model"):
+                                 level_zero_epochs=20, n_estimators=10, batch_size=30, method="bagging", split_rate=.4,
+                                 saved_model_path="level_zero_model_{}.model", data_samples_path="bagging_samples_{}.model"):
     if method == "bagging":
         #### START BAGGING ####
         ensemble = TrainEnsembleBagging()
-        ensemble.fit(data, classes, model_creator, training_data_samples=training_data_samples,
+        ensemble.fit(data, classes, model_creator, training_data_samples=training_data_samples, split_rate=split_rate,
                      training_classes_samples=training_classes_samples, epochs=level_zero_epochs,
-                     batch_size=batch_size, n_estimators=n_estimators, saved_model_path=saved_model_path)
+                     batch_size=batch_size, n_estimators=n_estimators, saved_model_path=saved_model_path,
+                     saved_data_samples_path=data_samples_path)
         ### END ADABOOSTING ####
     elif method == "clustering":
         ### START CLUSTERING ENSEMBLE ###
@@ -51,11 +55,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 from classification_ensemble_parameters import parameters
 
+
 if not os.path.exists(parameters['training_directory_path']):
     os.mkdir(parameters['training_directory_path'])
 
 if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint']):
     os.mkdir(parameters['training_directory_path'] + parameters['checkpoint'])
+
+with open(parameters['training_directory_path'] + parameters['checkpoint'] + "parameters.pkl", 'wb') as handler:
+    pickle.dump(parameters, handler)
 
 # Loading csv
 print_with_time("Loading data")
@@ -139,7 +147,12 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
     dictWriter = None
     level_zero_dict_writer = None
     for trainIndex, testIndex in kf.split(structured_data, classes):
-        if os.path.exists(parameters['training_directory_path'] + parameters['checkpoint'] + parameters['meta_model_file_name'].format(fold)):
+        jump_fold = True
+        for num_models in range(1, parameters['n_estimators']):
+            if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint']
+                              + parameters['meta_model_file_name'].format(num_models, fold)):
+                jump_fold = False
+        if jump_fold:
             print("Pass fold {}".format(fold))
             fold += 1
             continue
@@ -185,40 +198,47 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                         metrics=[keras.metrics.binary_accuracy],
                                                                         optimizer=parameters['structured_optimizer'])
             print_with_time("Training level 0 models for structured data")
-            level_zero_models_saving_path = parameters['training_directory_path'] + parameters['ensenble_models_path'].format(fold)
+            level_zero_models_saving_path = parameters['training_directory_path'] + parameters['ensemble_models_path'].format(fold)
             if not os.path.exists(level_zero_models_saving_path):
                 os.mkdir(level_zero_models_saving_path)
             start = datetime.datetime.now()
             structured_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
                                                                modelCreator, level_zero_epochs=parameters['structured_training_epochs'],
                                                                n_estimators=parameters['n_estimators'],
+                                                               split_rate=parameters['dataset_split_rate'],
                                                                batch_size=parameters['structured_batch_size'],
                                                                saved_model_path=level_zero_models_saving_path +
-                                                                                parameters['structured_ensemble_models_name_prefix'])
+                                                                                parameters['structured_ensemble_models_name_prefix'],
+                                                               data_samples_path = level_zero_models_saving_path +
+                                                                                parameters['structured_ensemble_samples_name_prefix'])
             end = datetime.datetime.now()
             time_to_train = end - start
             hours, remainder = divmod(time_to_train.seconds, 3600)
             minutes, seconds = divmod(remainder, 60)
             print_with_time('Took {:02}:{:02}:{:02} to train the level zero models for structured data'.format(int(hours), int(minutes), int(seconds)))
 
-            test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex],
-                                                                        sizes_filename= parameters['training_directory_path'] +
-                                                                            parameters['structured_testing_events_sizes_file'].format(fold)
-                                                                        , classes_filename=parameters['training_directory_path'] +
-                                                                                           parameters['structured_testing_events_sizes_labels_file'].format(fold))
-            dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
-                                                                max_batch_size=parameters['structured_batch_size'])
-            dataTestGenerator.create_batches()
-            print_with_time("Testing level 0 models for structured data")
-            structured_level_zero_models = structured_ensemble.get_classifiers()
-            for model in structured_level_zero_models:
-                metrics = test_model(model, dataTestGenerator, fold)
-                metrics['data_type'] = "structured"
-                if level_zero_dict_writer is None:
-                    level_zero_dict_writer = csv.DictWriter(level_zero_csv_file_handler, metrics.keys())
-                if fold == 0:
-                    level_zero_dict_writer.writeheader()
-                level_zero_dict_writer.writerow(metrics)
+            if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint'] +
+                                      parameters['level_zero_structured_result_file_name'].format(fold)):
+                print_with_time("Testing level 0 models for structured data")
+                test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex],
+                                                                            classes[testIndex],
+                                                                            sizes_filename=parameters['training_directory_path'] +
+                                                                                           parameters['structured_testing_events_sizes_file'].format(fold)
+                                                                            , classes_filename=parameters['training_directory_path'] +
+                                                                                               parameters['structured_testing_events_sizes_labels_file'].format(fold))
+                dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
+                                                                    max_batch_size=parameters['structured_batch_size'])
+                dataTestGenerator.create_batches()
+                structured_level_zero_models = structured_ensemble.get_classifiers()
+                structured_results = []
+                for i, model in enumerate(structured_level_zero_models):
+                    metrics = test_model(model, dataTestGenerator, fold)
+                    metrics['model_num'] = i
+                    structured_results.append(metrics)
+                structured_results = pd.DataFrame(structured_results)
+                print(structured_results)
+                structured_results.to_csv(parameters['training_directory_path'] + parameters['checkpoint'] +
+                                          parameters['level_zero_structured_result_file_name'].format(fold))
 
 
         if parameters['use_textual_data']:
@@ -239,7 +259,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 training_data_samples = structured_ensemble.training_data_samples
                 training_data_samples = [ [path.replace(parameters['normalized_structured_data_path'].format(fold),
                                 parameters['word2vec_padded_representation_files_path']) for path in samples ]
-                  for samples in training_data_samples ]
+                  for samples in training_data_samples]
                 training_classes_samples = structured_ensemble.training_classes_samples
             level_zero_models_saving_path = parameters['training_directory_path'] \
                                             + parameters['ensenble_models_path'].format(fold)
@@ -250,9 +270,13 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                modelCreator, level_zero_epochs=parameters['textual_training_epochs'],
                                                                n_estimators=parameters['n_estimators'],
                                                                batch_size=parameters['textual_batch_size'],
+                                                               split_rate=parameters['dataset_split_rate'],
                                                                saved_model_path=level_zero_models_saving_path
                                                                                 + parameters['textual_ensemble_models_name_prefix'],
-                                                            training_data_samples=training_data_samples, training_classes_samples=training_classes_samples)
+                                                            data_samples_path=level_zero_models_saving_path +
+                                                                              parameters['structured_ensemble_samples_name_prefix'],
+                                                            training_data_samples=training_data_samples,
+                                                            training_classes_samples=training_classes_samples)
             end = datetime.datetime.now()
             time_to_train = end - start
             hours, remainder = divmod(time_to_train.seconds, 3600)
@@ -261,24 +285,28 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 'Took {:02}:{:02}:{:02} to train the level zero models for textual data'.format(int(hours),
                                                                                                    int(minutes),
                                                                                                    int(seconds)))
-            test_sizes, test_labels = functions.divide_by_events_lenght(textual_data[testIndex], classes[testIndex]
-                                                                        , sizes_filename=parameters['training_directory_path'] +
-                                                                                         parameters['textual_testing_events_sizes_file'].format(fold)
-                                                                        , classes_filename=parameters['training_directory_path'] +
-                                                                                            parameters['textual_testing_events_sizes_labels_file'].format(fold))
-            dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
-                                                                max_batch_size=parameters['textual_batch_size'])
-            dataTestGenerator.create_batches()
-            print_with_time("Testing level 0 models for textual data")
-            textual_level_zero_models = textual_ensemble.get_classifiers()
-            for model in textual_level_zero_models:
-                metrics = test_model(model, dataTestGenerator, fold)
-                metrics['data_type'] = "textual"
-                if level_zero_dict_writer is None:
-                    level_zero_dict_writer = csv.DictWriter(level_zero_csv_file_handler, metrics.keys())
-                if fold == 0:
-                    level_zero_dict_writer.writeheader()
-                level_zero_dict_writer.writerow(metrics)
+            if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint'] +
+                                      parameters['level_zero_textual_result_file_name'].format(fold)):
+                print_with_time("Testing level 0 models for textual data")
+                test_sizes, test_labels = functions.divide_by_events_lenght(textual_data[testIndex], classes[testIndex]
+                                                                            , sizes_filename=parameters['training_directory_path'] +
+                                                                                             parameters['textual_testing_events_sizes_file'].format(fold)
+                                                                            , classes_filename=parameters['training_directory_path'] +
+                                                                                                parameters['textual_testing_events_sizes_labels_file'].format(fold))
+                dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
+                                                                    max_batch_size=parameters['textual_batch_size'])
+                dataTestGenerator.create_batches()
+                textual_results = []
+                textual_level_zero_models = textual_ensemble.get_classifiers()
+                for i, model in enumerate(textual_level_zero_models):
+                    metrics = test_model(model, dataTestGenerator, fold)
+                    metrics['model_num'] = i
+                    textual_results.append(metrics)
+                textual_results = pd.DataFrame(structured_results)
+                print(textual_results)
+                textual_results.to_csv(parameters['training_directory_path'] + parameters['checkpoint'] +
+                                          parameters['level_zero_textual_result_file_name'].format(fold))
+
 
         for num_models in range(1, parameters['n_estimators']):
             print_with_time("Preparing data to change their representation")
@@ -314,7 +342,8 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             print_with_time("Creating meta model data")
 
             meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
-            meta_data_creator.create_meta_learner_data(meta_data, parameters['meta_representation_path'])
+            meta_data_creator.create_meta_learner_data(meta_data, parameters['training_directory_path'] +
+                                                       parameters['meta_representation_path'].format(num_models, fold))
 
             meta_data = meta_data_creator.get_new_paths(meta_data)
 
@@ -332,8 +361,6 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                 use_dropout=parameters['useDropout'],
                                                 dropout=parameters['dropout'],
                                                 metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
-            with open(parameters['modelCheckpointPath'] + "parameters.pkl", 'wb') as handler:
-                pickle.dump(parameters, handler)
             kerasAdapter = modelCreator.create()
             epochs = parameters['trainingEpochs']
             print_with_time("Training model")
@@ -346,10 +373,12 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             print_with_time('Took {:02}:{:02}:{:02} to train the model'.format(int(hours), int(minutes), int(seconds)))
             print_with_time("Testing model")
             metrics = test_model(kerasAdapter, testing_meta_data_generator, fold)
+            metrics['num_models'] = num_models
             if dictWriter is None:
                 dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
             if fold == 0:
                 dictWriter.writeheader()
             dictWriter.writerow(metrics)
-            kerasAdapter.save(parameters['modelCheckpointPath'] + 'trained_{}.model'.format(fold))
+            kerasAdapter.save(parameters['training_directory_path'] + parameters['checkpoint']
+                              + parameters['meta_model_file_name'].format(num_models, fold))
             fold += 1

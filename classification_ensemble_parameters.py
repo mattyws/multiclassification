@@ -1,3 +1,5 @@
+from keras.layers import LeakyReLU
+
 parameters = {
     "training_directory_path" : "../mimic/ensemble_training/",
     "dataset_csv_file_path": "../mimic/new_dataset_patients.csv",
@@ -6,6 +8,7 @@ parameters = {
     "use_textual_data": False,
 
     "normalization_value_counts_dir" : "value_counts/",
+    "meta_representation_path": "{}_meta_representation_fold_{}/",
 
 
     "word2vec_representation_data_path": "transformed_textual_representation/",
@@ -16,17 +19,21 @@ parameters = {
     "training_dir_path": "../mimic/ensemble_training/",
     "notes_word2vec_path" : "../mimic/textual_word2vec_preprocessed/",
     "normalized_structured_data_path" : "normalized_data_{}/",
+    "normalization_data_path": "normalization_values_{}.pkl",
 
     "checkpoint" : "checkpoint_only_structured/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
+    "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.model",
     "textual_ensemble_models_name_prefix" : "textual_bagging_level_zero_{}.model",
+    "meta_model_file_name": "{}_meta_model_fold_{}.model",
 
     "training_config_file_name" : "config.pkl",
     'word2vec_model_file_name': "word2vec.model",
-    'meta_model_file_name': 'meta_model_{}.pkl',
     "normalization_values_file_name": "normalization_values_{}.pkl",
     "results_file_name": "result.csv",
+    "level_zero_structured_result_file_name": "structured_results_{}.csv",
+    "level_zero_textual_result_file_name": "textual_results_{}.csv",
     "level_zero_result_file_name": "level_zero_result.csv",
 
     "structured_testing_events_sizes_file" : "structured_testing_sizes_{}.pkl",
@@ -35,15 +42,16 @@ parameters = {
     "textual_testing_events_sizes_labels_file" : "textual_testing_sizes_labels_{}.pkl",
 
     "n_estimators": 15,
+    "dataset_split_rate": .4,
 
     "structured_output_units": [
         64
     ],
-    "strctured_output_neurons": 1,
+    "structured_output_neurons": 1,
     "structured_loss": "binary_crossentropy",
     "structured_optimizer":"adam",
     "structured_layers_activations": [
-        "relu"
+        LeakyReLU()
     ],
     "structured_network_activation" : "sigmoid",
     "structured_gru": False,
@@ -94,6 +102,5 @@ parameters = {
     "testingGeneratorPath": "../mimic/ensemble_training/checkpoint/dataTestGenerator.pkl",
 
     "temporary_data_path" : "../mimic/ensemble_training/data_tmp_{}/",
-    "normalization_data_path": "../mimic/ensemble_training/normalization_values_{}.pkl",
 
 }
