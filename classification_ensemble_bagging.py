@@ -1,6 +1,8 @@
 import csv
+import datetime
 import json
 import os
+import pickle
 from collections import Counter
 from pprint import PrettyPrinter
 
@@ -26,7 +28,6 @@ from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, EnsembleModelCreator, \
     MultilayerTemporalConvolutionalNNCreator, NoteeventsClassificationModelCreator
 from normalization import Normalization, NormalizationValues
-# TODO: check sync from dataset lists
 
 def train_level_zero_classifiers(data, classes, model_creator, training_data_samples=None, training_classes_samples=None,
                                  level_zero_epochs=20, n_estimators=10, batch_size=30, method="bagging",
@@ -89,6 +90,7 @@ if parameters['use_structured_data']:
 
 # If script is using textual data, do the preparations (train word2vec)
 textual_data = None
+textual_transformed_data = None
 if parameters['use_textual_data']:
     print_with_time("Preparing textual data")
     textual_data = np.array([itemid for itemid in list(data_csv['icustay_id'])
@@ -187,12 +189,18 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
             level_zero_models_saving_path = parameters['training_directory_path'] + parameters['ensenble_models_path'].format(fold)
             if not os.path.exists(level_zero_models_saving_path):
                 os.mkdir(level_zero_models_saving_path)
+            start = datetime.datetime.now()
             structured_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
                                                                modelCreator, level_zero_epochs=parameters['structured_training_epochs'],
                                                                n_estimators=parameters['n_estimators'],
                                                                batch_size=parameters['structured_batch_size'],
                                                                saved_model_path=level_zero_models_saving_path +
                                                                                 parameters['structured_ensemble_models_name_prefix'])
+            end = datetime.datetime.now()
+            time_to_train = end - start
+            hours, remainder = divmod(time_to_train.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            print_with_time('Took {:02}:{:02}:{:02} to train the level zero models for structured data'.format(int(hours), int(minutes), int(seconds)))
 
             test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex],
                                                                         sizes_filename= parameters['training_directory_path'] +
@@ -238,6 +246,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                                             + parameters['ensenble_models_path'].format(fold)
             if not os.path.exists(level_zero_models_saving_path):
                 os.mkdir(level_zero_models_saving_path)
+            start = datetime.datetime.now()
             textual_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
                                                                modelCreator, level_zero_epochs=parameters['textual_training_epochs'],
                                                                n_estimators=parameters['n_estimators'],
@@ -245,6 +254,14 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                                                                saved_model_path=level_zero_models_saving_path
                                                                                 + parameters['textual_ensemble_models_name_prefix'],
                                                             training_data_samples=training_data_samples, training_classes_samples=training_classes_samples)
+            end = datetime.datetime.now()
+            time_to_train = end - start
+            hours, remainder = divmod(time_to_train.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            print_with_time(
+                'Took {:02}:{:02}:{:02} to train the level zero models for textual data'.format(int(hours),
+                                                                                                   int(minutes),
+                                                                                                   int(seconds)))
             test_sizes, test_labels = functions.divide_by_events_lenght(textual_data[testIndex], classes[testIndex]
                                                                         , sizes_filename=parameters['training_directory_path'] +
                                                                                          parameters['textual_testing_events_sizes_file'].format(fold)
@@ -264,8 +281,6 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                     level_zero_dict_writer.writeheader()
                 level_zero_dict_writer.writerow(metrics)
 
-        # TODO: prepare to train with multiple size of models
-        # TODO: fix statistics, metrics and time to train
         for num_models in range(1, parameters['n_estimators']):
             print_with_time("Preparing data to change their representation")
             if parameters['use_structured_data'] and parameters['use_textual_data']:
@@ -295,7 +310,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
                     aux_level_zero_models.append((adapter[0].model, adapter[1]))
                 else:
                     aux_level_zero_models.append(adapter.model)
-
+            level_zero_models = aux_level_zero_models
 
             print_with_time("Creating meta model data")
 
@@ -311,19 +326,25 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler, \
             testing_meta_data_generator = MetaLearnerDataGenerator(meta_data[testIndex], classes[testIndex],
                                                                     batchSize=parameters['meta_learner_batch_size'])
 
-            meta_data_input_shape = (meta_data_creator.representation_length)
+            meta_data_input_shape = (parameters['meta_learner_batch_size'], meta_data_creator.representation_length)
             modelCreator = EnsembleModelCreator(meta_data_input_shape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                 loss=parameters['loss'], layers_activation=parameters['layersActivations'],
                                                 network_activation=parameters['networkActivation'],
                                                 use_dropout=parameters['useDropout'],
                                                 dropout=parameters['dropout'],
                                                 metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
-            with open(parameters['modelCheckpointPath']+"parameters.json", 'w') as handler:
-                json.dump(parameters, handler)
+            with open(parameters['modelCheckpointPath'] + "parameters.pkl", 'wb') as handler:
+                pickle.dump(parameters, handler)
             kerasAdapter = modelCreator.create()
             epochs = parameters['trainingEpochs']
             print_with_time("Training model")
+            start = datetime.datetime.now()
             kerasAdapter.fit(training_meta_data_generator, epochs=epochs, callbacks=None)
+            end = datetime.datetime.now()
+            time_to_train = end - start
+            hours, remainder = divmod(time_to_train.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            print_with_time('Took {:02}:{:02}:{:02} to train the model'.format(int(hours), int(minutes), int(seconds)))
             print_with_time("Testing model")
             metrics = test_model(kerasAdapter, testing_meta_data_generator, fold)
             if dictWriter is None:
