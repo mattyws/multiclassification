@@ -258,10 +258,12 @@ class EnsembleMetaLearnerDataCreator():
         with multiprocessing.Pool(processes=4) as pool:
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
-            partial_transform_representation = partial(self.__transform_representations,
+            partial_transform_representation = partial(self.transform_representations,
                                                        new_representation_path=new_representation_path,
                                                         manager_queue=manager_queue)
             data = numpy.array_split(dataset, 6)
+            self.transform_representations(data[0], new_representation_path=new_representation_path, manager_queue=manager_queue)
+            exit()
             print(data)
             total_files = len(dataset)
             map_obj = pool.map_async(partial_transform_representation, data)
@@ -280,7 +282,7 @@ class EnsembleMetaLearnerDataCreator():
                 padded_paths.update(r)
             self.new_paths = padded_paths
 
-    def __transform_representations(self, dataset, new_representation_path=None, manager_queue=None):
+    def transform_representations(self, dataset, new_representation_path=None, manager_queue=None):
         """
         Do the actual transformation
         :param dataset: the paths for the events as .csv files
@@ -331,6 +333,7 @@ class EnsembleMetaLearnerDataCreator():
                 return pandas.read_csv(path)
 
     def __transform(self, data):
+        data = np.array([data])
         new_representation = []
         for model in self.weak_classifiers:
             print("Vamos predizer")
@@ -340,9 +343,12 @@ class EnsembleMetaLearnerDataCreator():
                 prediction = model.predict(data[data_index])
                 new_representation.extend(prediction)
             else:
-                prediction = model.predict(data)
+                prediction = model.predict(data)[0]
                 new_representation.extend(prediction)
             print("preveu")
+        print(new_representation)
+        print(len(new_representation))
+        exit()
         return new_representation
 
     def __change_weak_classifiers(self):
