@@ -12,8 +12,6 @@ import pandas
 import sys
 
 
-
-
 class TransformClinicalTextsRepresentations(object):
     """
     Changes the representation for patients notes using a word2vec model.
@@ -243,6 +241,7 @@ class EnsembleMetaLearnerDataCreator():
         self.representation_length = None
         self.new_paths = dict()
         if not use_class_prediction:
+            print("Changing model structure")
             self.__change_weak_classifiers()
 
 
@@ -257,22 +256,24 @@ class EnsembleMetaLearnerDataCreator():
         if not os.path.exists(new_representation_path):
             os.mkdir(new_representation_path)
         with multiprocessing.Pool(processes=4) as pool:
-            dataset = np.array_split(dataset, 10)
             manager = multiprocessing.Manager()
             manager_queue = manager.Queue()
             partial_transform_representation = partial(self.__transform_representations,
                                                        new_representation_path=new_representation_path,
                                                         manager_queue=manager_queue)
             data = numpy.array_split(dataset, 6)
+            print(data)
             total_files = len(dataset)
             map_obj = pool.map_async(partial_transform_representation, data)
             consumed = 0
+            print("Entering loop")
             while not map_obj.ready() or manager_queue.qsize() != 0:
+                print("YAY")
                 for _ in range(manager_queue.qsize()):
                     manager_queue.get()
                     consumed += 1
                 sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-            print()
+            print("Acabou loop")
             result = map_obj.get()
             padded_paths = dict()
             for r in result:
@@ -288,6 +289,7 @@ class EnsembleMetaLearnerDataCreator():
         :return: dictionary {old_path : new_path}
         """
         new_paths = dict()
+        print("Calling it")
         for path in dataset:
             if isinstance(path, tuple):
                 icustayid = os.path.splitext(path[0].split('/')[-1])[0]
@@ -296,10 +298,13 @@ class EnsembleMetaLearnerDataCreator():
             if manager_queue is not None:
                 manager_queue.put(path)
             transformed_doc_path = new_representation_path + icustayid + '.pkl'
+            print(transformed_doc_path)
             if os.path.exists(transformed_doc_path):
                 new_paths[path] = transformed_doc_path
                 continue
+            print("Loading data")
             data = self.__load_data(path)
+            print("Transforming representation")
             new_representation = self.__transform(data)
             if self.representation_length is None:
                 self.representation_length = len(new_representation)
@@ -328,6 +333,7 @@ class EnsembleMetaLearnerDataCreator():
     def __transform(self, data):
         new_representation = []
         for model in self.weak_classifiers:
+            print("Vamos predizer")
             if isinstance(model, tuple):
                 data_index = model[1]
                 model = model[0]
@@ -336,6 +342,7 @@ class EnsembleMetaLearnerDataCreator():
             else:
                 prediction = model.predict(data)
                 new_representation.extend(prediction)
+            print("preveu")
         return new_representation
 
     def __change_weak_classifiers(self):
@@ -345,9 +352,15 @@ class EnsembleMetaLearnerDataCreator():
                 new_model = Model(inputs=model[0].input, outputs=model[0].layers[-2].output)
                 new_model = (new_model, model[1])
             else:
+                # print(model.input, model.layers, model.layers[-2])
                 new_model = Model(inputs=model.input, outputs=model.layers[-2].output)
+                print("==============================")
+            print("*********************")
+            new_model.compile(loss=model.loss, optimizer=model.optimizer)
+            print("--------------------------------")
             new_weak_classifiers.append(new_model)
         self.weak_classifiers = new_weak_classifiers
+        print(self.weak_classifiers)
 
     def get_new_paths(self, files_list):
         # TODO: considerar os tipos de dados

@@ -216,7 +216,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             hours, remainder = divmod(time_to_train.seconds, 3600)
             minutes, seconds = divmod(remainder, 60)
             print_with_time('Took {:02}:{:02}:{:02} to train the level zero models for structured data'.format(int(hours), int(minutes), int(seconds)))
-
+            structured_level_zero_models = structured_ensemble.get_classifiers()
             if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint'] +
                                       parameters['level_zero_structured_result_file_name'].format(fold)):
                 print_with_time("Testing level 0 models for structured data")
@@ -229,7 +229,6 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels,
                                                                     max_batch_size=parameters['structured_batch_size'])
                 dataTestGenerator.create_batches()
-                structured_level_zero_models = structured_ensemble.get_classifiers()
                 structured_results = []
                 for i, model in enumerate(structured_level_zero_models):
                     metrics = test_model(model, dataTestGenerator, fold)
