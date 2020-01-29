@@ -255,32 +255,29 @@ class EnsembleMetaLearnerDataCreator():
         """
         if not os.path.exists(new_representation_path):
             os.mkdir(new_representation_path)
-        with multiprocessing.Pool(processes=4) as pool:
-            manager = multiprocessing.Manager()
-            manager_queue = manager.Queue()
-            partial_transform_representation = partial(self.transform_representations,
-                                                       new_representation_path=new_representation_path,
-                                                        manager_queue=manager_queue)
-            data = numpy.array_split(dataset, 6)
-            self.transform_representations(data[0], new_representation_path=new_representation_path, manager_queue=manager_queue)
-            exit()
-            print(data)
-            total_files = len(dataset)
-            map_obj = pool.map_async(partial_transform_representation, data)
-            consumed = 0
-            print("Entering loop")
-            while not map_obj.ready() or manager_queue.qsize() != 0:
-                print("YAY")
-                for _ in range(manager_queue.qsize()):
-                    manager_queue.get()
-                    consumed += 1
-                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-            print("Acabou loop")
-            result = map_obj.get()
-            padded_paths = dict()
-            for r in result:
-                padded_paths.update(r)
-            self.new_paths = padded_paths
+        self.new_paths = self.transform_representations(dataset, new_representation_path=new_representation_path)
+        # with multiprocessing.Pool(processes=1) as pool:
+        #     manager = multiprocessing.Manager()
+        #     manager_queue = manager.Queue()
+        #     partial_transform_representation = partial(self.transform_representations,
+        #                                                new_representation_path=new_representation_path,
+        #                                                 manager_queue=manager_queue)
+        #     data = numpy.array_split(dataset, 6)
+        #     # self.transform_representations(data[0], new_representation_path=new_representation_path, manager_queue=manager_queue)
+        #     # exit()
+        #     total_files = len(dataset)
+        #     map_obj = pool.map_async(partial_transform_representation, data)
+        #     consumed = 0
+        #     while not map_obj.ready() or manager_queue.qsize() != 0:
+        #         for _ in range(manager_queue.qsize()):
+        #             manager_queue.get()
+        #             consumed += 1
+        #         sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+        #     result = map_obj.get()
+        #     padded_paths = dict()
+        #     for r in result:
+        #         padded_paths.update(r)
+        #     self.new_paths = padded_paths
 
     def transform_representations(self, dataset, new_representation_path=None, manager_queue=None):
         """
@@ -291,7 +288,8 @@ class EnsembleMetaLearnerDataCreator():
         :return: dictionary {old_path : new_path}
         """
         new_paths = dict()
-        print("Calling it")
+        consumed = 0
+        total_files = len(dataset)
         for path in dataset:
             if isinstance(path, tuple):
                 icustayid = os.path.splitext(path[0].split('/')[-1])[0]
@@ -299,20 +297,20 @@ class EnsembleMetaLearnerDataCreator():
                 icustayid = os.path.splitext(path.split('/')[-1])[0]
             if manager_queue is not None:
                 manager_queue.put(path)
+            else:
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
             transformed_doc_path = new_representation_path + icustayid + '.pkl'
-            print(transformed_doc_path)
             if os.path.exists(transformed_doc_path):
                 new_paths[path] = transformed_doc_path
                 continue
-            print("Loading data")
             data = self.__load_data(path)
-            print("Transforming representation")
             new_representation = self.__transform(data)
             if self.representation_length is None:
                 self.representation_length = len(new_representation)
             with open(transformed_doc_path, 'wb') as fhandler:
                 pickle.dump(new_representation, fhandler)
             new_paths[icustayid] = transformed_doc_path
+            consumed += 1
         return new_paths
 
     def __load_data(self, path):
@@ -336,7 +334,6 @@ class EnsembleMetaLearnerDataCreator():
         data = np.array([data])
         new_representation = []
         for model in self.weak_classifiers:
-            print("Vamos predizer")
             if isinstance(model, tuple):
                 data_index = model[1]
                 model = model[0]
@@ -345,10 +342,6 @@ class EnsembleMetaLearnerDataCreator():
             else:
                 prediction = model.predict(data)[0]
                 new_representation.extend(prediction)
-            print("preveu")
-        print(new_representation)
-        print(len(new_representation))
-        exit()
         return new_representation
 
     def __change_weak_classifiers(self):

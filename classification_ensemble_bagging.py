@@ -344,7 +344,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             meta_data_creator.create_meta_learner_data(meta_data, parameters['training_directory_path'] +
                                                        parameters['meta_representation_path'].format(num_models, fold))
 
-            meta_data = meta_data_creator.get_new_paths(meta_data)
+            meta_data = np.array(meta_data_creator.get_new_paths(meta_data))
 
             print_with_time("Creating meta data generators")
 
@@ -354,11 +354,13 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                     batchSize=parameters['meta_learner_batch_size'])
 
             meta_data_input_shape = (parameters['meta_learner_batch_size'], meta_data_creator.representation_length)
-            modelCreator = EnsembleModelCreator(meta_data_input_shape, parameters['outputUnits'], parameters['numOutputNeurons'],
-                                                loss=parameters['loss'], layers_activation=parameters['layersActivations'],
-                                                network_activation=parameters['networkActivation'],
-                                                use_dropout=parameters['useDropout'],
-                                                dropout=parameters['dropout'],
+            modelCreator = EnsembleModelCreator(meta_data_input_shape, parameters['meta_learner_output_units'],
+                                                parameters['meta_learner_num_output_neurons'],
+                                                loss=parameters['meta_learner_loss'],
+                                                layers_activation=parameters['meta_learner_layers_activations'],
+                                                network_activation=parameters['meta_learner_network_activation'],
+                                                use_dropout=parameters['meta_learner_use_dropout'],
+                                                dropout=parameters['meta_learner_dropout'],
                                                 metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
             kerasAdapter = modelCreator.create()
             epochs = parameters['trainingEpochs']

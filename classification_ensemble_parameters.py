@@ -92,6 +92,19 @@ parameters = {
     ],
     "textual_network_activation" : "sigmoid",
 
+    'meta_learner_batch_size': 50,
+    'meta_learner_output_units': [
+        64
+    ],
+    'meta_learner_num_output_neurons': 1,
+    'meta_learner_loss': 'binary_crossentropy',
+    'meta_learner_layers_activations': [
+        LeakyReLU()
+    ],
+    'meta_learner_network_activation': 'sigmoid',
+    'meta_learner_use_dropout': True,
+    'meta_learner_dropout': 0.2,
+
     "modelCheckpointPath": "../mimic/ensemble_training/checkpoint/",
     "modelConfigPath": "../mimic/ensemble_training/checkpoint/config.json",
     "trainingDataPath" :  "../mimic/ensemble_training/dataTraining/",
