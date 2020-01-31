@@ -339,7 +339,6 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             level_zero_models = aux_level_zero_models
 
             print_with_time("Creating meta model data")
-
             meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
             meta_data_creator.create_meta_learner_data(meta_data, parameters['training_directory_path'] +
                                                        parameters['meta_representation_path'].format(num_models, fold))
@@ -353,20 +352,21 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             testing_meta_data_generator = MetaLearnerDataGenerator(meta_data[testIndex], classes[testIndex],
                                                                     batchSize=parameters['meta_learner_batch_size'])
 
-            meta_data_input_shape = (parameters['meta_learner_batch_size'], meta_data_creator.representation_length)
-            modelCreator = EnsembleModelCreator(meta_data_input_shape, parameters['meta_learner_output_units'],
-                                                parameters['meta_learner_num_output_neurons'],
+            meta_data_input_shape = (meta_data_creator.representation_length, )
+            modelCreator = EnsembleModelCreator(meta_data_input_shape, parameters['meta_learner_num_output_neurons'],
+                                                output_units=parameters['meta_learner_output_units'],
                                                 loss=parameters['meta_learner_loss'],
                                                 layers_activation=parameters['meta_learner_layers_activations'],
                                                 network_activation=parameters['meta_learner_network_activation'],
                                                 use_dropout=parameters['meta_learner_use_dropout'],
                                                 dropout=parameters['meta_learner_dropout'],
-                                                metrics=[keras.metrics.binary_accuracy], optimizer=parameters['optimizer'])
+                                                metrics=[keras.metrics.binary_accuracy],
+                                                optimizer=parameters['meta_learner_optimizer'])
             kerasAdapter = modelCreator.create()
-            epochs = parameters['trainingEpochs']
+            epochs = parameters['meta_learner_training_epochs']
             print_with_time("Training model")
             start = datetime.datetime.now()
-            kerasAdapter.fit(training_meta_data_generator, epochs=epochs, callbacks=None)
+            kerasAdapter.fit(training_meta_data_generator, epochs=epochs, callbacks=None, use_multiprocessing=False)
             end = datetime.datetime.now()
             time_to_train = end - start
             hours, remainder = divmod(time_to_train.seconds, 3600)

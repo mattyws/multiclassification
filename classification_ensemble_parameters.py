@@ -91,6 +91,7 @@ parameters = {
         "relu"
     ],
     "textual_network_activation" : "sigmoid",
+    "textual_training_epochs": 15,
 
     'meta_learner_batch_size': 50,
     'meta_learner_output_units': [
@@ -104,6 +105,8 @@ parameters = {
     'meta_learner_network_activation': 'sigmoid',
     'meta_learner_use_dropout': True,
     'meta_learner_dropout': 0.2,
+    "meta_learner_optimizer":"adam",
+    "meta_learner_training_epochs": 30,
 
     "modelCheckpointPath": "../mimic/ensemble_training/checkpoint/",
     "modelConfigPath": "../mimic/ensemble_training/checkpoint/config.json",

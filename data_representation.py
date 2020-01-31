@@ -301,7 +301,11 @@ class EnsembleMetaLearnerDataCreator():
                 sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
             transformed_doc_path = new_representation_path + icustayid + '.pkl'
             if os.path.exists(transformed_doc_path):
-                new_paths[path] = transformed_doc_path
+                new_paths[icustayid] = transformed_doc_path
+                if self.representation_length is None:
+                    with open(transformed_doc_path, 'rb') as fhandler:
+                        new_representation = pickle.load(fhandler)
+                        self.representation_length = len(new_representation)
                 continue
             data = self.__load_data(path)
             new_representation = self.__transform(data)

@@ -134,7 +134,7 @@ class EnsembleModelCreator(ModelCreator):
         return adapter.KerasAdapter(model)
 
     def build_network(self):
-        input = Input(self.input_shape)
+        input = Input(shape=self.input_shape)
         layer = Dense(self.output_units[0], activation=self.layers_activation[0])(input)
         if len(self.output_units) > 1:
             for i in range(1, len(self.output_units)):
