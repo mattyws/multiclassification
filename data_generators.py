@@ -321,7 +321,7 @@ class Word2VecTextEmbeddingGenerator(Sequence):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
 
-class MetaLearnerDataGenerator(object):
+class MetaLearnerDataGenerator(Sequence):
 
     def __init__(self, dataPaths, labels, batchSize, iterForever=False):
         self.batchSize = batchSize

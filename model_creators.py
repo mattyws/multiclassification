@@ -135,13 +135,17 @@ class EnsembleModelCreator(ModelCreator):
 
     def build_network(self):
         input = Input(shape=self.input_shape)
-        layer = Dense(self.output_units[0], activation=self.layers_activation[0])(input)
+        layer = Dense(self.output_units[0])(input)
+        activation = copy.deepcopy(self.layers_activation[0])
+        layer = activation(layer)
         if len(self.output_units) > 1:
             for i in range(1, len(self.output_units)):
                 if self.use_dropout:
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
-                layer = Dense(self.output_units[i], activation=self.layers_activation[i])(layer)
+                layer = Dense(self.output_units[i])(layer)
+                activation = copy.deepcopy(self.layers_activation[i])
+                layer = activation(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout

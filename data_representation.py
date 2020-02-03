@@ -355,15 +355,10 @@ class EnsembleMetaLearnerDataCreator():
                 new_model = Model(inputs=model[0].input, outputs=model[0].layers[-2].output)
                 new_model = (new_model, model[1])
             else:
-                # print(model.input, model.layers, model.layers[-2])
                 new_model = Model(inputs=model.input, outputs=model.layers[-2].output)
-                print("==============================")
-            print("*********************")
             new_model.compile(loss=model.loss, optimizer=model.optimizer)
-            print("--------------------------------")
             new_weak_classifiers.append(new_model)
         self.weak_classifiers = new_weak_classifiers
-        print(self.weak_classifiers)
 
     def get_new_paths(self, files_list):
         # TODO: considerar os tipos de dados
