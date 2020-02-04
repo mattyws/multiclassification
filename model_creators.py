@@ -144,7 +144,7 @@ class EnsembleModelCreator(ModelCreator):
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
                 layer = Dense(self.output_units[i])(layer)
-                activation = copy.deepcopy(self.layers_activation[i])
+                activation = copy.deepcopy(self.layers_activatkion[i])
                 layer = activation(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)

@@ -148,7 +148,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
     level_zero_dict_writer = None
     for trainIndex, testIndex in kf.split(structured_data, classes):
         jump_fold = True
-        for num_models in range(1, parameters['n_estimators']):
+        for num_models in range(1, parameters['n_estimators']+1):
             if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint']
                               + parameters['meta_model_file_name'].format(num_models, fold)):
                 jump_fold = False
@@ -307,7 +307,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                           parameters['level_zero_textual_result_file_name'].format(fold))
 
 
-        for num_models in range(1, parameters['n_estimators']):
+        for num_models in range(1, parameters['n_estimators']+1):
             print_with_time("Preparing data to change their representation")
             if parameters['use_structured_data'] and parameters['use_textual_data']:
                 meta_data = [ (parameters['training_directory_path'] + parameters['normalized_data_path'] + itemid + '.csv',
@@ -382,4 +382,4 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             dictWriter.writerow(metrics)
             kerasAdapter.save(parameters['training_directory_path'] + parameters['checkpoint']
                               + parameters['meta_model_file_name'].format(num_models, fold))
-            fold += 1
+        fold += 1

@@ -94,3 +94,14 @@ class TrainEnsembleBagging():
             adapter = KerasAdapter.load_model(classifier)
             classifiers.append(adapter)
         return classifiers
+
+
+class TrainEnsembleClustering():
+
+    def __init__(self):
+        self.classifiers = []
+        self.training_data_samples = []
+        self.training_classes_samples = []
+
+    def fit(self, n_estimators=10):
+        print_with_time("Training autoencoder for clustering")
