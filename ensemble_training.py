@@ -8,8 +8,10 @@ from sklearn.utils import resample
 
 import functions
 from adapter import KerasAdapter
-from data_generators import LengthLongitudinalDataGenerator
+from data_generators import LengthLongitudinalDataGenerator, AutoencoderDataGenerator
 from functions import print_with_time
+from model_creators import KerasVariationalAutoencoder
+
 
 def split_classes(classes):
     positive_indexes = []
@@ -103,5 +105,22 @@ class TrainEnsembleClustering():
         self.training_data_samples = []
         self.training_classes_samples = []
 
-    def fit(self, n_estimators=10):
+    def fit(self, data, classes, model_creator, autoencoder_creator, input_shape, n_estimators=10,
+            autoencoder_batch_size=30, autoencoder_epochs=30):
         print_with_time("Training autoencoder for clustering")
+        autoencoder_generator = self.__create_autoencoder_generator(data, batch_size=autoencoder_batch_size)
+        autoencoder_adapter = autoencoder_creator.create()
+        autoencoder_adapter.fit(autoencoder_generator, epochs=autoencoder_epochs, batch_size=autoencoder_batch_size)
+        print_with_time("Transforming representation with autoencoder")
+
+
+    def __create_autoencoder_generator(self, data, batch_size=30):
+        return AutoencoderDataGenerator(data, batch_size=batch_size)
+
+    def __create_generator(self, data, classes, batch_size):
+        train_sizes, train_labels = functions.divide_by_events_lenght(data, classes)
+        data_generator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=batch_size)
+        data_generator.create_batches()
+        return data_generator
+
+

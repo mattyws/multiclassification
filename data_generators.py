@@ -206,6 +206,7 @@ class LongitudinalDataGenerator(Sequence):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
 class AutoencoderDataGenerator(Sequence):
+    #TODO: change for batch loading
     def __init__(self, dataPaths, iterForever=False):
         self.__filesList = dataPaths
         self.iterForever = iterForever
