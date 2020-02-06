@@ -20,7 +20,7 @@ import functions
 from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator
 from data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
-from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging
+from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging, split_classes
 from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, remove_sepsis_mentions, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     train_representation_model
@@ -138,6 +138,8 @@ if parameters['use_textual_data']:
 # Using a seed always will get the same data split even if the training stops
 print_with_time("Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
+positive, negative = split_classes(classes)
+print_with_time(int(len(negative) * parameters['dataset_split_rate']))
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 fold = 0
 # ====================== Script that start training new models
@@ -198,7 +200,8 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                         metrics=[keras.metrics.binary_accuracy],
                                                                         optimizer=parameters['structured_optimizer'])
             print_with_time("Training level 0 models for structured data")
-            level_zero_models_saving_path = parameters['training_directory_path'] + parameters['ensemble_models_path'].format(fold)
+            level_zero_models_saving_path = parameters['training_directory_path'] + parameters['checkpoint'] \
+                                            + parameters['ensemble_models_path'].format(fold)
             if not os.path.exists(level_zero_models_saving_path):
                 os.mkdir(level_zero_models_saving_path)
             start = datetime.datetime.now()
@@ -260,7 +263,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                 parameters['word2vec_padded_representation_files_path']) for path in samples ]
                   for samples in training_data_samples]
                 training_classes_samples = structured_ensemble.training_classes_samples
-            level_zero_models_saving_path = parameters['training_directory_path'] \
+            level_zero_models_saving_path = parameters['training_directory_path'] + parameters['checkpoint'] \
                                             + parameters['ensenble_models_path'].format(fold)
             if not os.path.exists(level_zero_models_saving_path):
                 os.mkdir(level_zero_models_saving_path)
@@ -340,8 +343,9 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
 
             print_with_time("Creating meta model data")
             meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
-            meta_data_creator.create_meta_learner_data(meta_data, parameters['training_directory_path'] +
-                                                       parameters['meta_representation_path'].format(num_models, fold))
+            meta_data_creator.create_meta_learner_data(meta_data, parameters['training_directory_path']
+                                                       + parameters['checkpoint']
+                                                       + parameters['meta_representation_path'].format(num_models, fold))
 
             meta_data = np.array(meta_data_creator.get_new_paths(meta_data))
 

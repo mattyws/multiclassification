@@ -1,7 +1,7 @@
 from keras.layers import LeakyReLU
 
 parameters = {
-    "training_directory_path" : "../mimic/ensemble_training/",
+    "training_directory_path" : "../mimic/ensemble_training_only_structured/",
     "dataset_csv_file_path": "../mimic/new_dataset_patients.csv",
     "ensemble_training_method" : "bagging",
     "use_structured_data" : True,
@@ -21,7 +21,7 @@ parameters = {
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
 
-    "checkpoint" : "checkpoint_only_structured/",
+    "checkpoint" : "checkpoint_only_structured_.15/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
     "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.model",
@@ -42,7 +42,7 @@ parameters = {
     "textual_testing_events_sizes_labels_file" : "textual_testing_sizes_labels_{}.pkl",
 
     "n_estimators": 15,
-    "dataset_split_rate": .4,
+    "dataset_split_rate": .15,
 
     "structured_output_units": [
         64
