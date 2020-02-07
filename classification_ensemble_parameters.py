@@ -1,7 +1,7 @@
 from keras.layers import LeakyReLU
 
 parameters = {
-    "training_directory_path" : "../mimic/ensemble_training_only_structured/",
+    "training_directory_path" : "../mimic/ensemble_training/",
     "dataset_csv_file_path": "../mimic/new_dataset_patients.csv",
     "ensemble_training_method" : "bagging",
     "use_structured_data" : True,

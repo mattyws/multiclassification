@@ -29,8 +29,6 @@ from model_creators import MultilayerKerasRecurrentNNCreator, EnsembleModelCreat
     MultilayerTemporalConvolutionalNNCreator, NoteeventsClassificationModelCreator
 from normalization import Normalization, NormalizationValues
 
-# TODO: check resuming weak model training
-# TODO: check saving path
 
 def train_level_zero_classifiers(data, classes, model_creator, training_data_samples=None, training_classes_samples=None,
                                  level_zero_epochs=20, n_estimators=10, batch_size=30, method="bagging", split_rate=.4,
@@ -368,7 +366,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                 optimizer=parameters['meta_learner_optimizer'])
             kerasAdapter = modelCreator.create()
             epochs = parameters['meta_learner_training_epochs']
-            print_with_time("Training model")
+            print_with_time("Training model with {} models".format(num_models))
             start = datetime.datetime.now()
             kerasAdapter.fit(training_meta_data_generator, epochs=epochs, callbacks=None, use_multiprocessing=False)
             end = datetime.datetime.now()

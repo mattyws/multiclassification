@@ -374,3 +374,12 @@ class EnsembleMetaLearnerDataCreator():
             return new_list
         else:
             raise Exception("Data not transformed!")
+
+
+class AutoencoderDataCreator():
+
+    def __init__(self):
+        pass
+
+    def transform_representation(self, data, encoder):
+        pass
