@@ -69,6 +69,7 @@ parameters = {
         3
     ],
     "structured_pooling": [
+        False,
         False
     ],
     "structured_dilations": [
