@@ -21,7 +21,7 @@ parameters = {
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
 
-    "checkpoint" : "checkpoint_only_structured_.15/",
+    "checkpoint" : "checkpoint_only_structured_.15_40epochs/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
     "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.model",
@@ -45,33 +45,38 @@ parameters = {
     "dataset_split_rate": .15,
 
     "structured_output_units": [
-        64
+        64,
+        32
     ],
     "structured_output_neurons": 1,
     "structured_loss": "binary_crossentropy",
     "structured_optimizer":"adam",
     "structured_layers_activations": [
+        LeakyReLU(),
         LeakyReLU()
     ],
     "structured_network_activation" : "sigmoid",
     "structured_gru": False,
     "structured_tcn": True,
     "structured_use_dropout": True,
-    "structured_dropout": 0.5,
-    "structured_training_epochs": 15,
+    "structured_dropout": 0.3,
+    "structured_training_epochs": 40,
     "structured_n_estimators": 15,
-    "structured_batch_size": 30,
+    "structured_batch_size": 50,
     # Temporal convolutional network parameters only
     "structured_kernel_sizes": [
+        5,
         3
     ],
     "structured_pooling": [
         False
     ],
     "structured_dilations": [
+        [1, 2, 4],
         [1, 2, 4]
     ],
     "structured_nb_stacks": [
+        1,
         1
     ],
 
