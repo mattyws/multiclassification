@@ -207,9 +207,10 @@ class LongitudinalDataGenerator(Sequence):
 
 class AutoencoderDataGenerator(Sequence):
     #TODO: change for batch loading
-    def __init__(self, dataPaths, iterForever=False):
+    def __init__(self, dataPaths, batch_size=30, iterForever=False):
         self.__filesList = dataPaths
         self.iterForever = iterForever
+        self.batch_size = batch_size
         self.__iterPos = 0
         self.total_events = 0
         self.consumed_idx = []
@@ -229,7 +230,7 @@ class AutoencoderDataGenerator(Sequence):
         :param idx:
         :return:
         """
-        batch_x = self.__filesList[idx]
+        batch_x = self.__filesList[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_x = self.__load(batch_x)
         if idx not in self.consumed_idx:
             self.consumed_idx.append(idx)

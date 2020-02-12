@@ -162,9 +162,12 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         # TODO: Train autoencoder
         print_with_time("Training Autoencoder")
         autoencoder_generator = AutoencoderDataGenerator(normalized_data, batch_size=parameters['autoencoder_batch_size'])
-        autoencoder_creator = KerasVariationalAutoencoder(input_shape, intermediate_dim, latent_dim, optmizer='adam', loss='mse', recurrent_autoencoder=False)
+        # TODO: fix variational autoencoder
+        autoencoder_creator = KerasVariationalAutoencoder(structured_input_shape, parameters['encoded_dim'],
+                                                          parameters['decoder_latent_dim'])
         autoencoder_adapter = autoencoder_creator.create()
-        autoencoder_adapter.fit(autoencoder_generator, epochs=autoencoder_epochs, batch_size=autoencoder_batch_size)
+        autoencoder_adapter.fit(autoencoder_generator, epochs=parameters['autoencoder_epochs'],
+                                batch_size=parameters['autoencoder_batch_size'])
         encoder = autoencoder_adapter.get_encoder()
         # TODO: Transform data with autoencoder
         print_with_time("Transforming representation with autoencoder")
