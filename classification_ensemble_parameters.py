@@ -21,7 +21,7 @@ parameters = {
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
 
-    "checkpoint" : "checkpoint_only_structured_.15_40epochs/",
+    "checkpoint" : "checkpoint_only_structured_.15_40epochs_l1l2_gru/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
     "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.model",
@@ -56,8 +56,8 @@ parameters = {
         LeakyReLU()
     ],
     "structured_network_activation" : "sigmoid",
-    "structured_gru": False,
-    "structured_tcn": True,
+    "structured_gru": True,
+    "structured_tcn": False,
     "structured_use_dropout": True,
     "structured_dropout": 0.3,
     "structured_training_epochs": 40,

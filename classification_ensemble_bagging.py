@@ -176,8 +176,9 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                  layersActivations=parameters['structured_layers_activations'],
                                                                  networkActivation=parameters['structured_network_activation'],
                                                                  gru=parameters['structured_gru'],
+                                                                 kernel_regularizer=l1_l2(),
                                                                  use_dropout=parameters['structured_use_dropout'],
-                                                                dropout=parameters['structured_dropout'], kernel_regularizer=None,
+                                                                dropout=parameters['structured_dropout'],
                                                                  metrics=[keras.metrics.binary_accuracy],
                                                                  optimizer=parameters['structured_optimizer'])
             else:
@@ -194,7 +195,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                         dilations=parameters['structured_dilations'],
                                                                         nb_stacks=parameters['structured_nb_stacks'],
                                                                         dropout=parameters['structured_dropout'],
-                                                                        kernel_regularizer=None,
+                                                                        kernel_regularizer=l1_l2(),
                                                                         metrics=[keras.metrics.binary_accuracy],
                                                                         optimizer=parameters['structured_optimizer'])
             print_with_time("Training level 0 models for structured data")
