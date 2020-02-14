@@ -195,7 +195,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                         dilations=parameters['structured_dilations'],
                                                                         nb_stacks=parameters['structured_nb_stacks'],
                                                                         dropout=parameters['structured_dropout'],
-                                                                        kernel_regularizer=l1_l2(),
+                                                                        kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
                                                                         metrics=[keras.metrics.binary_accuracy],
                                                                         optimizer=parameters['structured_optimizer'])
             print_with_time("Training level 0 models for structured data")
@@ -341,7 +341,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             level_zero_models = aux_level_zero_models
 
             print_with_time("Creating meta model data")
-            meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
+            meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models, use_class_prediction=parameters['use_class_prediction'])
             meta_data_creator.create_meta_learner_data(meta_data, parameters['training_directory_path']
                                                        + parameters['checkpoint']
                                                        + parameters['meta_representation_path'].format(num_models, fold))
@@ -386,3 +386,4 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             kerasAdapter.save(parameters['training_directory_path'] + parameters['checkpoint']
                               + parameters['meta_model_file_name'].format(num_models, fold))
         fold += 1
+        exit()

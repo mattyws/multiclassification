@@ -1,4 +1,4 @@
-from keras.layers import LeakyReLU
+from keras.layers import LeakyReLU, ReLU
 
 parameters = {
     "training_directory_path" : "../mimic/ensemble_training/",
@@ -21,7 +21,7 @@ parameters = {
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
 
-    "checkpoint" : "checkpoint_only_structured_.15_40epochs_l1l2_gru/",
+    "checkpoint" : "checkpoint_only_structured_1.4_ReLU_class_predictions/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
     "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.model",
@@ -41,8 +41,8 @@ parameters = {
     "textual_testing_events_sizes_file" : "textual_testing_sizes_{}.pkl",
     "textual_testing_events_sizes_labels_file" : "textual_testing_sizes_labels_{}.pkl",
 
-    "n_estimators": 15,
-    "dataset_split_rate": .15,
+    "n_estimators": 2,
+    "dataset_split_rate": 1.4,
 
     "structured_output_units": [
         64,
@@ -52,14 +52,14 @@ parameters = {
     "structured_loss": "binary_crossentropy",
     "structured_optimizer":"adam",
     "structured_layers_activations": [
-        LeakyReLU(),
-        LeakyReLU()
+        ReLU(),
+        ReLU()
     ],
     "structured_network_activation" : "sigmoid",
-    "structured_gru": True,
-    "structured_tcn": False,
+    "structured_gru": False,
+    "structured_tcn": True,
     "structured_use_dropout": True,
-    "structured_dropout": 0.3,
+    "structured_dropout": 0.5,
     "structured_training_epochs": 40,
     "structured_n_estimators": 15,
     "structured_batch_size": 50,
@@ -110,9 +110,10 @@ parameters = {
     ],
     'meta_learner_network_activation': 'sigmoid',
     'meta_learner_use_dropout': True,
-    'meta_learner_dropout': 0.2,
+    'meta_learner_dropout': 0.4,
     "meta_learner_optimizer":"adam",
     "meta_learner_training_epochs": 30,
+    "use_class_prediction": True,
 
     "modelCheckpointPath": "../mimic/ensemble_training/checkpoint/",
     "modelConfigPath": "../mimic/ensemble_training/checkpoint/config.json",
