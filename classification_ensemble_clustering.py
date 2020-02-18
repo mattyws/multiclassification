@@ -160,7 +160,8 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         print_with_time("Fold {}".format(fold))
 
         print_with_time("Training Autoencoder")
-        autoencoder_generator = AutoencoderDataGenerator(normalized_data, batch_size=parameters['autoencoder_batch_size'])
+        autoencoder_generator = AutoencoderDataGenerator(normalized_data,
+                                                         batch_size=parameters['autoencoder_batch_size'])
         # TODO: fix variational autoencoder
         autoencoder_creator = KerasVariationalAutoencoder(structured_input_shape, parameters['encoded_dim'],
                                                           parameters['decoder_latent_dim'])
