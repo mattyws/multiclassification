@@ -325,14 +325,14 @@ class EnsembleMetaLearnerDataCreator():
                     with open(p, 'rb') as fhandler:
                         data.append(pickle.load(fhandler))
                 elif 'csv' in p.split('.')[-1]:
-                    data.append(pandas.read_csv(p))
+                    data.append(pandas.read_csv(p).values)
             return data
         elif isinstance(path, str):
             if 'pkl' in path.split('.')[-1]:
                 with open(path, 'rb') as fhandler:
                     return pickle.load(fhandler)
             elif 'csv' in path.split('.')[-1]:
-                return pandas.read_csv(path)
+                return pandas.read_csv(path).values
 
     def __transform(self, data):
         data = np.array([data])
@@ -378,8 +378,92 @@ class EnsembleMetaLearnerDataCreator():
 
 class AutoencoderDataCreator():
 
-    def __init__(self):
+    def __init__(self, encoder):
+        self.new_paths = []
+        self.encoder = encoder
         pass
 
-    def transform_representation(self, data, encoder):
+    def transform_representations(self, dataset, new_representation_path=None, manager_queue=None):
+        """
+        Do the actual transformation
+        :param dataset: the paths for the events as .csv files
+        :param new_representation_path: the path where the new representations will be saved
+        :param manager_queue: the multiprocessing.Manager.Queue to use for progress checking
+        :return: dictionary {old_path : new_path}
+        """
+        new_paths = dict()
+        consumed = 0
+        total_files = len(dataset)
+        for path in dataset:
+            if isinstance(path, tuple):
+                icustayid = os.path.splitext(path[0].split('/')[-1])[0]
+            else:
+                icustayid = os.path.splitext(path.split('/')[-1])[0]
+            if manager_queue is not None:
+                manager_queue.put(path)
+            else:
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            transformed_doc_path = new_representation_path + icustayid + '.pkl'
+            if os.path.exists(transformed_doc_path):
+                new_paths[icustayid] = transformed_doc_path
+                if self.representation_length is None:
+                    with open(transformed_doc_path, 'rb') as fhandler:
+                        new_representation = pickle.load(fhandler)
+                        self.representation_length = len(new_representation)
+                continue
+            data = self.__load_data(path)
+            new_representation = self.__transform(data)
+            if self.representation_length is None:
+                self.representation_length = len(new_representation)
+            with open(transformed_doc_path, 'wb') as fhandler:
+                pickle.dump(new_representation, fhandler)
+            new_paths[icustayid] = transformed_doc_path
+            consumed += 1
+        return new_paths
         pass
+
+    def create_autoencoder_representation(self, dataset, new_representation_path=None):
+        with multiprocessing.Pool(processes=1) as pool:
+            manager = multiprocessing.Manager()
+            manager_queue = manager.Queue()
+            partial_transform_representation = partial(self.transform_representations,
+                                                       new_representation_path=new_representation_path,
+                                                        manager_queue=manager_queue)
+            data = numpy.array_split(dataset, 6)
+            # self.transform_representations(data[0], new_representation_path=new_representation_path, manager_queue=manager_queue)
+            # exit()
+            total_files = len(dataset)
+            map_obj = pool.map_async(partial_transform_representation, data)
+            consumed = 0
+            while not map_obj.ready() or manager_queue.qsize() != 0:
+                for _ in range(manager_queue.qsize()):
+                    manager_queue.get()
+                    consumed += 1
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            result = map_obj.get()
+            padded_paths = dict()
+            for r in result:
+                padded_paths.update(r)
+            self.new_paths = padded_paths
+
+    def __load_data(self, path):
+        if 'pkl' in path.split('.')[-1]:
+            with open(path, 'rb') as fhandler:
+                return pickle.load(fhandler)
+        elif 'csv' in path.split('.')[-1]:
+            return pandas.read_csv(path).values
+
+    def __transform(self, data):
+        data = np.array([data])
+        prediction = self.encoder.predict(data)
+        return prediction
+
+    def get_new_paths(self, files_list):
+        if self.new_paths is not None and len(self.new_paths.keys()) != 0:
+            new_list = []
+            for file in files_list:
+                if file in self.new_paths.keys():
+                    new_list.append(self.new_paths[file])
+            return new_list
+        else:
+            raise Exception("Data not transformed!")

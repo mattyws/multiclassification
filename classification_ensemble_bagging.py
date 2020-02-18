@@ -380,7 +380,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             metrics['num_models'] = num_models
             if dictWriter is None:
                 dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
-            if fold == 0:
+            if fold == 0 and num_models == 1:
                 dictWriter.writeheader()
             dictWriter.writerow(metrics)
             kerasAdapter.save(parameters['training_directory_path'] + parameters['checkpoint']

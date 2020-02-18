@@ -159,7 +159,6 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             continue
         print_with_time("Fold {}".format(fold))
 
-        # TODO: Train autoencoder
         print_with_time("Training Autoencoder")
         autoencoder_generator = AutoencoderDataGenerator(normalized_data, batch_size=parameters['autoencoder_batch_size'])
         # TODO: fix variational autoencoder
@@ -169,10 +168,9 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         autoencoder_adapter.fit(autoencoder_generator, epochs=parameters['autoencoder_epochs'],
                                 batch_size=parameters['autoencoder_batch_size'])
         encoder = autoencoder_adapter.get_encoder()
-        # TODO: Transform data with autoencoder
         print_with_time("Transforming representation with autoencoder")
         autoencoder_data_creator = AutoencoderDataCreator()
-        autoencoder_data_creator.transform_representation(normalized_data, encoder)
+        autoencoder_data_creator.create_autoencoder_representation(normalized_data, encoder)
 
         ensemble_training = TrainEnsembleClustering()
         for num_models in range(1, parameters['n_estimators'] + 1):
