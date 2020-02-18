@@ -74,9 +74,6 @@ class TrainEnsembleBagging():
                     train_indexes.extend(positive_indexes)
                     train_samples = data[train_indexes]
                     train_classes = classes[train_indexes]
-                print(train_samples, train_classes)
-                print(len(train_samples), len(train_classes))
-                print(len(positive_indexes), len(negative_indexes))
                 data_train_generator = self.__create_generator(train_samples, train_classes, batch_size)
                 adapter = model_creator.create()
                 adapter.fit(data_train_generator, epochs=epochs, use_multiprocessing=False)

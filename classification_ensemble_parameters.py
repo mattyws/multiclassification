@@ -21,7 +21,7 @@ parameters = {
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
 
-    "checkpoint" : "checkpoint_only_structured_1.4_ReLU_class_predictions/",
+    "checkpoint" : "checkpoint_only_structured_1.4balance_class_predictions/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
     "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.model",
@@ -52,8 +52,8 @@ parameters = {
     "structured_loss": "binary_crossentropy",
     "structured_optimizer":"adam",
     "structured_layers_activations": [
-        ReLU(),
-        ReLU()
+        LeakyReLU(),
+        LeakyReLU()
     ],
     "structured_network_activation" : "sigmoid",
     "structured_gru": False,

@@ -386,4 +386,3 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             kerasAdapter.save(parameters['training_directory_path'] + parameters['checkpoint']
                               + parameters['meta_model_file_name'].format(num_models, fold))
         fold += 1
-        exit()
