@@ -3,6 +3,7 @@ import pickle
 
 from keras.engine.saving import load_model
 from keras.wrappers.scikit_learn import KerasClassifier
+from sklearn.cluster.k_means_ import MiniBatchKMeans
 from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier
 from sklearn.utils import resample
 
@@ -105,8 +106,32 @@ class TrainEnsembleClustering():
         self.training_data_samples = []
         self.training_classes_samples = []
 
-    def cluster(self, data, n_cluster):
-        pass
+    def cluster(self, data, classes, n_clusters):
+        positive_indexes, negative_indexes = split_classes(classes)
+        loaded_data = self.__load_encoded_data(data[negative_indexes])
+        km = MiniBatchKMeans(n_clusters=n_clusters, init='k-means++', n_init=1,
+                             init_size=1000, batch_size=1000)
+        print_with_time("Training K-means")
+        clusters_indexes = km.fit_predict(loaded_data)
+        data_samples_dict = dict()
+        classes_samples_dict = dict()
+        for index, cluster_index in enumerate(clusters_indexes):
+            if clusters_indexes not in data_samples_dict.keys():
+                data_samples_dict[cluster_index] = []
+            data_samples_dict[cluster_index].append(data[negative_indexes[index]])
+            if cluster_index not in classes_samples_dict.keys():
+                classes_samples_dict[cluster_index] = []
+            classes_samples_dict[cluster_index].append(0)
+        data_samples = []
+        classes_samples = []
+        for key in data_samples_dict.keys():
+            samples = data_samples_dict[key]
+            classes = classes_samples_dict[key]
+            samples.extend(data[positive_indexes])
+            classes.extend(classes[positive_indexes])
+            data_samples.append(samples)
+            classes_samples.append(classes)
+        return km, data_samples, classes_samples
 
     def fit(self, data, classes, model_creator, autoencoder_creator, input_shape, n_estimators=10,
             autoencoder_batch_size=30, autoencoder_epochs=30):
@@ -118,5 +143,12 @@ class TrainEnsembleClustering():
         data_generator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=batch_size)
         data_generator.create_batches()
         return data_generator
+
+    def __load_encoded_data(self, data):
+        encoded_data = []
+        for d in data:
+            with open(data, 'rb') as file_handler:
+                encoded_data.append(pickle.load(file_handler))
+        return encoded_data
 
 

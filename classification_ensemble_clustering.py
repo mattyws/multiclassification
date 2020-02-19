@@ -177,7 +177,25 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         for num_models in range(2, parameters['n_estimators'] + 1):
 
             #TODO: cluster data
-            ensemble_training.cluster(encoded_data, num_models)
+            ensemble_training.cluster(encoded_data[trainIndex], classes[trainIndex], num_models)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
             structured_ensemble = None
             if parameters['use_structured_data']:
