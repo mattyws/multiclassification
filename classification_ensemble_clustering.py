@@ -133,7 +133,6 @@ if parameters['use_textual_data']:
                                                            parameters['word2vec_padded_representation_files_path'])
     textual_transformed_data = np.array(texts_transformer.get_new_paths(textual_transformed_data))
 
-
 # Using a seed always will get the same data split even if the training stops
 print_with_time("Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
@@ -160,7 +159,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         print_with_time("Fold {}".format(fold))
 
         print_with_time("Training Autoencoder")
-        autoencoder_generator = AutoencoderDataGenerator(normalized_data,
+        autoencoder_generator = AutoencoderDataGenerator(normalized_data[trainIndex],
                                                          batch_size=parameters['autoencoder_batch_size'])
         # TODO: fix variational autoencoder
         autoencoder_creator = KerasVariationalAutoencoder(structured_input_shape, parameters['encoded_dim'],
@@ -172,17 +171,19 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         print_with_time("Transforming representation with autoencoder")
         autoencoder_data_creator = AutoencoderDataCreator()
         autoencoder_data_creator.create_autoencoder_representation(normalized_data, encoder)
+        encoded_data = autoencoder_data_creator.get_new_paths(normalized_data)
 
         ensemble_training = TrainEnsembleClustering()
-        for num_models in range(1, parameters['n_estimators'] + 1):
+        for num_models in range(2, parameters['n_estimators'] + 1):
 
             #TODO: cluster data
+            ensemble_training.cluster(encoded_data, num_models)
 
             structured_ensemble = None
             if parameters['use_structured_data']:
                 print_with_time("Getting values for normalization")
                 values = normalization_values.get_normalization_values(structured_data[trainIndex],
-                                                                       saved_file_name=parameters['training_directory_path']
+                                                                           saved_file_name=parameters['training_directory_path']
                                                                                        + parameters['normalization_data_path'].format(fold))
                 normalizer = Normalization(values, temporary_path=parameters['training_directory_path']
                                                                   + parameters['normalized_structured_data_path'].format(fold))
