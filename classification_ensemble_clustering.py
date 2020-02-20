@@ -50,6 +50,16 @@ def train_level_zero_classifiers(data, classes, model_creator, training_data_sam
         raise ValueError("Either bagginng or clustering")
     return ensemble
 
+def change_to_normalized_directory(data_samples, normalized_directory):
+    new_data_samples = []
+    for samples in data_samples:
+        new_samples = []
+        for sample in samples:
+            filename = os.path.basename(sample)
+            new_samples.append(normalized_directory+filename)
+        new_data_samples.append(new_samples)
+    return new_data_samples
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 from classification_ensemble_parameters import parameters
@@ -141,6 +151,8 @@ print_with_time(int(len(negative) * parameters['dataset_split_rate']))
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 fold = 0
 # ====================== Script that start training new models
+
+
 with open(parameters['training_directory_path'] + parameters['checkpoint'] + parameters['results_file_name'], 'a+') as cvsFileHandler, \
         open(parameters['training_directory_path'] + parameters['checkpoint'] + parameters['level_zero_result_file_name'], 'a+')\
                 as level_zero_csv_file_handler: # where the results for each fold are appended
@@ -169,6 +181,8 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                 batch_size=parameters['autoencoder_batch_size'])
         encoder = autoencoder_adapter.get_encoder()
         print_with_time("Transforming representation with autoencoder")
+        #TODO: add path to save files
+        #TODO: value normalization have to happen before this
         autoencoder_data_creator = AutoencoderDataCreator()
         autoencoder_data_creator.create_autoencoder_representation(normalized_data, encoder)
         encoded_data = autoencoder_data_creator.get_new_paths(normalized_data)
@@ -177,7 +191,11 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         for num_models in range(2, parameters['n_estimators'] + 1):
 
             #TODO: cluster data
-            ensemble_training.cluster(encoded_data[trainIndex], classes[trainIndex], num_models)
+            cluster_model, data_samples, classes_samples = ensemble_training.cluster(encoded_data[trainIndex],
+                                                                                     classes[trainIndex], num_models)
+            data_samples = change_to_normalized_directory(data_samples, parameters['training_directory_path']
+                                                                  + parameters['normalized_structured_data_path'].format(fold))
+
 
 
 
