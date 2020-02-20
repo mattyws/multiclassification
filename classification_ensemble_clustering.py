@@ -32,7 +32,7 @@ from model_creators import MultilayerKerasRecurrentNNCreator, EnsembleModelCreat
 from normalization import Normalization, NormalizationValues
 
 def train_level_zero_classifiers(data, classes, model_creator, training_data_samples=None, training_classes_samples=None,
-                                 level_zero_epochs=20, n_estimators=10, batch_size=30, method="bagging", split_rate=.4,
+                                 level_zero_epochs=20, batch_size=30, method="bagging", split_rate=.4,
                                  saved_model_path="level_zero_model_{}.model", data_samples_path="bagging_samples_{}.model"):
     if method == "bagging":
         #### START BAGGING ####
@@ -169,7 +169,17 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             fold += 1
             continue
         print_with_time("Fold {}".format(fold))
-
+        print_with_time("Getting values for normalization")
+        values = normalization_values.get_normalization_values(structured_data[trainIndex],
+                                                               saved_file_name=parameters['training_directory_path']
+                                                                               + parameters[
+                                                                                   'normalization_data_path'].format(
+                                                                   fold))
+        normalizer = Normalization(values, temporary_path=parameters['training_directory_path']
+                                                          + parameters['normalized_structured_data_path'].format(fold))
+        print_with_time("Normalizing fold data")
+        normalizer.normalize_files(structured_data)
+        normalized_data = np.array(normalizer.get_new_paths(structured_data))
         print_with_time("Training Autoencoder")
         autoencoder_generator = AutoencoderDataGenerator(normalized_data[trainIndex],
                                                          batch_size=parameters['autoencoder_batch_size'])
@@ -182,7 +192,6 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         encoder = autoencoder_adapter.get_encoder()
         print_with_time("Transforming representation with autoencoder")
         #TODO: add path to save files
-        #TODO: value normalization have to happen before this
         autoencoder_data_creator = AutoencoderDataCreator()
         autoencoder_data_creator.create_autoencoder_representation(normalized_data, encoder)
         encoded_data = autoencoder_data_creator.get_new_paths(normalized_data)
@@ -217,15 +226,6 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
 
             structured_ensemble = None
             if parameters['use_structured_data']:
-                print_with_time("Getting values for normalization")
-                values = normalization_values.get_normalization_values(structured_data[trainIndex],
-                                                                           saved_file_name=parameters['training_directory_path']
-                                                                                       + parameters['normalization_data_path'].format(fold))
-                normalizer = Normalization(values, temporary_path=parameters['training_directory_path']
-                                                                  + parameters['normalized_structured_data_path'].format(fold))
-                print_with_time("Normalizing fold data")
-                normalizer.normalize_files(structured_data)
-                normalized_data = np.array(normalizer.get_new_paths(structured_data))
                 if not parameters['structured_tcn']:
                     modelCreator = MultilayerKerasRecurrentNNCreator(structured_input_shape, parameters['structured_output_units'],
                                                                      parameters['structured_output_neurons'],
@@ -262,13 +262,15 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 start = datetime.datetime.now()
                 structured_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
                                                                    modelCreator, level_zero_epochs=parameters['structured_training_epochs'],
-                                                                   n_estimators=parameters['n_estimators'],
                                                                    split_rate=parameters['dataset_split_rate'],
                                                                    batch_size=parameters['structured_batch_size'],
                                                                    saved_model_path=level_zero_models_saving_path +
                                                                                     parameters['structured_ensemble_models_name_prefix'],
                                                                    data_samples_path = level_zero_models_saving_path +
-                                                                                    parameters['structured_ensemble_samples_name_prefix'])
+                                                                                    parameters['structured_ensemble_samples_name_prefix'],
+                                                                    training_data_samples = data_samples,
+                                                                    training_classes_samples = classes_samples
+                                                                    )
                 end = datetime.datetime.now()
                 time_to_train = end - start
                 hours, remainder = divmod(time_to_train.seconds, 3600)
@@ -325,7 +327,6 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 start = datetime.datetime.now()
                 textual_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
                                                                    modelCreator, level_zero_epochs=parameters['textual_training_epochs'],
-                                                                   n_estimators=parameters['n_estimators'],
                                                                    batch_size=parameters['textual_batch_size'],
                                                                    split_rate=parameters['dataset_split_rate'],
                                                                    saved_model_path=level_zero_models_saving_path
