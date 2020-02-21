@@ -1,5 +1,6 @@
 import os
 import pickle
+from abc import abstractmethod
 
 from keras.engine.saving import load_model
 from keras.wrappers.scikit_learn import KerasClassifier
@@ -134,13 +135,15 @@ class TrainEnsembleClustering():
     def fit(self, data_samples, classes_samples, model_creator, epochs=10, batch_size=30, saved_model_path="ensemble_{}.model",
             saved_data_samples_path="ensemble_samples_{}.model" ):
         n = 0
+        trained_classifiers_path = []
         for data_sample, class_samples in zip(data_samples, classes_samples):
             data_train_generator = self.__create_generator(data_sample, class_samples, batch_size)
             adapter = model_creator.create()
             adapter.fit(data_train_generator, epochs=epochs, use_multiprocessing=False)
             adapter.save(saved_model_path.format(n))
-            self.classifiers.append(saved_model_path.format(n))
+            trained_classifiers_path.append(saved_model_path.format(n))
             n += 1
+        return trained_classifiers_path
 
 
     def __create_generator(self, data, classes, batch_size):
@@ -155,5 +158,13 @@ class TrainEnsembleClustering():
             with open(data, 'rb') as file_handler:
                 encoded_data.append(pickle.load(file_handler))
         return encoded_data
+
+    @abstractmethod
+    def get_classifiers(self, classifiers_path):
+        classifiers = []
+        for classifier in classifiers_path:
+            adapter = KerasAdapter.load_model(classifier)
+            classifiers.append(adapter)
+        return classifiers
 
 

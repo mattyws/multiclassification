@@ -267,7 +267,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             if not os.path.exists(level_zero_models_saving_path):
                 os.mkdir(level_zero_models_saving_path)
             start = datetime.datetime.now()
-            textual_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
+            textual_ensemble = train_level_zero_classifiers(textual_transformed_data[trainIndex], classes[trainIndex],
                                                                modelCreator, level_zero_epochs=parameters['textual_training_epochs'],
                                                                n_estimators=parameters['n_estimators'],
                                                                batch_size=parameters['textual_batch_size'],
@@ -303,7 +303,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                     metrics = test_model(model, dataTestGenerator, fold)
                     metrics['model_num'] = i
                     textual_results.append(metrics)
-                textual_results = pd.DataFrame(structured_results)
+                textual_results = pd.DataFrame(textual_results)
                 print(textual_results)
                 textual_results.to_csv(parameters['training_directory_path'] + parameters['checkpoint'] +
                                           parameters['level_zero_textual_result_file_name'].format(fold))

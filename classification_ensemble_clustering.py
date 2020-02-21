@@ -196,36 +196,17 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         autoencoder_data_creator.create_autoencoder_representation(normalized_data, encoder)
         encoded_data = autoencoder_data_creator.get_new_paths(normalized_data)
 
-        ensemble_training = TrainEnsembleClustering()
         for num_models in range(2, parameters['n_estimators'] + 1):
+            print_with_time("Training loop for {} clusters".format(num_models))
+            ensemble_training = TrainEnsembleClustering()
 
-            #TODO: cluster data
             cluster_model, data_samples, classes_samples = ensemble_training.cluster(encoded_data[trainIndex],
                                                                                      classes[trainIndex], num_models)
-            data_samples = change_to_normalized_directory(data_samples, parameters['training_directory_path']
-                                                                  + parameters['normalized_structured_data_path'].format(fold))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            # TODO: save cluster model, data samples and classes samples
             structured_ensemble = None
             if parameters['use_structured_data']:
+                structured_data_samples = change_to_normalized_directory(data_samples, parameters['training_directory_path']
+                                                                        + parameters['normalized_structured_data_path'].format(fold))
                 if not parameters['structured_tcn']:
                     modelCreator = MultilayerKerasRecurrentNNCreator(structured_input_shape, parameters['structured_output_units'],
                                                                      parameters['structured_output_neurons'],
@@ -254,29 +235,23 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                             kernel_regularizer=None,
                                                                             metrics=[keras.metrics.binary_accuracy],
                                                                             optimizer=parameters['structured_optimizer'])
-                print_with_time("Training level 0 models for structured data")
                 level_zero_models_saving_path = parameters['training_directory_path'] + parameters['checkpoint'] \
                                                 + parameters['ensemble_models_path'].format(fold)
                 if not os.path.exists(level_zero_models_saving_path):
                     os.mkdir(level_zero_models_saving_path)
                 start = datetime.datetime.now()
-                structured_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
-                                                                   modelCreator, level_zero_epochs=parameters['structured_training_epochs'],
-                                                                   split_rate=parameters['dataset_split_rate'],
-                                                                   batch_size=parameters['structured_batch_size'],
-                                                                   saved_model_path=level_zero_models_saving_path +
-                                                                                    parameters['structured_ensemble_models_name_prefix'],
-                                                                   data_samples_path = level_zero_models_saving_path +
-                                                                                    parameters['structured_ensemble_samples_name_prefix'],
-                                                                    training_data_samples = data_samples,
-                                                                    training_classes_samples = classes_samples
-                                                                    )
+                print_with_time("Training level 0 models for structured data")
+                structured_classifiers_path = ensemble_training.fit(structured_data_samples, classes_samples, modelCreator,
+                                      epochs=parameters['structured_training_epochs'],
+                                      batch_size=parameters['structured_batch_size'],
+                                      saved_model_path=level_zero_models_saving_path
+                                                       + parameters['structured_ensemble_models_name_prefix'])
                 end = datetime.datetime.now()
                 time_to_train = end - start
                 hours, remainder = divmod(time_to_train.seconds, 3600)
                 minutes, seconds = divmod(remainder, 60)
                 print_with_time('Took {:02}:{:02}:{:02} to train the level zero models for structured data'.format(int(hours), int(minutes), int(seconds)))
-                structured_level_zero_models = structured_ensemble.get_classifiers()
+                structured_level_zero_models = TrainEnsembleClustering.get_classifiers(structured_classifiers_path)
                 if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint'] +
                                           parameters['level_zero_structured_result_file_name'].format(fold)):
                     print_with_time("Testing level 0 models for structured data")
@@ -301,6 +276,9 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
 
 
             if parameters['use_textual_data']:
+                textual_data_samples = change_to_normalized_directory(data_samples,
+                                                                         parameters['training_directory_path'] +
+                                                                         parameters['word2vec_padded_representation_files_path'])
                 modelCreator = NoteeventsClassificationModelCreator(textual_input_shape, parameters['textual_output_units'],
                                                                     parameters['textual_output_neurons'],
                                                                     embedding_size=parameters['textual_embedding_size'],
@@ -325,16 +303,12 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 if not os.path.exists(level_zero_models_saving_path):
                     os.mkdir(level_zero_models_saving_path)
                 start = datetime.datetime.now()
-                textual_ensemble = train_level_zero_classifiers(normalized_data[trainIndex], classes[trainIndex],
-                                                                   modelCreator, level_zero_epochs=parameters['textual_training_epochs'],
-                                                                   batch_size=parameters['textual_batch_size'],
-                                                                   split_rate=parameters['dataset_split_rate'],
-                                                                   saved_model_path=level_zero_models_saving_path
-                                                                                    + parameters['textual_ensemble_models_name_prefix'],
-                                                                data_samples_path=level_zero_models_saving_path +
-                                                                                  parameters['structured_ensemble_samples_name_prefix'],
-                                                                training_data_samples=training_data_samples,
-                                                                training_classes_samples=training_classes_samples)
+                textual_classifiers_path = ensemble_training.fit(textual_data_samples, classes_samples,
+                                                                    modelCreator,
+                                                                    epochs=parameters['structured_training_epochs'],
+                                                                    batch_size=parameters['structured_batch_size'],
+                                                                    saved_model_path=level_zero_models_saving_path
+                                                                                     + parameters['structured_ensemble_models_name_prefix'])
                 end = datetime.datetime.now()
                 time_to_train = end - start
                 hours, remainder = divmod(time_to_train.seconds, 3600)
@@ -343,6 +317,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                     'Took {:02}:{:02}:{:02} to train the level zero models for textual data'.format(int(hours),
                                                                                                        int(minutes),
                                                                                                        int(seconds)))
+                textual_level_zero_models = TrainEnsembleClustering.get_classifiers(textual_classifiers_path)
                 if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint'] +
                                           parameters['level_zero_textual_result_file_name'].format(fold)):
                     print_with_time("Testing level 0 models for textual data")
@@ -355,12 +330,11 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                         max_batch_size=parameters['textual_batch_size'])
                     dataTestGenerator.create_batches()
                     textual_results = []
-                    textual_level_zero_models = textual_ensemble.get_classifiers()
                     for i, model in enumerate(textual_level_zero_models):
                         metrics = test_model(model, dataTestGenerator, fold)
                         metrics['model_num'] = i
                         textual_results.append(metrics)
-                    textual_results = pd.DataFrame(structured_results)
+                    textual_results = pd.DataFrame(textual_results)
                     print(textual_results)
                     textual_results.to_csv(parameters['training_directory_path'] + parameters['checkpoint'] +
                                               parameters['level_zero_textual_result_file_name'].format(fold))
@@ -375,18 +349,14 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 level_zero_models = []
                 for model_num, model in enumerate(structured_level_zero_models):
                     level_zero_models.append((model, 0))
-                    if model_num == num_models:
-                        break
                 for model_num, model in enumerate(textual_level_zero_models):
                     level_zero_models.append((model, 1))
-                    if model_num == num_models:
-                        break
             elif parameters['use_structured_data']:
                 meta_data = normalized_data
-                level_zero_models = structured_level_zero_models[: num_models]
+                level_zero_models = structured_level_zero_models
             elif parameters['use_textual_data']:
                 meta_data = textual_transformed_data
-                level_zero_models = textual_level_zero_models[: num_models]
+                level_zero_models = textual_level_zero_models
 
             print_with_time("Get model from adapters")
             aux_level_zero_models = []
@@ -398,6 +368,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             level_zero_models = aux_level_zero_models
 
             print_with_time("Creating meta model data")
+            #TODO: fix the saving path name
             meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
             meta_data_creator.create_meta_learner_data(meta_data, parameters['training_directory_path']
                                                        + parameters['checkpoint']
