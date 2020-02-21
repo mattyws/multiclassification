@@ -324,3 +324,7 @@ def tokenize_sentences(sentences):
     for sentence in sentences:
         tokenized_sentences.append(whitespace_tokenize_text(sentence))
     return tokenized_sentences
+
+
+def get_ensemble_results(meta_model_results, weak_models_results, ensemble_parameters):
+    pass

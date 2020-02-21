@@ -21,7 +21,7 @@ parameters = {
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
 
-    "checkpoint" : "checkpoint_only_structured_1.4balance_class_predictions/",
+    "checkpoint" : "checkpoint_only_structured_1.4balance/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
     "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.model",
@@ -113,17 +113,6 @@ parameters = {
     'meta_learner_dropout': 0.4,
     "meta_learner_optimizer":"adam",
     "meta_learner_training_epochs": 30,
-    "use_class_prediction": True,
-
-    "modelCheckpointPath": "../mimic/ensemble_training/checkpoint/",
-    "modelConfigPath": "../mimic/ensemble_training/checkpoint/config.json",
-    "trainingDataPath" :  "../mimic/ensemble_training/dataTraining/",
-    "testingDataPath" : "../mimic/ensemble_training/dataTest/",
-    "datasetFilesFileName": "../mimic/ensemble_training/datasetFiles.pkl",
-    "datasetLabelsFileName": "../mimic/ensemble_training/datasetLabels.pkl",
-    "trainingGeneratorPath": "../mimic/ensemble_training/checkpoint/dataTrainGenerator.pkl",
-    "testingGeneratorPath": "../mimic/ensemble_training/checkpoint/dataTestGenerator.pkl",
-
-    "temporary_data_path" : "../mimic/ensemble_training/data_tmp_{}/",
+    "use_class_prediction": False
 
 }
