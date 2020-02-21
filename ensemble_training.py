@@ -103,8 +103,6 @@ class TrainEnsembleClustering():
 
     def __init__(self):
         self.classifiers = []
-        self.training_data_samples = []
-        self.training_classes_samples = []
 
     def cluster(self, data, classes, n_clusters):
         positive_indexes, negative_indexes = split_classes(classes)
@@ -133,9 +131,16 @@ class TrainEnsembleClustering():
             classes_samples.append(classes)
         return km, data_samples, classes_samples
 
-    def fit(self, data, classes, model_creator, autoencoder_creator, input_shape, n_estimators=10,
-            autoencoder_batch_size=30, autoencoder_epochs=30):
-        print_with_time("Training autoencoder for clustering")
+    def fit(self, data_samples, classes_samples, model_creator, epochs=10, batch_size=30, saved_model_path="ensemble_{}.model",
+            saved_data_samples_path="ensemble_samples_{}.model" ):
+        n = 0
+        for data_sample, class_samples in zip(data_samples, classes_samples):
+            data_train_generator = self.__create_generator(data_sample, class_samples, batch_size)
+            adapter = model_creator.create()
+            adapter.fit(data_train_generator, epochs=epochs, use_multiprocessing=False)
+            adapter.save(saved_model_path.format(n))
+            self.classifiers.append(saved_model_path.format(n))
+            n += 1
 
 
     def __create_generator(self, data, classes, batch_size):
