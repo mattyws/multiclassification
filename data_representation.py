@@ -420,7 +420,6 @@ class AutoencoderDataCreator():
             new_paths[icustayid] = transformed_doc_path
             consumed += 1
         return new_paths
-        pass
 
     def create_autoencoder_representation(self, dataset, new_representation_path=None):
         with multiprocessing.Pool(processes=1) as pool:

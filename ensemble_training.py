@@ -2,6 +2,10 @@ import os
 import pickle
 from abc import abstractmethod
 
+import multiprocessing
+from functools import partial
+
+import numpy
 from keras.engine.saving import load_model
 from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.cluster.k_means_ import MiniBatchKMeans
@@ -99,11 +103,40 @@ class TrainEnsembleBagging():
             classifiers.append(adapter)
         return classifiers
 
+def compute_dtw_distance(frac_data, all_data=None, manager_queue=None):
+    distances = dict()
+    for data in frac_data:
+        for aux_data in all_data:
+            pass
+        # TODO: finish
+    return distances
 
 class TrainEnsembleClustering():
 
     def __init__(self):
         self.classifiers = []
+
+    def generate_distance_matrix(self, data):
+        with multiprocessing.Pool(processes=1) as pool:
+            manager = multiprocessing.Manager()
+            manager_queue = manager.Queue()
+            partial_transform_representation = partial(compute_dtw_distance,
+                                                       all_data=data,
+                                                        manager_queue=manager_queue)
+            dataset = numpy.array_split(data, 6)
+            total_files = len(dataset)
+            map_obj = pool.map_async(partial_transform_representation, dataset)
+            consumed = 0
+            while not map_obj.ready() or manager_queue.qsize() != 0:
+                for _ in range(manager_queue.qsize()):
+                    manager_queue.get()
+                    consumed += 1
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            result = map_obj.get()
+            padded_paths = dict()
+            for r in result:
+                padded_paths.update(r)
+            self.new_paths = padded_paths
 
     def cluster(self, data, classes, n_clusters):
         positive_indexes, negative_indexes = split_classes(classes)

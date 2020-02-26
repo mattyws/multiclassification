@@ -327,20 +327,16 @@ class KerasVariationalAutoencoder(ModelCreator):
     This script was writen based on https://github.com/keras-team/keras/blob/master/examples/variational_autoencoder.py
     See the linked script for more details on a tutorial of how to build it.
     """
-    def __init__(self, input_shape, intermediate_dim, latent_dim, optmizer='adam', loss='mse', recurrent_autoencoder=False):
+    def __init__(self, input_shape, intermediate_dim, latent_dim, optmizer='adam', loss='mse'):
         self.input_shape = input_shape
         self.intermediate_dim = intermediate_dim
         self.latent_dim = latent_dim
         self.sampling = sampling
         self.loss = loss
         self.optmizer = optmizer
-        self.recurrent_autoencoder = recurrent_autoencoder
 
     def create(self):
-        if self.recurrent_autoencoder:
-            encoder, decoder, vae = self.__build_recurrent_model()
-        else:
-            encoder, decoder, vae = self.__build_model()
+        encoder, decoder, vae = self.__build_recurrent_model()
         return adapter.KerasAutoencoderAdapter(encoder, decoder, vae)
 
     def timedistribute_vae(self, input_shape, vae, encoder=None):
@@ -353,26 +349,6 @@ class KerasVariationalAutoencoder(ModelCreator):
             return vae, encoder
         return vae
 
-    def __build_model(self):
-        # Encoder model
-        inputs = Input(shape=self.input_shape, name='encoder_input')
-        x = Dense(self.intermediate_dim, activation='relu')(inputs)
-        z_mean = Dense(self.latent_dim, name='z_mean')(x)
-        z_log_var = Dense(self.latent_dim, name='z_log_var')(x)
-        z = Lambda(self.sampling, output_shape=(self.latent_dim,), name='z')([z_mean, z_log_var])
-        encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
-        # Decoder model
-        latent_inputs = Input(shape=(self.latent_dim,), name='z_sampling')
-        x = Dense(self.intermediate_dim, activation='relu')(latent_inputs)
-        outputs = Dense(self.input_shape[0], activation='sigmoid')(x)
-        decoder = Model(latent_inputs, outputs, name='decoder')
-        # VAE
-        outputs = decoder(encoder(inputs)[2])
-        vae = Model(inputs, outputs, name='vae_mlp')
-        vae.add_loss(self.__get_loss(inputs, outputs, z_mean, z_log_var))
-        vae.compile(optimizer=self.optmizer)
-        return encoder, decoder, vae
-
     def __build_recurrent_model(self):
         # Encoder
         inputs = Input(shape=self.input_shape, name='encoder_input')
@@ -381,6 +357,8 @@ class KerasVariationalAutoencoder(ModelCreator):
         z_log_var = Dense(self.latent_dim)(x)
         # Z layer
         z = Lambda(self.sampling, name='z')([z_mean, z_log_var])
+
+        print(self.input_shape)
         # Decoder
         latent_inputs = RepeatVector(self.input_shape[0])(z)
         decoder_x = LSTM(self.intermediate_dim, return_sequences=True)(latent_inputs)

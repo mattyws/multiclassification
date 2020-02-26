@@ -1,7 +1,7 @@
 from keras.layers import LeakyReLU, ReLU
 
 parameters = {
-    "training_directory_path" : "../mimic/ensemble_training/",
+    "training_directory_path" : "../mimic/ensemble_training_clustering/",
     "dataset_csv_file_path": "../mimic/new_dataset_patients.csv",
     "ensemble_training_method" : "bagging",
     "use_structured_data" : True,
@@ -113,6 +113,20 @@ parameters = {
     'meta_learner_dropout': 0.4,
     "meta_learner_optimizer":"adam",
     "meta_learner_training_epochs": 30,
-    "use_class_prediction": False
+    "use_class_prediction": False,
+
+
+    # For clustering only
+    "encoder_model_filename": "encoder_vae.model",
+    "decoder_model_filename": "decoder_vae.model",
+    "vae_model_filename": "vae.model",
+    "encoded_data_path": "encoder_encoded_data_{}/",
+    "clustering_ensemble_models_path": "{}_clusters_ensemble_models_fold_{}/",
+    "cluster_model_filename": "{}_cluster_{}.model",
+    "data_samples_filename": "{}_data_samples_{}.pkl",
+    "classes_samples_filename": "{}_classes_samples_{}.pkl",
+    "autoencoder_batch_size": 50,
+    "encoded_dim": 64,
+    "decoder_latent_dim": 72
 
 }

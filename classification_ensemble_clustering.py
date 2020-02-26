@@ -183,26 +183,55 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         print_with_time("Training Autoencoder")
         autoencoder_generator = AutoencoderDataGenerator(normalized_data[trainIndex],
                                                          batch_size=parameters['autoencoder_batch_size'])
-        # TODO: fix variational autoencoder
+        # TODO: calc the distance matrix with DTW
+
         autoencoder_creator = KerasVariationalAutoencoder(structured_input_shape, parameters['encoded_dim'],
                                                           parameters['decoder_latent_dim'])
         autoencoder_adapter = autoencoder_creator.create()
         autoencoder_adapter.fit(autoencoder_generator, epochs=parameters['autoencoder_epochs'],
                                 batch_size=parameters['autoencoder_batch_size'])
+        autoencoder_adapter.save(parameters['training_directory_path']+parameters['checkpoint']
+                                 +parameters['vae_model_filename'])
         encoder = autoencoder_adapter.get_encoder()
         print_with_time("Transforming representation with autoencoder")
-        #TODO: add path to save files
-        autoencoder_data_creator = AutoencoderDataCreator()
-        autoencoder_data_creator.create_autoencoder_representation(normalized_data, encoder)
+        if not os.path.exists(parameters['training_directory_path'] +
+                                                        parameters['checkpoint'] + parameters['encoded_data_path'].format(fold)):
+            os.mkdir(parameters['training_directory_path'] +
+                                                        parameters['checkpoint'] + parameters['encoded_data_path'].format(fold))
+        autoencoder_data_creator = AutoencoderDataCreator(encoder)
+        autoencoder_data_creator.create_autoencoder_representation(normalized_data,
+                                                        new_representation_path=parameters['training_directory_path'] +
+                                                        parameters['checkpoint'] + parameters['encoded_data_path'].format(fold))
         encoded_data = autoencoder_data_creator.get_new_paths(normalized_data)
 
         for num_models in range(2, parameters['n_estimators'] + 1):
             print_with_time("Training loop for {} clusters".format(num_models))
             ensemble_training = TrainEnsembleClustering()
-
-            cluster_model, data_samples, classes_samples = ensemble_training.cluster(encoded_data[trainIndex],
-                                                                                     classes[trainIndex], num_models)
-            # TODO: save cluster model, data samples and classes samples
+            # Testing if clustering was already done for this fold
+            # TODO: agglomerative hierarchical cluster based on distance matrix
+            if not os.path.exists(parameters['training_directory_path'] + parameters['checkpoint']
+                              + parameters['data_samples_filename'].format(num_models, fold)) and not \
+                os.path.exists(parameters['training_directory_path'] + parameters['checkpoint']
+                              + parameters['classes_samples_filename'].format(num_models, fold)):
+                cluster_model, data_samples, classes_samples = ensemble_training.cluster(encoded_data[trainIndex],
+                                                                                         classes[trainIndex], num_models)
+                with open(parameters['training_directory_path'] + parameters['checkpoint']
+                                  + parameters['cluster_model_filename'].format(num_models, fold), 'wb') as file_handler:
+                    pickle.dump(cluster_model, file_handler)
+                with open(parameters['training_directory_path'] + parameters['checkpoint']
+                                  + parameters['data_samples_filename'].format(num_models, fold), 'wb') as file_handler:
+                    pickle.dump(data_samples, file_handler)
+                with open(parameters['training_directory_path'] + parameters['checkpoint']
+                                  + parameters['classes_samples_filename'].format(num_models, fold), 'wb') as file_handler:
+                    pickle.dump(classes_samples, file_handler)
+            else:
+                # Loading in case it was already trained
+                with open(parameters['training_directory_path'] + parameters['checkpoint']
+                                  + parameters['data_samples_filename'].format(num_models, fold), 'rb') as file_handler:
+                    data_samples = pickle.load(file_handler)
+                with open(parameters['training_directory_path'] + parameters['checkpoint']
+                                  + parameters['classes_samples_filename'].format(num_models, fold), 'rb') as file_handler:
+                    classes_samples = pickle.load(file_handler)
             structured_ensemble = None
             if parameters['use_structured_data']:
                 structured_data_samples = change_to_normalized_directory(data_samples, parameters['training_directory_path']
@@ -236,7 +265,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                             metrics=[keras.metrics.binary_accuracy],
                                                                             optimizer=parameters['structured_optimizer'])
                 level_zero_models_saving_path = parameters['training_directory_path'] + parameters['checkpoint'] \
-                                                + parameters['ensemble_models_path'].format(fold)
+                                                + parameters['clustering_ensemble_models_path'].format(num_models, fold)
                 if not os.path.exists(level_zero_models_saving_path):
                     os.mkdir(level_zero_models_saving_path)
                 start = datetime.datetime.now()
@@ -299,7 +328,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                       for samples in training_data_samples]
                     training_classes_samples = structured_ensemble.training_classes_samples
                 level_zero_models_saving_path = parameters['training_directory_path'] + parameters['checkpoint'] \
-                                                + parameters['ensenble_models_path'].format(fold)
+                                                + parameters['clustering_ensemble_models_path'].format(num_models, fold)
                 if not os.path.exists(level_zero_models_saving_path):
                     os.mkdir(level_zero_models_saving_path)
                 start = datetime.datetime.now()
@@ -368,7 +397,6 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
             level_zero_models = aux_level_zero_models
 
             print_with_time("Creating meta model data")
-            #TODO: fix the saving path name
             meta_data_creator = EnsembleMetaLearnerDataCreator(level_zero_models)
             meta_data_creator.create_meta_learner_data(meta_data, parameters['training_directory_path']
                                                        + parameters['checkpoint']
