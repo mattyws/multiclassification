@@ -321,6 +321,13 @@ def sampling(args):
     return z_mean + K.exp(0.5 * z_log_var) * epsilon
 
 
+def repeat(x):
+
+    stepMatrix = K.ones_like(x[0][:,:,:1]) #matrix with ones, shaped as (batch, steps, 1)
+    latentMatrix = K.expand_dims(x[1],axis=1) #latent vars, shaped as (batch, 1, latent_dim)
+
+    return K.batch_dot(stepMatrix,latentMatrix)
+
 class KerasVariationalAutoencoder(ModelCreator):
     """
     A class that create a Variational Autoenconder.
@@ -360,7 +367,8 @@ class KerasVariationalAutoencoder(ModelCreator):
 
         print(self.input_shape)
         # Decoder
-        latent_inputs = RepeatVector(self.input_shape[0])(z)
+        latent_inputs = Lambda(repeat)([inputs,z])
+        # latent_inputs = RepeatVector(self.input_shape[0])(z)
         decoder_x = LSTM(self.intermediate_dim, return_sequences=True)(latent_inputs)
         outputs = LSTM(self.input_shape[1], return_sequences=True)(decoder_x)
         # TODO: não aceita retorno de um vetor [zmeean, ...], ver qual saída uso para o encoder

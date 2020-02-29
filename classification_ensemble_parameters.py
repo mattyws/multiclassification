@@ -119,6 +119,7 @@ parameters = {
     # For clustering only
     "encoder_model_filename": "encoder_vae.model",
     "decoder_model_filename": "decoder_vae.model",
+    "distance_matrix_filename": "distances_{}.pkl",
     "vae_model_filename": "vae.model",
     "encoded_data_path": "encoder_encoded_data_{}/",
     "clustering_ensemble_models_path": "{}_clusters_ensemble_models_fold_{}/",

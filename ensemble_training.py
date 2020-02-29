@@ -6,11 +6,15 @@ import multiprocessing
 from functools import partial
 
 import numpy
+import sys
+
 from keras.engine.saving import load_model
 from keras.wrappers.scikit_learn import KerasClassifier
+from sklearn.cluster.hierarchical import AgglomerativeClustering
 from sklearn.cluster.k_means_ import MiniBatchKMeans
 from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier
 from sklearn.utils import resample
+from tslearn.metrics import dtw
 
 import functions
 from adapter import KerasAdapter
@@ -106,9 +110,17 @@ class TrainEnsembleBagging():
 def compute_dtw_distance(frac_data, all_data=None, manager_queue=None):
     distances = dict()
     for data in frac_data:
+        if manager_queue is not None:
+            manager_queue.put(data)
+        data_distances = []
+        with open(data, 'rb') as file_handler:
+            data_values = pickle.load(file_handler)
         for aux_data in all_data:
-            pass
-        # TODO: finish
+            with open(aux_data, 'rb') as aux_handler:
+                aux_values = pickle.load(aux_handler)
+            distance = dtw(data_values, aux_values)
+            data_distances.append(distance)
+        distances[data] = data_distances
     return distances
 
 class TrainEnsembleClustering():
@@ -122,9 +134,9 @@ class TrainEnsembleClustering():
             manager_queue = manager.Queue()
             partial_transform_representation = partial(compute_dtw_distance,
                                                        all_data=data,
-                                                        manager_queue=manager_queue)
+                                                       manager_queue=manager_queue)
             dataset = numpy.array_split(data, 6)
-            total_files = len(dataset)
+            total_files = len(data)
             map_obj = pool.map_async(partial_transform_representation, dataset)
             consumed = 0
             while not map_obj.ready() or manager_queue.qsize() != 0:
@@ -133,18 +145,22 @@ class TrainEnsembleClustering():
                     consumed += 1
                 sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
             result = map_obj.get()
-            padded_paths = dict()
+            paths = dict()
             for r in result:
-                padded_paths.update(r)
-            self.new_paths = padded_paths
+                paths.update(r)
+            distance_matrix = []
+            for d in data:
+                distance_matrix.append(paths[d])
+            return distance_matrix
 
-    def cluster(self, data, classes, n_clusters):
+    def cluster(self, data, classes, distance_matrix, n_clusters):
         positive_indexes, negative_indexes = split_classes(classes)
-        loaded_data = self.__load_encoded_data(data[negative_indexes])
-        km = MiniBatchKMeans(n_clusters=n_clusters, init='k-means++', n_init=1,
-                             init_size=1000, batch_size=1000)
+        # loaded_data = self.__load_encoded_data(data[negative_indexes])
+        # print_with_time("Generating distance matrix")
+        # loaded_data = self.generate_distance_matrix(data[negative_indexes])
+        km = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed")
         print_with_time("Training K-means")
-        clusters_indexes = km.fit_predict(loaded_data)
+        clusters_indexes = km.fit_predict(distance_matrix)
         data_samples_dict = dict()
         classes_samples_dict = dict()
         for index, cluster_index in enumerate(clusters_indexes):
@@ -188,8 +204,8 @@ class TrainEnsembleClustering():
     def __load_encoded_data(self, data):
         encoded_data = []
         for d in data:
-            with open(data, 'rb') as file_handler:
-                encoded_data.append(pickle.load(file_handler))
+            with open(d, 'rb') as file_handler:
+                encoded_data.append(numpy.array(pickle.load(file_handler)))
         return encoded_data
 
     @abstractmethod
