@@ -158,7 +158,7 @@ class TrainEnsembleClustering():
         # loaded_data = self.__load_encoded_data(data[negative_indexes])
         # print_with_time("Generating distance matrix")
         # loaded_data = self.generate_distance_matrix(data[negative_indexes])
-        km = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed")
+        km = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed", linkage="single", compute_full_tree=False)
         print_with_time("Training K-means")
         clusters_indexes = km.fit_predict(distance_matrix)
         data_samples_dict = dict()
