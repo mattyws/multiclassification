@@ -4,14 +4,17 @@ from abc import abstractmethod
 
 import multiprocessing
 from functools import partial
+from random import random
 
 import numpy
 import sys
 
 from keras.engine.saving import load_model
 from keras.wrappers.scikit_learn import KerasClassifier
+from pyclustering.cluster import kmedoids
 from sklearn.cluster.hierarchical import AgglomerativeClustering
 from sklearn.cluster.k_means_ import MiniBatchKMeans
+from sklearn.cluster.optics_ import OPTICS
 from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier
 from sklearn.utils import resample
 from tslearn.metrics import dtw
@@ -155,30 +158,44 @@ class TrainEnsembleClustering():
 
     def cluster(self, data, classes, distance_matrix, n_clusters):
         positive_indexes, negative_indexes = split_classes(classes)
+        print(len(positive_indexes))
         # loaded_data = self.__load_encoded_data(data[negative_indexes])
         # print_with_time("Generating distance matrix")
         # loaded_data = self.generate_distance_matrix(data[negative_indexes])
-        km = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed", linkage="single", compute_full_tree=False)
-        print_with_time("Training K-means")
-        clusters_indexes = km.fit_predict(distance_matrix)
+        # km = OPTICS(n_jobs=-1, cluster_method="dbscan", metric="precomputed", eps=10.0)
+        # print_with_time("Training OPTICS")
+        # km.fit(distance_matrix)
+        # clusters_indexes = km.labels_
+        print_with_time("Training K-medoids")
+        initial_medoids = []
+        for _ in range(n_clusters):
+            initial_medoids.append(random())
+        km = kmedoids.kmedoids(distance_matrix, initial_medoids, data_type='distance_matrix')
+        km.process()
+        clusters_indexes = km.get_clusters()
+        print_with_time(clusters_indexes)
         data_samples_dict = dict()
         classes_samples_dict = dict()
         for index, cluster_index in enumerate(clusters_indexes):
-            if clusters_indexes not in data_samples_dict.keys():
+            if cluster_index not in data_samples_dict.keys():
                 data_samples_dict[cluster_index] = []
             data_samples_dict[cluster_index].append(data[negative_indexes[index]])
             if cluster_index not in classes_samples_dict.keys():
                 classes_samples_dict[cluster_index] = []
             classes_samples_dict[cluster_index].append(0)
+        print(data_samples_dict.keys())
+        for key in data_samples_dict.keys():
+            print(key, len(data_samples_dict[key]))
+        exit()
         data_samples = []
         classes_samples = []
         for key in data_samples_dict.keys():
             samples = data_samples_dict[key]
-            classes = classes_samples_dict[key]
+            samples_classes = classes_samples_dict[key]
             samples.extend(data[positive_indexes])
-            classes.extend(classes[positive_indexes])
+            samples_classes.extend(classes[positive_indexes])
             data_samples.append(samples)
-            classes_samples.append(classes)
+            classes_samples.append(samples_classes)
         return km, data_samples, classes_samples
 
     def fit(self, data_samples, classes_samples, model_creator, epochs=10, batch_size=30, saved_model_path="ensemble_{}.model",

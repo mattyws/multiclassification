@@ -23,6 +23,8 @@ from functions import test_model, print_with_time, escape_invalid_xml_characters
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator
 
+from classification_noteevents_word2vec_parameters import parameters
+
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 def sync_data_classes(data, classes):
     new_dataset = []
@@ -36,15 +38,7 @@ def sync_data_classes(data, classes):
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
-parametersFilePath = "./classification_noteevents_word2vec_parameters.json"
-
-#Loading parameters file
-print("========= Loading Parameters")
-parameters = None
-with open(parametersFilePath, 'r') as parametersFileHandler:
-    parameters = json.load(parametersFileHandler)
-if parameters is None:
-    exit(1)
+parametersFilePath = "./classification_noteevents_word2vec_parameters.py"
 
 if not os.path.exists(parameters['modelCheckpointPath']):
     os.mkdir(parameters['modelCheckpointPath'])

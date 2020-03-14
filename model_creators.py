@@ -77,19 +77,32 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         input = Input(self.inputShape)
         layer = TimeDistributed(representation_model, name="representation_model")(input)
         if len(self.outputUnits) == 1:
-            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], False)(layer)
+            layer = create_recurrent_layer(self.outputUnits[0], returnSequences=False
+                                           , gru=self.gru)(input)
         else:
-            layer = self.__create_recurrent_layer(self.outputUnits[0], self.layersActivations[0], True)(layer)
+            layer = create_recurrent_layer(self.outputUnits[0], returnSequences=True
+                                           , gru=self.gru)(input)
+        activation = copy.deepcopy(self.layersActivations[0])
+        layer = activation(layer)
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
                 if self.use_dropout:
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
-                layer = self.__create_recurrent_layer(self.outputUnits[i], self.layersActivations[i], True)(layer)
+                if i == len(self.outputUnits) - 1:
+                    layer = create_recurrent_layer(self.outputUnits[i], returnSequences=False
+                                                   , gru=self.gru)(layer)
+                else:
+                    layer = create_recurrent_layer(self.outputUnits[i], returnSequences=True
+                                                   , gru=self.gru)(layer)
+                activation = copy.deepcopy(self.layersActivations[i])
+                layer = activation(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
-        output = Dense(self.numOutputNeurons, activation=self.networkActivation)(layer)
+        output = Dense(self.numOutputNeurons, activation=self.networkActivation,
+                       kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
+                       activity_regularizer=self.activity_regularizer)(layer)
         return input, output
 
     def __create_recurrent_layer(self, outputUnit, activation, returnSequences, inputShape=None):

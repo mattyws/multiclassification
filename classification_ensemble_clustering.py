@@ -147,7 +147,6 @@ if parameters['use_textual_data']:
 print_with_time("Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
 positive, negative = split_classes(classes)
-print_with_time(int(len(negative) * parameters['dataset_split_rate']))
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 fold = 0
 # ====================== Script that start training new models
@@ -244,6 +243,10 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 with open(parameters['training_directory_path'] + parameters['checkpoint']
                                   + parameters['classes_samples_filename'].format(num_models, fold), 'rb') as file_handler:
                     classes_samples = pickle.load(file_handler)
+                for samples in data_samples:
+                    print("Len of samples: {}".format(len(samples)))
+                print(len(distance_matrix), len(distance_matrix[0]))
+                exit()
             structured_ensemble = None
             if parameters['use_structured_data']:
                 structured_data_samples = change_to_normalized_directory(data_samples, parameters['training_directory_path']
