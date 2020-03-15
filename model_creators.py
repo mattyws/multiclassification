@@ -39,7 +39,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
     def __init__(self, input_shape, outputUnits, numOutputNeurons, embedding_size = None,
                  layersActivations=None, networkActivation='sigmoid',
                  loss='categorical_crossentropy', optimizer='adam', gru=False, use_dropout=False, dropout=0.5,
-                 metrics=['accuracy']):
+                 metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
         self.inputShape = input_shape
         self.outputUnits = outputUnits
         self.numOutputNeurons = numOutputNeurons
@@ -52,6 +52,9 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         self.dropout = dropout
         self.metrics = metrics
         self.embedding_size = embedding_size
+        self.kernel_regularizer = kernel_regularizer
+        self.bias_regularizer = bias_regularizer
+        self.activity_regularizer = activity_regularizer
         self.__check_parameters()
 
     def __check_parameters(self):
@@ -78,10 +81,10 @@ class NoteeventsClassificationModelCreator(ModelCreator):
         layer = TimeDistributed(representation_model, name="representation_model")(input)
         if len(self.outputUnits) == 1:
             layer = create_recurrent_layer(self.outputUnits[0], returnSequences=False
-                                           , gru=self.gru)(input)
+                                           , gru=self.gru)(layer)
         else:
             layer = create_recurrent_layer(self.outputUnits[0], returnSequences=True
-                                           , gru=self.gru)(input)
+                                           , gru=self.gru)(layer)
         activation = copy.deepcopy(self.layersActivations[0])
         layer = activation(layer)
         if len(self.outputUnits) > 1:
