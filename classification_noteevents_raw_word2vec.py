@@ -146,7 +146,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
         print_with_time("Training model")
-        kerasAdapter.fit(dataTrainGenerator, epochs=epochs)
+        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, use_multiprocessing=False)
         print_with_time("Testing model")
         metrics = test_model(kerasAdapter, dataTestGenerator, i)
         if dictWriter is None:
