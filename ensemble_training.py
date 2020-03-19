@@ -9,21 +9,16 @@ from random import random
 import numpy
 import sys
 
-from keras.engine.saving import load_model
 from keras.wrappers.scikit_learn import KerasClassifier
-from pyclustering.cluster import kmedoids
 from sklearn.cluster.hierarchical import AgglomerativeClustering
-from sklearn.cluster.k_means_ import MiniBatchKMeans
-from sklearn.cluster.optics_ import OPTICS
-from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier
+from sklearn.ensemble import AdaBoostClassifier
 from sklearn.utils import resample
 from tslearn.metrics import dtw
 
 import functions
 from adapter import KerasAdapter
-from data_generators import LengthLongitudinalDataGenerator, AutoencoderDataGenerator
+from data_generators import LengthLongitudinalDataGenerator
 from functions import print_with_time
-from model_creators import KerasVariationalAutoencoder
 
 
 def split_classes(classes):
@@ -162,17 +157,17 @@ class TrainEnsembleClustering():
         # loaded_data = self.__load_encoded_data(data[negative_indexes])
         # print_with_time("Generating distance matrix")
         # loaded_data = self.generate_distance_matrix(data[negative_indexes])
-        # km = OPTICS(n_jobs=-1, cluster_method="dbscan", metric="precomputed", eps=10.0)
-        # print_with_time("Training OPTICS")
-        # km.fit(distance_matrix)
-        # clusters_indexes = km.labels_
-        print_with_time("Training K-medoids")
-        initial_medoids = []
-        for _ in range(n_clusters):
-            initial_medoids.append(random())
-        km = kmedoids.kmedoids(distance_matrix, initial_medoids, data_type='distance_matrix')
-        km.process()
-        clusters_indexes = km.get_clusters()
+        km = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed", linkage="single")
+        print_with_time("Training Hierarchical Clustering")
+        km.fit(distance_matrix)
+        clusters_indexes = km.labels_
+        # print_with_time("Training K-medoids")
+        # initial_medoids = []
+        # for _ in range(n_clusters):
+        #     initial_medoids.append(random())
+        # km = kmedoids.kmedoids(distance_matrix, initial_medoids, data_type='distance_matrix')
+        # km.process()
+        # clusters_indexes = km.get_clusters()
         print_with_time(clusters_indexes)
         data_samples_dict = dict()
         classes_samples_dict = dict()
