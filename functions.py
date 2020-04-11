@@ -24,7 +24,7 @@ from sklearn.metrics.classification import f1_score, precision_score, recall_sco
 from sklearn.metrics.ranking import roc_auc_score
 
 from adapter import Word2VecTrainer, Doc2VecTrainer
-from data_generators import NoteeventsTextDataGenerator
+from data_generators import NoteeventsTextDataGenerator, TaggedNoteeventsDataGenerator
 
 DATE_PATTERN = "%Y-%m-%d"
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
@@ -45,19 +45,17 @@ def chunk_lst(data, SIZE=10000):
 def train_representation_model(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None,
                                preprocessing_pipeline=None, word2vec=True):
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-    if noteevents_iterator is None:
+    model_trainer = None
+    if word2vec and noteevents_iterator is None:
         noteevents_iterator = NoteeventsTextDataGenerator(files_paths, preprocessing_pipeline=preprocessing_pipeline)
-    # for noteevent in noteevents_iterator:
-    #     print(noteevent)
-    #     exit()
-    if word2vec:
         model_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
-    else:
+    elif not word2vec and noteevents_iterator is None:
+        noteevents_iterator = TaggedNoteeventsDataGenerator(files_paths, preprocessing_pipeline=preprocessing_pipeline)
         model_trainer = Doc2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
-    if os.path.exists(saved_model_path):
+    if model_trainer is not None and os.path.exists(saved_model_path):
         model = model_trainer.load_model(saved_model_path)
         return model
-    else:
+    elif model_trainer is not None:
         model_trainer.train(noteevents_iterator)
         model_trainer.save(saved_model_path)
         return model_trainer.model

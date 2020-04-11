@@ -11,14 +11,14 @@ import numpy as np
 import pandas
 import sys
 
-
 class TransformClinicalTextsRepresentations(object):
     """
     Changes the representation for patients notes using a word2vec model.
     The patients notes must be into different csv.
     """
-    def __init__(self, word2vec_model, embedding_size=200, text_max_len=None,  window=2, texts_path=None, representation_save_path=None):
-        self.word2vec_model = word2vec_model
+    def __init__(self, representation_model, embedding_size=200, text_max_len=None, window=2,
+                 texts_path=None, representation_save_path=None, is_word2vec=True):
+        self.representation_model = representation_model
         self.embedding_size = embedding_size
         self.window = window
         self.texts_path = texts_path
@@ -28,6 +28,7 @@ class TransformClinicalTextsRepresentations(object):
             os.mkdir(representation_save_path)
         self.new_paths = dict()
         self.lock = None
+        self.is_word2vec = is_word2vec
 
     def create_embedding_matrix(self, text):
         """
@@ -42,7 +43,7 @@ class TransformClinicalTextsRepresentations(object):
         for pos, w in enumerate(text):
             try:
                 # x[pos] = self.word2vec_model.wv[w]
-                x.append(self.word2vec_model.wv[w])
+                x.append(self.representation_model.wv[w])
             except:
                 try:
                     # x[pos] = np.zeros(shape=self.embeddingSize)
@@ -54,15 +55,18 @@ class TransformClinicalTextsRepresentations(object):
                         end = len(text)
                     else:
                         end = pos + self.window
-                    word = self.word2vec_model.predict_output_word(text[begin:end])[0][0]
+                    word = self.representation_model.predict_output_word(text[begin:end])[0][0]
                     # x[pos] = self.word2vec_model.wv[word]
-                    x.append(self.word2vec_model.wv[word])
+                    x.append(self.representation_model.wv[word])
                 except:
                     # continue
                     # x[pos] = np.zeros(shape=self.embedding_size)
                     x.append(np.zeros(shape=self.embedding_size))
         x = np.array(x)
         return x
+
+    def get_docvec(self, icustay_id, charttime):
+        return np.array(self.representation_model.docvecs["{}_{}".format(icustay_id, charttime)])
 
     def transform_docs(self, docs_path, preprocessing_pipeline=[], manager_queue=None):
         new_paths = dict()
@@ -85,7 +89,11 @@ class TransformClinicalTextsRepresentations(object):
                 if preprocessing_pipeline is not None:
                     for func in preprocessing_pipeline:
                         note = func(note)
-                new_representation = self.create_embedding_matrix(note)
+                if self.is_word2vec:
+                    new_representation = self.create_embedding_matrix(note)
+                else:
+                    icustay_id = os.path.basename(path).split('.')[0]
+                    new_representation = self.get_docvec(icustay_id, row['charttime'])
                 if new_representation is not None:
                     transformed_texts.append(new_representation)
             if len(transformed_texts) != 0:

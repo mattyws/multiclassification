@@ -1,7 +1,7 @@
 from keras.layers import LeakyReLU, ReLU
 
 parameters = {
-    "training_directory_path" : "../mimic/ensemble_training_clustering/",
+    "training_directory_path" : "../mimic/ensemble_training_bagging/",
     "dataset_csv_file_path": "../mimic/new_dataset_patients.csv",
     "ensemble_training_method" : "bagging",
     "use_structured_data" : True,
@@ -21,7 +21,7 @@ parameters = {
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
 
-    "checkpoint" : "checkpoint_only_structured_1.4balance/",
+    "checkpoint" : "checkpoint/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
     "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.model",
@@ -45,14 +45,12 @@ parameters = {
     "dataset_split_rate": 1.4,
 
     "structured_output_units": [
-        64,
         32
     ],
     "structured_output_neurons": 1,
     "structured_loss": "binary_crossentropy",
     "structured_optimizer":"adam",
     "structured_layers_activations": [
-        LeakyReLU(),
         LeakyReLU()
     ],
     "structured_network_activation" : "sigmoid",
@@ -65,19 +63,15 @@ parameters = {
     "structured_batch_size": 50,
     # Temporal convolutional network parameters only
     "structured_kernel_sizes": [
-        5,
         3
     ],
     "structured_pooling": [
-        False,
         False
     ],
     "structured_dilations": [
-        [1, 2, 4],
         [1, 2, 4]
     ],
     "structured_nb_stacks": [
-        1,
         1
     ],
 

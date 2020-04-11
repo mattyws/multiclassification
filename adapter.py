@@ -203,7 +203,7 @@ class Doc2VecTrainer(object):
 
     def train(self, corpus, sg=1):
         self.model = Doc2Vec(corpus, min_count=self.min_count, vector_size=self.size, workers=self.workers,
-                              window=self.window, iter=self.iter)
+                              window=self.window, epochs=self.iter)
 
     def save(self, filename):
         self.model.save(filename)

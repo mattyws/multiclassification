@@ -215,7 +215,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         #                                                 parameters['checkpoint'] + parameters['encoded_data_path'].format(fold))
         # encoded_data = autoencoder_data_creator.get_new_paths(normalized_data)
 
-        for num_models in range(2, parameters['n_estimators'] + 1):
+        for num_models in range(3, parameters['n_estimators'] + 1):
             print_with_time("Training loop for {} clusters".format(num_models))
             # Testing if clustering was already done for this fold
             # TODO: agglomerative hierarchical cluster based on similarity matrix

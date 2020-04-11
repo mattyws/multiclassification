@@ -5,7 +5,10 @@ from math import ceil
 
 import numpy as np
 import os
+
+import pandas
 import pandas as pd
+from gensim.models.doc2vec import TaggedDocument
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils import Sequence
 from ast import literal_eval
@@ -361,8 +364,27 @@ class NoteeventsTextDataGenerator(object):
 
     def __iter__(self):
         tokenizer = WhitespaceTokenizer()
-        for path in self.data_paths:
+        for index, path in enumerate(self.data_paths):
             with open(path, 'r') as handler:
                 for line in handler:
                     yield tokenizer.tokenize(line)
+        return self
+
+class TaggedNoteeventsDataGenerator(object):
+
+    def __init__(self, data_paths, preprocessing_pipeline=None):
+        self.data_paths = data_paths
+        self.preprocessing_pipeline = preprocessing_pipeline
+
+    def __iter__(self):
+        for index, path in enumerate(self.data_paths):
+            patient_noteevents = pandas.read_csv(path)
+            patient_id = os.path.basename(path).split('.')[0]
+            for index, row in patient_noteevents.iterrows():
+                text = row['Note']
+                if self.preprocessing_pipeline is not None:
+                    for func in self.preprocessing_pipeline:
+                        text = func(text)
+                tagged_doc = TaggedDocument(words=text, tags=["{}_{}".format(patient_id,row['charttime'])])
+                yield tagged_doc
         return self

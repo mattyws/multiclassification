@@ -3,25 +3,21 @@ import html
 import json
 import logging
 import os
-from datetime import datetime
 
 import pandas as pd
 import numpy as np
 
 import keras
-from keras.utils import plot_model
 
 from sklearn.model_selection._split import StratifiedKFold
-
-from adapter import Word2VecTrainer, Doc2VecTrainer
-from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataGenerator
+from data_generators import LengthLongitudinalDataGenerator
 
 from data_representation import TransformClinicalTextsRepresentations
 from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
-    text_to_lower, tokenize_text, remove_only_special_characters_tokens, whitespace_tokenize_text, \
+    text_to_lower, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     divide_by_events_lenght, remove_sepsis_mentions, train_representation_model
 from keras_callbacks import Metrics
-from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator
+from model_creators import MultilayerTemporalConvolutionalNNCreator
 
 from classification_noteevents_textual_parameters import parameters
 
@@ -35,7 +31,7 @@ def sync_data_classes(data, classes):
             new_classes.append(c)
     return np.array(new_dataset), np.array(new_classes)
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
 parametersFilePath = "./classification_noteevents_textual_parameters.py"
@@ -68,30 +64,22 @@ min_count = parameters['min_count']
 workers = parameters['workers']
 window = parameters['window']
 iterations = parameters['iterations']
-inputShape = (None, None, embedding_size)
+inputShape = (None, embedding_size)
 
-print_with_time("Training/Loading Word2vec")
+print_with_time("Training/Loading Doc2Vec")
 preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
                           whitespace_tokenize_text, remove_only_special_characters_tokens, remove_sepsis_mentions]
-word2vec_model = train_representation_model(word2vec_data,
-                                            parameters['word2vecModelFileName'], min_count,
-                                            embedding_size, workers, window, iterations)
+doc2vec_model = train_representation_model(data, parameters['word2vecModelFileName'], min_count,
+                                           embedding_size, workers, window, iterations,
+                                           preprocessing_pipeline=preprocessing_pipeline, word2vec=False)
 print_with_time("Transforming/Retrieving representation")
-texts_transformer = TransformClinicalTextsRepresentations(word2vec_model, embedding_size=embedding_size,
+texts_transformer = TransformClinicalTextsRepresentations(doc2vec_model, embedding_size=embedding_size,
                                                           window=window, texts_path=parameters['dataPath'],
                                                           representation_save_path=parameters['word2vec_representation_files_path'],
-                                                          text_max_len=228+224 # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
-                                                          )
-word2vec_model = None
+                                                          is_word2vec=False)
+doc2vec_model = None
 texts_transformer.transform(data, preprocessing_pipeline=preprocessing_pipeline)
 normalized_data = np.array(texts_transformer.get_new_paths(data))
-normalized_data, classes = sync_data_classes(normalized_data, classes)
-# IN CASE THAT YOU ALREADY HAVE THE REPRESENTATIONS CREATED
-print_with_time("Padding/Retrieving sequences")
-# Valores com base na média + desvio padrão do tamanho dos textos já pre processados
-texts_transformer.pad_new_representation(normalized_data, 228+224,
-                                         pad_data_path=parameters['word2vec_padded_representation_files_path'])
-normalized_data = np.array(texts_transformer.get_new_paths(normalized_data))
 normalized_data, classes = sync_data_classes(normalized_data, classes)
 i = 0
 # ====================== Script that start training new models
@@ -111,9 +99,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         test_sizes, test_labels = divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
                                                             , sizes_filename = parameters['testing_events_sizes_file'].format(i)
                                                             , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
-        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, ndmin=4)
+        dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels)
         dataTrainGenerator.create_batches()
-        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, ndmin=4)
+        dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels)
         dataTestGenerator.create_batches()
         # for batch in dataTestGenerator.batches.keys():
         #     print(batch, len(dataTestGenerator.batches[batch]))
@@ -129,19 +117,26 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         #         print(note[0].shape)
         #     # print(test)
         #     break
+        # exit()
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
         #                                                classes[trainIndex], parameters['batchSize'],
         #                                                saved_batch_dir='training_batches_fold_{}'.format(i))
         # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
         #                                               classes[testIndex], parameters['batchSize'],
         #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
-
-        modelCreator = NoteeventsClassificationModelCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
-                                                         embedding_size=embedding_size, optimizer=parameters['optimizer'],
-                                                         loss=parameters['loss'], layersActivations=parameters['layersActivations'],
-                                                         use_dropout=parameters['useDropout'],
-                                                         dropout=parameters['dropout'], networkActivation=parameters['networkActivation'],
-                                                         metrics=[keras.metrics.binary_accuracy])
+        modelCreator = MultilayerTemporalConvolutionalNNCreator(inputShape, parameters['outputUnits'],
+                                                                parameters['numOutputNeurons'],
+                                                                loss=parameters['loss'],
+                                                                layersActivations=parameters['layersActivations'],
+                                                                networkActivation=parameters['networkActivation'],
+                                                                pooling=parameters['pooling'],
+                                                                dilations=parameters['dilations'],
+                                                                nb_stacks=parameters['nb_stacks'],
+                                                                kernel_sizes=parameters['kernel_sizes'],
+                                                                use_dropout=parameters['useDropout'],
+                                                                dropout=parameters['dropout'], kernel_regularizer=None,
+                                                                metrics=[keras.metrics.binary_accuracy],
+                                                                optimizer=parameters['optimizer'])
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)

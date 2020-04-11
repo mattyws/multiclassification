@@ -13,7 +13,7 @@ from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.cluster.hierarchical import AgglomerativeClustering
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.utils import resample
-from tslearn.metrics import dtw
+from dtaidistance import dtw
 
 import functions
 from adapter import KerasAdapter
@@ -116,7 +116,24 @@ def compute_dtw_distance(frac_data, all_data=None, manager_queue=None):
         for aux_data in all_data:
             with open(aux_data, 'rb') as aux_handler:
                 aux_values = pickle.load(aux_handler)
-            distance = dtw(data_values, aux_values)
+            distance = dtw.distance(data_values, aux_values)
+            data_distances.append(distance)
+        distances[data] = data_distances
+    return distances
+
+def compute_lpc_cepstrum_distance(frac_data, all_data=None, manager_queue=None):
+    # TODO: adapt to lpc
+    distances = dict()
+    for data in frac_data:
+        if manager_queue is not None:
+            manager_queue.put(data)
+        data_distances = []
+        with open(data, 'rb') as file_handler:
+            data_values = pickle.load(file_handler)
+        for aux_data in all_data:
+            with open(aux_data, 'rb') as aux_handler:
+                aux_values = pickle.load(aux_handler)
+            distance = dtw.distance(data_values, aux_values)
             data_distances.append(distance)
         distances[data] = data_distances
     return distances
@@ -157,7 +174,8 @@ class TrainEnsembleClustering():
         # loaded_data = self.__load_encoded_data(data[negative_indexes])
         # print_with_time("Generating distance matrix")
         # loaded_data = self.generate_distance_matrix(data[negative_indexes])
-        km = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed", linkage="single")
+        km = AgglomerativeClustering(n_clusters=n_clusters, affinity="precomputed", linkage="single",
+                                     compute_full_tree=True)
         print_with_time("Training Hierarchical Clustering")
         km.fit(distance_matrix)
         clusters_indexes = km.labels_
