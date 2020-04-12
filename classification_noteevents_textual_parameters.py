@@ -6,7 +6,7 @@ parameters = {
     "word2vecModelFileName": "../mimic/word2vec_raw_training/word2vec.model",
     "word2vec_representation_files_path": "../mimic/word2vec_raw_training/transformed_representation/",
     "word2vec_padded_representation_files_path": "../mimic/word2vec_raw_training/padded_representation/",
-    "embedding_size" : 400,
+    "embedding_size" : 150,
     "min_count" : 1,
     "workers" : 4,
     "window" : 4,
