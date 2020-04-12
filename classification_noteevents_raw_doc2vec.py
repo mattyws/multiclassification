@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 
 import keras
+from keras.regularizers import l1_l2
 
 from sklearn.model_selection._split import StratifiedKFold
 from data_generators import LengthLongitudinalDataGenerator
@@ -133,8 +134,9 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                                 dilations=parameters['dilations'],
                                                                 nb_stacks=parameters['nb_stacks'],
                                                                 kernel_sizes=parameters['kernel_sizes'],
+                                                                # kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
                                                                 use_dropout=parameters['useDropout'],
-                                                                dropout=parameters['dropout'], kernel_regularizer=None,
+                                                                dropout=parameters['dropout'],
                                                                 metrics=[keras.metrics.binary_accuracy],
                                                                 optimizer=parameters['optimizer'])
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')
