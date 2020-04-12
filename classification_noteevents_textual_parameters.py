@@ -13,7 +13,7 @@ parameters = {
     "iterations" : 90,
 
     "modelConfigPath": "../mimic/word2vec_raw_training/checkpoint_2/config.json",
-    "dataPath" : "../mimic/textual_anonymized_data/",
+    "dataPath" : "../mimic/sepsis_noteevents/",
     "notes_word2vec_path" : "../mimic/sepsis_noteevents_preprocessed/",
     "trainingDataPath" :  "../mimic/word2vec_raw_training/dataTraining/",
     "testingDataPath" : "../mimic/word2vec_raw_training/dataTest/",
