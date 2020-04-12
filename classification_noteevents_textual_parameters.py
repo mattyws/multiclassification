@@ -3,7 +3,7 @@ from keras.layers import LeakyReLU
 parameters = {
     "datasetCsvFilePath": "../mimic/new_dataset_patients.csv",
     "modelCheckpointPath": "../mimic/word2vec_raw_training/checkpoint_2/",
-    "word2vecModelFileName": "../mimic/word2vec_raw_training/doc2vec.model",
+    "word2vecModelFileName": "../mimic/word2vec_raw_training/word2vec.model",
     "word2vec_representation_files_path": "../mimic/word2vec_raw_training/transformed_representation/",
     "word2vec_padded_representation_files_path": "../mimic/word2vec_raw_training/padded_representation/",
     "embedding_size" : 400,
