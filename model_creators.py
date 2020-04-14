@@ -74,7 +74,7 @@ class NoteeventsClassificationModelCreator(ModelCreator):
     def build_network(self):
         representation_model = Sequential()
         representation_model.add(Masking(mask_value=0., name="representation_masking"))
-        representation_model.add(LSTM(64, dropout=.3, name="representation_lstm"))
+        representation_model.add(GRU(64, dropout=.3, name="representation_gru"))
         representation_model.add(LeakyReLU(alpha=.3, name="representation_leakyrelu"))
         representation_model.add(Dense(32, name="representation_dense"))
         input = Input(self.inputShape)
@@ -108,17 +108,87 @@ class NoteeventsClassificationModelCreator(ModelCreator):
                        activity_regularizer=self.activity_regularizer)(layer)
         return input, output
 
-    def __create_recurrent_layer(self, outputUnit, activation, returnSequences, inputShape=None):
-        if self.gru:
-            if inputShape:
-                return GRU(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
-            else:
-                return GRU(outputUnit, activation=activation, return_sequences=returnSequences)
+
+class NoteeventsClassificationTCNModelCreator(ModelCreator):
+
+    def __init__(self, input_shape, outputUnits, numOutputNeurons, embedding_size = None,
+                 layersActivations=None, networkActivation='sigmoid', pooling=None, kernel_sizes=None,
+                 loss='categorical_crossentropy', optimizer='adam', gru=False, use_dropout=False, dropout=0.5,
+                 dilations=[[1, 2, 4]], nb_stacks=[1],
+                 metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
+        self.inputShape = input_shape
+        self.outputUnits = outputUnits
+        self.numOutputNeurons = numOutputNeurons
+        self.networkActivation = networkActivation
+        self.layersActivations = layersActivations
+        self.loss = loss
+        self.optimizer = optimizer
+        self.gru = gru
+        self.kernel_sizes = kernel_sizes
+        self.dilatations = dilations
+        self.nb_stacks = nb_stacks
+        self.pooling = pooling
+        self.use_dropout = use_dropout
+        self.dropout = dropout
+        self.metrics = metrics
+        self.embedding_size = embedding_size
+        self.kernel_regularizer = kernel_regularizer
+        self.bias_regularizer = bias_regularizer
+        self.activity_regularizer = activity_regularizer
+        self.__check_parameters()
+
+    def __check_parameters(self):
+        if self.layersActivations is not None and len(self.layersActivations) != len(self.outputUnits):
+            raise ValueError("Output units must have the same size as activations!")
+
+    def create(self, model_summary_filename=None):
+        input, output = self.build_network()
+        model = Model(inputs=input, outputs=output)
+        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        print(model.summary())
+        if model_summary_filename is not None:
+            with open(model_summary_filename, 'w') as summary_file:
+                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
+        return adapter.KerasAdapter(model)
+
+    def build_network(self):
+        representation_model = Sequential()
+        representation_model.add(Masking(mask_value=0., name="representation_masking"))
+        representation_model.add(GRU(64, dropout=.3, name="representation_gru"))
+        representation_model.add(LeakyReLU(alpha=.3, name="representation_leakyrelu"))
+        representation_model.add(Dense(32, name="representation_dense"))
+        input = Input(self.inputShape)
+        layer = TimeDistributed(representation_model, name="representation_model")(input)
+
+        if len(self.outputUnits) == 1:
+            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0], dilations=self.dilatations[0]
+                        , nb_stacks=self.nb_stacks[0], return_sequences=False)(layer)
         else:
-            if inputShape:
-                return LSTM(outputUnit, activation=activation, input_shape=inputShape, return_sequences=returnSequences)
-            else:
-                return LSTM(outputUnit, activation=activation, return_sequences=returnSequences)
+            layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0], dilations=self.dilatations[0],
+                        nb_stacks=self.nb_stacks[0], return_sequences=True)(input)
+        activation = copy.deepcopy(self.layersActivations[0])
+        layer = activation(layer)
+        if self.pooling[0]:
+            layer = MaxPool1D()(layer)
+        if len(self.outputUnits) > 1:
+            for i in range(1, len(self.outputUnits)):
+                if i == len(self.outputUnits) - 1:
+                    layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i], dilations=self.dilatations[i],
+                                nb_stacks=self.nb_stacks[i], return_sequences=False)(input)
+                else:
+                    layer = TCN(self.outputUnits[i], kernel_size=self.kernel_sizes[i], dilations=self.dilatations[i],
+                                nb_stacks=self.nb_stacks[i], return_sequences=True)(input)
+                activation = copy.deepcopy(self.layersActivations[i])
+                layer = activation(layer)
+                if self.pooling[i]:
+                    layer = MaxPool1D()(layer)
+        if self.use_dropout:
+            dropout = Dropout(self.dropout)(layer)
+            layer = dropout
+        output = Dense(self.numOutputNeurons, activation=self.networkActivation,
+                       kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
+                       activity_regularizer=self.activity_regularizer)(layer)
+        return input, output
 
 
 class EnsembleModelCreator(ModelCreator):

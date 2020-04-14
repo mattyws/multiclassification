@@ -21,7 +21,8 @@ from functions import test_model, print_with_time, escape_invalid_xml_characters
     text_to_lower, tokenize_text, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     divide_by_events_lenght, remove_sepsis_mentions, train_representation_model
 from keras_callbacks import Metrics
-from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator
+from model_creators import MultilayerKerasRecurrentNNCreator, NoteeventsClassificationModelCreator, \
+    NoteeventsClassificationTCNModelCreator
 
 from classification_noteevents_textual_parameters import parameters
 
@@ -136,10 +137,20 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         #                                               classes[testIndex], parameters['batchSize'],
         #                                               saved_batch_dir='testing_batches_fold_{}'.format(i))
 
-        modelCreator = NoteeventsClassificationModelCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
+        # modelCreator = NoteeventsClassificationModelCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
+        #                                                  embedding_size=embedding_size, optimizer=parameters['optimizer'],
+        #                                                  loss=parameters['loss'], layersActivations=parameters['layersActivations'],
+        #                                                  use_dropout=parameters['useDropout'],
+        #                                                  dropout=parameters['dropout'], networkActivation=parameters['networkActivation'],
+        #                                                  metrics=[keras.metrics.binary_accuracy])
+        modelCreator = NoteeventsClassificationTCNModelCreator(inputShape, parameters['outputUnits'], parameters['numOutputNeurons'],
                                                          embedding_size=embedding_size, optimizer=parameters['optimizer'],
                                                          loss=parameters['loss'], layersActivations=parameters['layersActivations'],
                                                          use_dropout=parameters['useDropout'],
+                                                               pooling=parameters['pooling'],
+                                                               dilations=parameters['dilations'],
+                                                               nb_stacks=parameters['nb_stacks'],
+                                                               kernel_sizes=parameters['kernel_sizes'],
                                                          dropout=parameters['dropout'], networkActivation=parameters['networkActivation'],
                                                          metrics=[keras.metrics.binary_accuracy])
         kerasAdapter = modelCreator.create(model_summary_filename=parameters['modelCheckpointPath']+'model_summary')

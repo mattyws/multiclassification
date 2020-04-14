@@ -70,10 +70,14 @@ class TransformClinicalTextsRepresentations(object):
 
     def transform_docs(self, docs_path, preprocessing_pipeline=[], manager_queue=None):
         new_paths = dict()
+        total_files = len(docs_path)
+        consumed = 0
         for path in docs_path:
             file_name = path.split('/')[-1]
             if manager_queue is not None:
-                manager_queue.put(path)
+                # manager_queue.put(path)
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+                consumed += 1
             transformed_doc_path = self.representation_save_path + os.path.splitext(file_name)[0] + '.pkl'
             if os.path.exists(transformed_doc_path):
                 new_paths[path] = transformed_doc_path
@@ -111,19 +115,20 @@ class TransformClinicalTextsRepresentations(object):
             partial_transform_docs = partial(self.transform_docs,
                                              preprocessing_pipeline=preprocessing_pipeline,
                                              manager_queue=manager_queue)
-            data = numpy.array_split(docs_paths, 6)
+            # data = numpy.array_split(docs_paths, 6)
             total_files = len(docs_paths)
-            map_obj = pool.map_async(partial_transform_docs, data)
-            consumed=0
-            while not map_obj.ready() or manager_queue.qsize() != 0:
-                for _ in range(manager_queue.qsize()):
-                    manager_queue.get()
-                    consumed += 1
-                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-            print()
-            result = map_obj.get()
-            for r in result:
-                self.new_paths.update(r)
+            self.new_paths = partial_transform_docs(docs_paths)
+            # map_obj = pool.map_async(partial_transform_docs, data)
+            # consumed=0
+            # while not map_obj.ready() or manager_queue.qsize() != 0:
+            #     for _ in range(manager_queue.qsize()):
+            #         manager_queue.get()
+            #         consumed += 1
+            #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            # print()
+            # result = map_obj.get()
+            # for r in result:
+            #     self.new_paths.update(r)
 
     def pad_sequence(self, value, pad_max_len):
         # if len(value) < 3:
