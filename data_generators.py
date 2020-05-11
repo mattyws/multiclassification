@@ -3,6 +3,7 @@ import pickle
 import uuid
 from math import ceil
 
+import bert
 import numpy as np
 import os
 
@@ -16,9 +17,44 @@ from ast import literal_eval
 from nltk import WhitespaceTokenizer
 
 from data_representation import Word2VecEmbeddingCreator
+import sentencepiece as spm
+
+from tensorflow.python.keras.utils.data_utils import Sequence as tsSeq
+
+
+class BertDataGenerator(tsSeq):
+
+    def __init__(self, data_paths, labels, batch_size):
+        self.data_paths = data_paths
+        self.labels = labels
+        self.batch_size = batch_size
+
+    def __load_files(self, filesNames):
+        x = []
+        for fileName in filesNames:
+            with open(fileName, 'rb') as data_file:
+                x.append(pickle.load(data_file))
+        x = np.asarray(x)
+        # print(x)
+        return x
+
+    def __iter__(self):
+        return self
+
+    def __getitem__(self, idx):
+        """
+        :param idx:
+        :return:
+        """
+        batch_x = self.data_paths[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_x = self.__load_files(batch_x)
+        batch_y = self.labels[idx * self.batch_size:(idx + 1) * self.batch_size]
+        return batch_x, batch_y
+
+    def __len__(self):
+        return np.int64(np.ceil(len(self.data_paths) / float(self.batch_size)))
 
 class LengthLongitudinalDataGenerator(Sequence):
-
 
     def __init__(self, sizes_data_paths, labels, max_batch_size=50, iterForever=False, ndmin=None):
         self.max_batch_size = max_batch_size
@@ -328,19 +364,22 @@ class Word2VecTextEmbeddingGenerator(Sequence):
 
 class MetaLearnerDataGenerator(Sequence):
 
-    def __init__(self, dataPaths, labels, batchSize, iterForever=False):
+    def __init__(self, dataPaths, labels, batchSize, num_models, representation_chunk_size, iterForever=False):
         self.batchSize = batchSize
         self.__labels = labels
         self.__filesList = dataPaths
         self.iterForever = iterForever
         self.__iterPos = 0
+        self.num_models = num_models
+        self.representation_chunk_size = representation_chunk_size
+
 
     def __load(self, files_names):
         x = []
         for fileName in files_names:
             with open(fileName, 'rb') as data_file:
                 data = pickle.load(data_file)
-            x.append(data)
+            x.append(data[: self.num_models * self.representation_chunk_size])
         x = np.array(x)
         return x
 

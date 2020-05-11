@@ -57,6 +57,7 @@ class TrainEnsembleBagging():
         self.classifiers = []
         self.training_data_samples = []
         self.training_classes_samples = []
+        self.not_chosen_instances = None
 
 
     def fit(self, data, classes, model_creator, training_data_samples=None, training_classes_samples=None, split_rate=.2,
@@ -78,7 +79,8 @@ class TrainEnsembleBagging():
                     train_samples = training_data_samples[n]
                     train_classes = training_classes_samples[n]
                 else:
-                    train_indexes = resample(indexes, replace=False, n_samples=int(len(positive_indexes) * split_rate))
+                    # train_indexes = resample(indexes, replace=False, n_samples=int(len(positive_indexes) * split_rate))
+                    train_indexes = self.resample(indexes, n_samples=int(len(positive_indexes) * split_rate))
                     train_indexes.extend(positive_indexes)
                     train_samples = data[train_indexes]
                     train_classes = classes[train_indexes]
@@ -91,6 +93,33 @@ class TrainEnsembleBagging():
             self.classifiers.append(saved_model_path.format(n))
             self.training_data_samples.append(train_samples)
             self.training_classes_samples.append(train_samples)
+
+    def resample(self, indexes, n_samples=0):
+        if self.not_chosen_instances is None:
+            self.not_chosen_instances = []
+            samples = resample(indexes, replace=True, n_samples=n_samples)
+            for index in indexes:
+                if index not in samples:
+                    self.not_chosen_instances.append(index)
+            return numpy.array(samples)
+        else:
+            if len(self.not_chosen_instances) == 0:
+                return resample(indexes, replace=True, n_samples=n_samples)
+            elif len(self.not_chosen_instances) < int(n_samples/2) :
+                samples = resample([i for i in indexes if i not in self.not_chosen_instances],
+                                   replace=True, n_samples=n_samples - len(self.not_chosen_instances))
+                samples.extend(self.not_chosen_instances)
+                self.not_chosen_instances = []
+                return numpy.array(samples)
+            else :
+                not_chosen_samples = resample(self.not_chosen_instances, replace=True, n_samples=n_samples/2)
+                for sample in not_chosen_samples:
+                    if sample in self.not_chosen_instances:
+                        self.not_chosen_instances.remove(sample)
+                samples = resample([i for i in indexes if i not in self.not_chosen_instances],
+                                   replace=True, n_samples=n_samples/2)
+                samples.extend(not_chosen_samples)
+                return numpy.array(samples)
 
     def __create_generator(self, data, classes, batch_size):
         train_sizes, train_labels = functions.divide_by_events_lenght(data, classes)

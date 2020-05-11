@@ -267,10 +267,20 @@ def remove_only_special_characters_tokens(tokens):
 def test_model(kerasAdapter, dataTestGenerator, fold):
     testClasses, result = kerasAdapter.predict_generator(dataTestGenerator)
     metrics = dict()
-    metrics['fscore'] = f1_score(testClasses, result, average='weighted')
-    metrics['precision'] = precision_score(testClasses, result, average='weighted')
-    metrics['recall'] = recall_score(testClasses, result, average='weighted')
-    metrics['auc'] = roc_auc_score(testClasses, result, average='weighted')
+    metrics['w_fscore'] = f1_score(testClasses, result, average='weighted')
+    metrics['w_precision'] = precision_score(testClasses, result, average='weighted')
+    metrics['w_recall'] = recall_score(testClasses, result, average='weighted')
+    metrics['w_auc'] = roc_auc_score(testClasses, result, average='weighted')
+
+    metrics['mi_fscore'] = f1_score(testClasses, result, average='micro')
+    metrics['mi_precision'] = precision_score(testClasses, result, average='micro')
+    metrics['mi_recall'] = recall_score(testClasses, result, average='micro')
+    metrics['mi_auc'] = roc_auc_score(testClasses, result, average='micro')
+
+    metrics['ma_fscore'] = f1_score(testClasses, result, average='macro')
+    metrics['ma_precision'] = precision_score(testClasses, result, average='macro')
+    metrics['ma_recall'] = recall_score(testClasses, result, average='macro')
+    metrics['ma_auc'] = roc_auc_score(testClasses, result, average='macro')
 
     metrics['fscore_b'] = f1_score(testClasses, result)
     metrics['precision_b'] = precision_score(testClasses, result)
@@ -291,7 +301,6 @@ def remove_sepsis_mentions(tokens):
     sepsis_texts = ['sepsis', 'septic', 'septicemia']
     tokens = [token for token in tokens if token not in sepsis_texts]
     return tokens
-
 
 
 def escape_invalid_xml_characters(text):

@@ -8,28 +8,29 @@ parameters = {
     "use_textual_data": False,
 
     "normalization_value_counts_dir" : "value_counts/",
-    "meta_representation_path": "{}_meta_representation_fold_{}/",
+    "meta_representation_path": "meta_representation_fold_{}/",
 
 
-    "word2vec_representation_data_path": "transformed_textual_representation/",
-    "word2vec_padded_representation_files_path": "padded_textual_representation/",
+    "textual_representation_representation_data_path": "transformed_textual_representation/",
+    "textual_representation_padded_representation_files_path": "padded_textual_representation/",
 
     "structured_data_path" : "../mimic/structured_data/",
-    "textual_data_path" : "../mimic/textual_data/",
+    "textual_data_path" : "../mimic/textual_anonymized_data/",
     "training_dir_path": "../mimic/ensemble_training/",
-    "notes_word2vec_path" : "../mimic/textual_word2vec_preprocessed/",
+    "notes_textual_representation_path" : "../mimic/trained_doc2vec/50/transformed_representation/",
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
 
-    "checkpoint" : "checkpoint/",
+    "checkpoint" : "checkpoint_only_struct_representation/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
-    "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.model",
+    "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.pkl",
     "textual_ensemble_models_name_prefix" : "textual_bagging_level_zero_{}.model",
+    "textual_ensemble_samples_name_prefix" : "textual_bagging_level_zero_samples_{}.pkl",
     "meta_model_file_name": "{}_meta_model_fold_{}.model",
 
     "training_config_file_name" : "config.pkl",
-    'word2vec_model_file_name': "word2vec.model",
+    'textual_representation_model_path': "../mimic/trained_doc2vec/50/doc2vec.model",
     "normalization_values_file_name": "normalization_values_{}.pkl",
     "results_file_name": "result.csv",
     "level_zero_structured_result_file_name": "structured_results_{}.csv",
@@ -75,27 +76,43 @@ parameters = {
         1
     ],
 
-    "textual_embedding_size" : 150,
+    "textual_embedding_size" : 50,
     "textual_min_count" : 1,
     "textual_workers" : 4,
     "textual_window" : 3,
+    "textual_use_dropout" : True,
+    "textual_dropout": 0.3,
     "textual_iterations" : 30,
+    "textual_batch_size" : 50,
 
     "textual_output_units": [
-        64
+        16
     ],
     "textual_output_neurons": 1,
     "textual_loss": "binary_crossentropy",
     "textual_optimizer":"adam",
     "textual_layers_activations": [
-        "relu"
+        LeakyReLU()
     ],
     "textual_network_activation" : "sigmoid",
-    "textual_training_epochs": 15,
+    "textual_training_epochs": 40,
+# Temporal convolutional network parameters only
+    "textual_kernel_sizes": [
+        3
+    ],
+    "textual_pooling": [
+        False
+    ],
+    "textual_dilations": [
+        [1, 2, 4]
+    ],
+    "textual_nb_stacks": [
+        1
+    ],
 
     'meta_learner_batch_size': 50,
     'meta_learner_output_units': [
-        64
+        32
     ],
     'meta_learner_num_output_neurons': 1,
     'meta_learner_loss': 'binary_crossentropy',
@@ -104,9 +121,9 @@ parameters = {
     ],
     'meta_learner_network_activation': 'sigmoid',
     'meta_learner_use_dropout': True,
-    'meta_learner_dropout': 0.4,
+    'meta_learner_dropout': 0.3,
     "meta_learner_optimizer":"adam",
-    "meta_learner_training_epochs": 30,
+    "meta_learner_training_epochs": 40,
     "use_class_prediction": False,
 
 

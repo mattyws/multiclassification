@@ -2,14 +2,98 @@ import os
 import pickle
 import types
 from functools import partial
+
+import bert
 from keras.models import Model
 
-import multiprocessing
+import tensorflow as tf
+from tensorflow import keras
 
+import multiprocessing
+import sentencepiece as spm
 import numpy
 import numpy as np
 import pandas
 import sys
+
+
+class TextToBertIDs():
+    def __init__(self, data_paths, model_dir=None, use_last_tokens=False):
+        self.data_paths = data_paths
+        spm_model = os.path.join(model_dir, "30k-clean.model")
+        vocab_file = os.path.join(model_dir, "30k-clean.vocab")
+        self.vocab = bert.albert_tokenization.load_vocab(vocab_file)
+        self.sp = spm.SentencePieceProcessor()
+        self.sp.load(spm_model)
+        self.tokenizer = bert.albert_tokenization.FullTokenizer(vocab_file)
+        self.do_lower_case = True
+        self.use_last_tokens = use_last_tokens
+        self.new_paths = dict()
+
+    def transform(self, new_representation_path):
+        self.new_paths = dict()
+        self.new_paths = self.transform_docs(self.data_paths, new_representation_path)
+        # with multiprocessing.Pool(processes=4) as pool:
+        #     manager = multiprocessing.Manager()
+            # manager_queue = manager.Queue()
+            # self.lock = manager.Lock()
+            # partial_transform_docs = partial(self.transform_docs,
+            #                                  new_representation_path=new_representation_path)
+            # data = numpy.array_split(self.data_paths, 6)
+            # # partial_transform_docs(data[0])
+            # total_files = len(self.data_paths)
+            # map_obj = pool.map_async(partial_transform_docs, data)
+            # consumed=0
+            # while not map_obj.ready() or manager_queue.qsize() != 0:
+            #     for _ in range(manager_queue.qsize()):
+            #         manager_queue.get()
+            #         consumed += 1
+            #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            # print()
+            # result = map_obj.get()
+            # for r in result:
+            #     self.new_paths.update(r)
+
+
+    def transform_docs(self, filesNames, new_representation_path, manager_queue=None):
+        x = dict()
+        consumed = 0
+        total_files = len(filesNames)
+        for fileName in filesNames:
+            consumed += 1
+            file_name = fileName.split('/')[-1].split('.')[0]
+            if manager_queue is not None:
+                manager_queue.put(fileName)
+            else:
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            new_file_name = new_representation_path + file_name + '.pkl'
+            if os.path.exists(new_file_name):
+                x[fileName] = new_file_name
+                continue
+            data = pandas.read_csv(fileName)
+            data = data.replace(np.nan, '')
+            text = ' '.join(data["preprocessed_note"])
+            processed_text = bert.albert_tokenization.preprocess_text(text, lower=self.do_lower_case)
+            pieces = bert.albert_tokenization.encode_pieces(self.sp, processed_text)
+            if len(pieces) < 510:
+                pieces = ["[CLS]"] + pieces + ["[PAD]"] * (510 - len(pieces)) + ["[SEP]"]
+            else:
+                pieces = ["[CLS]"] + pieces[-510:] + ["[SEP]"]
+            ids = [int(self.sp.PieceToId(piece)) for piece in pieces]
+            with open(new_file_name, 'wb') as pkl_file:
+                pickle.dump(ids, pkl_file)
+            x[fileName] = new_file_name
+        return x
+
+    def get_new_paths(self, files_list):
+        if self.new_paths is not None and len(self.new_paths.keys()) != 0:
+            new_list = []
+            for file in files_list:
+                if file in self.new_paths.keys():
+                    new_list.append(self.new_paths[file])
+            return new_list
+        else:
+            raise Exception("Data not transformed!")
 
 class TransformClinicalTextsRepresentations(object):
     """
@@ -324,6 +408,7 @@ class EnsembleMetaLearnerDataCreator():
             new_representation = self.__transform(data)
             if self.representation_length is None:
                 self.representation_length = len(new_representation)
+                print("Representation len {}".format(self.representation_length))
             with open(transformed_doc_path, 'wb') as fhandler:
                 pickle.dump(new_representation, fhandler)
             new_paths[icustayid] = transformed_doc_path
@@ -348,33 +433,34 @@ class EnsembleMetaLearnerDataCreator():
                 return pandas.read_csv(path).values
 
     def __transform(self, data):
-        data = np.array([data])
         new_representation = []
         for model in self.weak_classifiers:
             if isinstance(model, tuple):
                 data_index = model[1]
                 model = model[0]
-                prediction = model.predict(data[data_index])
+                input_data = np.array([data[data_index]])
+                prediction = model.predict(input_data)[0]
                 new_representation.extend(prediction)
             else:
-                prediction = model.predict(data)[0]
-                new_representation.extend(prediction)
-        return new_representation
+                data = np.array([data])
+                prediction = model.predict(data[0])[0]
+                new_representation = prediction
+        return np.array(new_representation)
 
     def __change_weak_classifiers(self):
         new_weak_classifiers = []
         for model in self.weak_classifiers:
             if isinstance(model, tuple):
                 new_model = Model(inputs=model[0].input, outputs=model[0].layers[-2].output)
+                new_model.compile(loss=model[0].loss, optimizer=model[0].optimizer)
                 new_model = (new_model, model[1])
             else:
                 new_model = Model(inputs=model.input, outputs=model.layers[-2].output)
-            new_model.compile(loss=model.loss, optimizer=model.optimizer)
+                new_model.compile(loss=model.loss, optimizer=model.optimizer)
             new_weak_classifiers.append(new_model)
         self.weak_classifiers = new_weak_classifiers
 
     def get_new_paths(self, files_list):
-        # TODO: considerar os tipos de dados
         if self.new_paths is not None and len(self.new_paths.keys()) != 0:
             new_list = []
             for file in files_list:

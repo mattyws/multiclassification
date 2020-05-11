@@ -1,7 +1,8 @@
 import abc
 import copy
 
-import keras
+import bert
+from tensorflow import keras
 from keras.layers.convolutional import Conv2D, Conv3D
 from keras.layers.wrappers import TimeDistributed
 from keras.models import load_model
@@ -19,6 +20,7 @@ from tcn import TCN
 
 import adapter
 from adapter import KerasAutoencoderAdapter
+import os
 
 
 def create_recurrent_layer(outputUnit, activation='tanh', returnSequences=None, gru=False):
@@ -33,6 +35,56 @@ class ModelCreator(object, metaclass=abc.ABCMeta):
     def create(self):
         raise NotImplementedError('users must define \'create\' to use this base class')
 
+
+class BertModelCreator(object):
+
+    def __init__(self, input_shape, albert_model_dir=None):
+        self.albert_model_dir = albert_model_dir
+        self.input_shape = input_shape
+
+    def create_representation_model(self, albert_model_name = "albert_base_v2"):
+        albert_dir = bert.fetch_google_albert_model(albert_model_name, ".models")
+        model_ckpt = os.path.join(albert_dir, "model.ckpt-best")
+
+        albert_params = bert.albert_params(albert_dir)
+        model, l_bert = self.build_model(albert_params)
+
+        bert.load_albert_weights(l_bert, model_ckpt)
+
+
+
+        # albert_model_name = self.albert_model_dir #os.path.join(self.albert_model_dir, albert_model_name)
+        # albert_dir = bert.fetch_tfhub_albert_model(albert_model_name, ".models")
+        #
+        # albert_params = bert.albert_params(albert_model_name)
+        # model, l_bert = self.build_model(albert_params)
+        #
+        # bert.load_albert_weights(l_bert, albert_dir)
+        return model, l_bert
+
+    def build_model(self, bert_params):
+        l_bert = bert.BertModelLayer.from_params(bert_params, name="bert")
+        model = keras.Sequential([
+            l_bert,
+            keras.layers.Lambda(lambda x: x[:, -0, ...]),  # [B, 2]
+            keras.layers.Dense(units=1, activation="softmax"),  # [B, 10, 2]
+        ])
+
+        # l_input_ids = keras.layers.Input(shape=self.input_shape[-1])
+        # output = l_bert(l_input_ids)
+        # output = keras.layers.Lambda(lambda x: x[:, 0, :])(output)
+        # output = keras.layers.Dense(1)(output)
+        # model = keras.Model(inputs=l_input_ids, outputs=output)
+
+        model.build(input_shape=self.input_shape)
+        model.compile(optimizer=keras.optimizers.Adam(),
+                      loss="binary_crossentropy",
+                      metrics=[keras.metrics.SparseCategoricalAccuracy(name="acc")])
+
+        for weight in l_bert.weights:
+            print(weight.name)
+
+        return model, l_bert
 
 class NoteeventsClassificationModelCreator(ModelCreator):
 
