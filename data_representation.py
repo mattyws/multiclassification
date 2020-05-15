@@ -1,10 +1,11 @@
 import os
 import pickle
 import types
+from ast import literal_eval
 from functools import partial
 
 import bert
-from keras.models import Model
+from tensorflow.keras.models import Model
 
 import tensorflow as tf
 from tensorflow import keras
@@ -288,6 +289,132 @@ class TransformClinicalTextsRepresentations(object):
             raise Exception("Data not transformed!")
 
 
+class TransformClinicalCtakesTextsRepresentations(object):
+    """
+    Changes the representation for patients notes using a word2vec model.
+    The patients notes must be into different csv.
+    """
+    def __init__(self, representation_model, embedding_size=200, window=2,
+                 texts_path=None, representation_save_path=None):
+        self.representation_model = representation_model
+        self.embedding_size = embedding_size
+        self.window = window
+        self.texts_path = texts_path
+        self.representation_save_path = representation_save_path
+        if not os.path.exists(representation_save_path):
+            os.mkdir(representation_save_path)
+        self.new_paths = dict()
+        self.lock = None
+
+    def create_embedding_matrix(self, text):
+        """
+        Transform a tokenized text into a 3 dimensional array with the word2vec model
+        :param text: the tokenized text
+        :return: the 3 dimensional array representing the content of the tokenized text
+        """
+        # x = np.zeros(shape=(self.text_max_len, self.embedding_size), dtype='float')
+        x = []
+        # if len(text) < 3:
+        #     return None
+        for pos, w in enumerate(text):
+            try:
+                # x[pos] = self.word2vec_model.wv[w]
+                x.append(self.representation_model.wv[w])
+            except:
+                try:
+                    # x[pos] = np.zeros(shape=self.embeddingSize)
+                    if pos - self.window < 0:
+                        begin = 0
+                    else:
+                        begin = pos - self.window
+                    if pos + self.window > len(text):
+                        end = len(text)
+                    else:
+                        end = pos + self.window
+                    word = self.representation_model.predict_output_word(text[begin:end])[0][0]
+                    # x[pos] = self.word2vec_model.wv[word]
+                    x.append(self.representation_model.wv[word])
+                except:
+                    # continue
+                    # x[pos] = np.zeros(shape=self.embedding_size)
+                    x.append(np.zeros(shape=self.embedding_size))
+        x = np.array(x)
+        return x
+
+    def transform_docs(self, docs_path, preprocessing_pipeline=[], manager_queue=None):
+        new_paths = dict()
+        total_files = len(docs_path)
+        print(total_files)
+        consumed = 0
+        for path in docs_path:
+            file_name = path.split('/')[-1]
+            if manager_queue is None:
+                # manager_queue.put(path)
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+                consumed += 1
+            else:
+                manager_queue.put(path)
+            transformed_doc_path = self.representation_save_path + os.path.splitext(file_name)[0] + '.pkl'
+            if os.path.exists(transformed_doc_path):
+                new_paths[path] = transformed_doc_path
+                continue
+            data = pandas.read_csv(path)
+            transformed_texts = []
+            for index, row in data.iterrows():
+                try:
+                    note = row['words']
+                except Exception as e:
+                    print(path)
+                    raise Exception("deu errado")
+                note = literal_eval(note)
+                if preprocessing_pipeline is not None:
+                    for func in preprocessing_pipeline:
+                        note = func(note)
+                new_representation = self.create_embedding_matrix(note)
+                if new_representation is not None:
+                    transformed_texts.extend(new_representation)
+            if len(transformed_texts) >= 3:
+                transformed_texts = numpy.array(transformed_texts)
+                with open(transformed_doc_path, 'wb') as handler:
+                    pickle.dump(transformed_texts, handler)
+                new_paths[path] = transformed_doc_path
+        return new_paths
+
+    def transform(self, docs_paths, preprocessing_pipeline=None):
+        self.new_paths = self.transform_docs(docs_paths, preprocessing_pipeline=preprocessing_pipeline)
+        # with multiprocessing.Pool(processes=4) as pool:
+        #     manager = multiprocessing.Manager()
+        #     manager_queue = manager.Queue()
+        #     self.lock = manager.Lock()
+            # partial_transform_docs = partial(self.transform_docs,
+            #                                  preprocessing_pipeline=preprocessing_pipeline,
+            #                                  manager_queue=manager_queue)
+            # data = numpy.array_split(docs_paths, 6)
+            # total_files = len(docs_paths)
+            # map_obj = pool.map_async(partial_transform_docs, data)
+            # consumed=0
+            # while not map_obj.ready() or manager_queue.qsize() != 0:
+            #     for _ in range(manager_queue.qsize()):
+            #         manager_queue.get()
+            #         consumed += 1
+            #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            # print()
+            # result = map_obj.get()
+            # for r in result:
+            #     self.new_paths.update(r)
+
+    def get_new_paths(self, files_list):
+        if self.new_paths is not None and len(self.new_paths.keys()) != 0:
+            new_list = []
+            for file in files_list:
+                if file in self.new_paths.keys():
+                    new_list.append(self.new_paths[file])
+            return new_list
+        else:
+            raise Exception("Data not transformed!")
+
+
+
 class Word2VecEmbeddingCreator(object):
 
     """
@@ -433,18 +560,21 @@ class EnsembleMetaLearnerDataCreator():
                 return pandas.read_csv(path).values
 
     def __transform(self, data):
+        if isinstance(data, tuple):
+            for data_index in range(len(data)):
+                data[data_index] = np.array([data[data_index]])
+        else:
+            data = np.array([data])
         new_representation = []
         for model in self.weak_classifiers:
             if isinstance(model, tuple):
                 data_index = model[1]
                 model = model[0]
-                input_data = np.array([data[data_index]])
-                prediction = model.predict(input_data)[0]
+                prediction = model.predict(data[data_index])[0]
                 new_representation.extend(prediction)
             else:
-                data = np.array([data])
-                prediction = model.predict(data[0])[0]
-                new_representation = prediction
+                prediction = model.predict(data)[0]
+                new_representation.extend(prediction)
         return np.array(new_representation)
 
     def __change_weak_classifiers(self):

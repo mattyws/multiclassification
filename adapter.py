@@ -1,14 +1,11 @@
 import abc
 import pickle
-
-import keras
 import numpy as np
-import itertools
 
 import sys
 
 from gensim.models import Word2Vec, Doc2Vec
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 
 
 class ModelAdapter(object, metaclass=abc.ABCMeta):
@@ -42,31 +39,17 @@ class KerasAdapter(ModelAdapter):
         self.model = model
 
     def fit(self, dataGenerator, epochs=1, batch_size=10, workers=4, validationDataGenerator = None,
-            validationSteps=None, callbacks=None, use_multiprocessing=True):
+            validationSteps=None, callbacks=None, use_multiprocessing=True, class_weights=None):
         self.model.fit_generator(dataGenerator, len(dataGenerator), epochs=epochs, initial_epoch=0, max_queue_size=1, verbose=1,
                                  workers=workers, validation_data=validationDataGenerator, validation_steps=validationSteps,
-                                 callbacks=callbacks, use_multiprocessing=use_multiprocessing)
-        # for i in range(len(dataGenerator)):
-        #     data = dataGenerator[i]
-        #     for y in range(len(data[0])):
-        #         notes = []
-        #         for note in data[0][y]:
-        #             print("note", note)
-        #             x = []
-        #             for word in note:
-        #                 print("x",word)
-        #                 x.append(word)
-        #             notes.append(x)
-        #         print("OMG THE DATA OMG OM GOMGO MGOGM OGM", notes)
-        #         notes = np.array(notes)
-        #         self.model.fit(notes, data[1][y])
+                                 callbacks=callbacks, use_multiprocessing=use_multiprocessing, class_weight=class_weights)
 
     def predict(self, testDocs, batch_size=10):
         # result = self.model.predict(testDocs, batch_size, verbose=0)
         # result = result.argmax(axis=-1)
         # result = self.model.predict_generator(testDocs)
-        result = self.model.predict_on_batch(testDocs)
-        result = (result > 0.5).astype(np.int)
+        result = self.model.predict(testDocs)
+        # result = np.argmax(result, axis=-1)
         # result = result.argmax(axis=-1)
         return result
 
@@ -90,16 +73,21 @@ class KerasAdapter(ModelAdapter):
     def load_model(model_path):
         return KerasAdapter(load_model(model_path))
 
-    def predict_generator(self, generator):
+    def predict_generator(self, generator, batches_files=False):
         predicted = []
         trueClasses = []
+        files = []
         for i in range(len(generator)):
             sys.stderr.write('\rdone {0:%}'.format(i / len(generator)))
             data = generator[i]
             r = self.predict(data[0])
+            r = (r > 0.5).astype(np.int)
             r = r.flatten()
             predicted.extend(r)
             trueClasses.extend(data[1])
+            files.extend(generator.batches[i])
+        if batches_files:
+            return trueClasses, predicted, files
         return trueClasses, predicted
 
 

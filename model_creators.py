@@ -2,21 +2,20 @@ import abc
 import copy
 
 import bert
+from tensorflow.keras.regularizers import l1_l2
 from tensorflow import keras
-from keras.layers.convolutional import Conv2D, Conv3D
-from keras.layers.wrappers import TimeDistributed
-from keras.models import load_model
-from keras.layers.core import Dense, Dropout, RepeatVector, Reshape
-from keras.layers.recurrent import LSTM, GRU
-from keras.models import Sequential
-from keras.layers import Lambda, Input, Dense, Flatten, Conv1D, AveragePooling1D, GlobalAveragePooling1D, Concatenate, \
+from tensorflow.keras.layers import TimeDistributed
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Dense, Dropout, RepeatVector, Reshape
+from tensorflow.keras.layers import LSTM, GRU
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Lambda, Input, Dense, Flatten, Conv1D, AveragePooling1D, GlobalAveragePooling1D, Concatenate, \
     GlobalAveragePooling2D, Masking, LeakyReLU, MaxPool1D
-from keras.models import Model
-from keras.datasets import mnist
-from keras.losses import mse, binary_crossentropy
-from keras.utils import plot_model
-from keras import backend as K
+from tensorflow.keras.models import Model
+from tensorflow.keras.losses import mse, binary_crossentropy
+from tensorflow.keras import backend as K
 from tcn import TCN
+from tensorflow.keras.optimizers import Adam
 
 import adapter
 from adapter import KerasAutoencoderAdapter
@@ -64,20 +63,21 @@ class BertModelCreator(object):
 
     def build_model(self, bert_params):
         l_bert = bert.BertModelLayer.from_params(bert_params, name="bert")
-        model = keras.Sequential([
-            l_bert,
-            keras.layers.Lambda(lambda x: x[:, -0, ...]),  # [B, 2]
-            keras.layers.Dense(units=1, activation="softmax"),  # [B, 10, 2]
-        ])
+        # model = keras.Sequential([
+        #     l_bert,
+        #     Lambda(lambda x: x[:, -0, ...]),  # [B, 2]
+        #     Dense(units=1, activation="softmax"),  # [B, 10, 2]
+        # ])
 
-        # l_input_ids = keras.layers.Input(shape=self.input_shape[-1])
-        # output = l_bert(l_input_ids)
-        # output = keras.layers.Lambda(lambda x: x[:, 0, :])(output)
-        # output = keras.layers.Dense(1)(output)
-        # model = keras.Model(inputs=l_input_ids, outputs=output)
+        l_input_ids = keras.layers.Input(shape=self.input_shape[-1])
+        output = l_bert(l_input_ids)
+        output = keras.layers.Lambda(lambda x: x[:, 0, :])(output)
+        output = Dropout(0.3)
+        output = keras.layers.Dense(1, activation="sigmoid", kernel_regularizer=l1_l2())(output)
+        model = keras.Model(inputs=l_input_ids, outputs=output)
 
         model.build(input_shape=self.input_shape)
-        model.compile(optimizer=keras.optimizers.Adam(),
+        model.compile(optimizer=Adam(),
                       loss="binary_crossentropy",
                       metrics=[keras.metrics.SparseCategoricalAccuracy(name="acc")])
 
@@ -314,6 +314,10 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         self.bias_regularizer = bias_regularizer
         self.activity_regularizer = activity_regularizer
         self.__check_parameters()
+        if gru:
+            self.name = "GRU_MODEL"
+        else:
+            self.name = "LSTM_MODEL"
 
     def __check_parameters(self):
         if self.layersActivations is not None and len(self.layersActivations) != len(self.outputUnits):
@@ -364,6 +368,74 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         model = load_model(filepath, custom_objects=custom_objects)
         return adapter.KerasAdapter(model)
 
+class MultilayerConvolutionalNNCreator(ModelCreator):
+    def __init__(self, input_shape, outputUnits, numOutputNeurons,
+                 layersActivations=None, networkActivation='sigmoid', pooling=None, kernel_sizes=None,
+                 loss='categorical_crossentropy', optimizer='adam', use_dropout=False, dropout=0.5,
+                 metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
+        self.inputShape = input_shape
+        self.outputUnits = outputUnits
+        self.numOutputNeurons = numOutputNeurons
+        self.networkActivation = networkActivation
+        self.layersActivations = layersActivations
+        self.kernel_sizes = kernel_sizes
+        self.loss = loss
+        self.pooling = pooling
+        self.optimizer = optimizer
+        self.use_dropout = use_dropout
+        self.dropout = dropout
+        self.metrics = metrics
+        self.kernel_regularizer = kernel_regularizer
+        self.bias_regularizer = bias_regularizer
+        self.activity_regularizer = activity_regularizer
+        self.__check_parameters()
+
+    def __check_parameters(self):
+        if self.layersActivations is not None and len(self.layersActivations) != len(self.outputUnits):
+            raise ValueError("Output units must have the same size as activations!")
+
+    def build_network(self):
+        input = Input(self.inputShape)
+        if len(self.outputUnits) == 1:
+            layer = Conv1D(self.outputUnits[0], kernel_size=self.kernel_sizes[0])(input)
+        else:
+            layer = Conv1D(self.outputUnits[0], kernel_size=self.kernel_sizes[0])(input)
+        activation = copy.deepcopy(self.layersActivations[0])
+        layer = activation(layer)
+        if self.pooling[0]:
+            layer = GlobalAveragePooling1D()(layer)
+        if len(self.outputUnits) > 1:
+            for i in range(1, len(self.outputUnits)):
+                if i == len(self.outputUnits) - 1:
+                    layer = Conv1D(self.outputUnits[i], kernel_size=self.kernel_sizes[i], return_sequences=False)(input)
+                else:
+                    layer = Conv1D(self.outputUnits[i], kernel_size=self.kernel_sizes[i], return_sequences=True)(input)
+                activation = copy.deepcopy(self.layersActivations[i])
+                layer = activation(layer)
+                if self.pooling[i]:
+                    layer = MaxPool1D()(layer)
+        if self.use_dropout:
+            dropout = Dropout(self.dropout)(layer)
+            layer = dropout
+        output = Dense(self.numOutputNeurons, activation=self.networkActivation,
+                       kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
+                       activity_regularizer=self.activity_regularizer)(layer)
+        return input, output
+
+    def create(self, model_summary_filename=None):
+        input, output = self.build_network()
+        model = Model(inputs=input, outputs=output)
+        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        if model_summary_filename is not None:
+            with open(model_summary_filename, 'w') as summary_file:
+                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
+        return adapter.KerasAdapter(model)
+
+    @staticmethod
+    def create_from_path(filepath, custom_objects=None):
+        model = load_model(filepath, custom_objects=custom_objects)
+        return adapter.KerasAdapter(model)
+
 
 class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
     def __init__(self, input_shape, outputUnits, numOutputNeurons,
@@ -389,6 +461,7 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
         self.bias_regularizer = bias_regularizer
         self.activity_regularizer = activity_regularizer
         self.__check_parameters()
+        self.name = "TCN_MODEL"
 
     def __check_parameters(self):
         if self.layersActivations is not None and len(self.layersActivations) != len(self.outputUnits):

@@ -14,6 +14,8 @@ import tensorflow as tf
 from keras.regularizers import l1_l2
 
 from sklearn.model_selection._split import StratifiedKFold
+from sklearn.utils import class_weight
+
 from classification_parameters import parameters
 
 import functions
@@ -60,6 +62,13 @@ print_with_time(data_csv['class'].value_counts())
 data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
 print_with_time("Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
+class_weights = class_weight.compute_class_weight('balanced',
+                                                 np.unique(classes),
+                                                 classes)
+mapped_weights = dict()
+for value in np.unique(classes):
+    mapped_weights[value] = class_weights[value]
+class_weights = mapped_weights
 classes_for_stratified = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
 # Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
@@ -144,7 +153,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
         epochs = parameters['trainingEpochs']
         metrics_callback = Metrics(dataTestGenerator)
         print_with_time("Training model")
-        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None)
+        kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None, class_weights=class_weights)
         print_with_time("Testing model")
         metrics = test_model(kerasAdapter, dataTestGenerator, i)
         if dictWriter is None:

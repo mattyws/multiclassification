@@ -264,8 +264,11 @@ def remove_only_special_characters_tokens(tokens):
     return new_tokens
 
 
-def test_model(kerasAdapter, dataTestGenerator, fold):
-    testClasses, result = kerasAdapter.predict_generator(dataTestGenerator)
+def test_model(kerasAdapter, dataTestGenerator, fold, return_predictions=False):
+    if return_predictions:
+        testClasses, result, files = kerasAdapter.predict_generator(dataTestGenerator, batches_files=True)
+    else:
+        testClasses, result = kerasAdapter.predict_generator(dataTestGenerator)
     metrics = dict()
     metrics['w_fscore'] = f1_score(testClasses, result, average='weighted')
     metrics['w_precision'] = precision_score(testClasses, result, average='weighted')
@@ -292,6 +295,11 @@ def test_model(kerasAdapter, dataTestGenerator, fold):
     tn, fp, fn, metrics['tp_rate'] = confusion_matrix(testClasses, result).ravel()
     print(classification_report(testClasses, result))
     metrics["fold"] = fold
+    if return_predictions:
+        result_dict = dict()
+        for f, r in zip(files, result):
+            result_dict[f] = r
+        return metrics, result_dict
     return metrics
 
 def print_with_time(text):
@@ -325,6 +333,12 @@ def tokenize_text(text):
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')
     return sentence_detector.tokenize(text)
 
+def remove_multiword_token(tokens):
+    result_tokens = []
+    for token in tokens:
+        if ' ' not in token:
+            result_tokens.append(token)
+    return result_tokens
 
 def tokenize_sentences(sentences):
     tokenized_sentences = []

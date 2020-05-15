@@ -13,7 +13,7 @@ parameters = {
     "iterations" : 90,
 
     "modelConfigPath": "../mimic/albert_raw_training/checkpoint/config.json",
-    "dataPath" : "../mimic/textual_normalized_preprocessed/",
+    "dataPath" : "../mimic/sepsis_noteevents_processed_ctakes/",
     "notes_word2vec_path" : "../mimic/sepsis_noteevents_preprocessed/",
     "trainingDataPath" :  "../mimic/albert_raw_training/dataTraining/",
     "testingDataPath" : "../mimic/albert_raw_training/dataTest/",

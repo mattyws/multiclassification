@@ -1,4 +1,5 @@
-from keras.layers import LeakyReLU
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.optimizers import Adam
 
 parameters = {
     "datasetCsvFilePath": "../mimic/new_dataset_patients.csv",
@@ -21,11 +22,17 @@ parameters = {
     "testing_events_sizes_labels_file" : "../mimic/new_filtered_training/testing_sizes_labels_{}.pkl",
     "dataLength" : 12,
     "outputUnits": [
-        64
+        16
     ],
     "numOutputNeurons": 1,
     "loss": "binary_crossentropy",
-    "optimizer":"adam",
+    "optimizer": Adam(
+        learning_rate=0.01,
+        beta_1=0.9,
+        beta_2=0.999,
+        epsilon=1e-07,
+        amsgrad=True
+    ),
     "layersActivations": [
         LeakyReLU()
     ],
@@ -35,7 +42,7 @@ parameters = {
     "useDropout": True,
     "dropout": 0.3,
     "trainingEpochs": 40,
-    "batchSize": 50,
+    "batchSize": 16,
 
     # Convolution only parameters
     "kernel_sizes": [

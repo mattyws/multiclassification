@@ -15,6 +15,7 @@ import tensorflow as tf
 from keras.regularizers import l1_l2
 
 from sklearn.model_selection._split import StratifiedKFold
+from sklearn.utils import class_weight
 
 import functions
 from adapter import KerasAdapter
@@ -122,14 +123,6 @@ if parameters['use_textual_data']:
     representation_model = None
     texts_transformer.transform(textual_data, preprocessing_pipeline=preprocessing_pipeline)
     textual_transformed_data = np.array(texts_transformer.get_new_paths(textual_data))
-    # IN CASE THAT YOU ALREADY HAVE THE REPRESENTATIONS CREATED
-    # print_with_time("Padding/Retrieving sequences")
-    # # Valores com base na média + desvio padrão do tamanho dos textos já pre processados
-    # texts_transformer.pad_new_representation(textual_transformed_data, 228 + 224,
-    #                                          pad_data_path=parameters['training_directory_path'] +
-    #                                                        parameters['word2vec_padded_representation_files_path'])
-    # textual_transformed_data = np.array(texts_transformer.get_new_paths(textual_transformed_data))
-
 
 # Using a seed always will get the same data split even if the training stops
 print_with_time("Transforming classes")
@@ -174,7 +167,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                  layersActivations=parameters['structured_layers_activations'],
                                                                  networkActivation=parameters['structured_network_activation'],
                                                                  gru=parameters['structured_gru'],
-                                                                 kernel_regularizer=l1_l2(),
+                                                                 # kernel_regularizer=l1_l2(),
                                                                  use_dropout=parameters['structured_use_dropout'],
                                                                 dropout=parameters['structured_dropout'],
                                                                  metrics=[keras.metrics.binary_accuracy],
@@ -193,7 +186,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                         dilations=parameters['structured_dilations'],
                                                                         nb_stacks=parameters['structured_nb_stacks'],
                                                                         dropout=parameters['structured_dropout'],
-                                                                        kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
+                                                                        # kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
                                                                         metrics=[keras.metrics.binary_accuracy],
                                                                         optimizer=parameters['structured_optimizer'])
             print_with_time("Training level 0 models for structured data")
@@ -376,14 +369,21 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                 network_activation=parameters['meta_learner_network_activation'],
                                                 use_dropout=parameters['meta_learner_use_dropout'],
                                                 dropout=parameters['meta_learner_dropout'],
-                                                kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
+                                                # kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
                                                 metrics=[keras.metrics.binary_accuracy],
                                                 optimizer=parameters['meta_learner_optimizer'])
             kerasAdapter = modelCreator.create()
             epochs = parameters['meta_learner_training_epochs']
             print_with_time("Training model with {} models".format(num_models))
             start = datetime.datetime.now()
-            kerasAdapter.fit(training_meta_data_generator, epochs=epochs, callbacks=None, use_multiprocessing=False)
+            class_weights = class_weight.compute_class_weight('balanced',
+                                                              np.unique(classes[trainIndex]),
+                                                              classes[trainIndex])
+            mapped_weights = dict()
+            for value in np.unique(classes):
+                mapped_weights[value] = class_weights[value]
+            class_weights = mapped_weights
+            kerasAdapter.fit(training_meta_data_generator, epochs=epochs, use_multiprocessing=False, class_weights=class_weights)
             end = datetime.datetime.now()
             time_to_train = end - start
             hours, remainder = divmod(time_to_train.seconds, 3600)

@@ -30,6 +30,7 @@ class BertDataGenerator(tsSeq):
         self.batch_size = batch_size
 
     def __load_files(self, filesNames):
+        # print("load files")
         x = []
         for fileName in filesNames:
             with open(fileName, 'rb') as data_file:
@@ -49,12 +50,13 @@ class BertDataGenerator(tsSeq):
         batch_x = self.data_paths[idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_x = self.__load_files(batch_x)
         batch_y = self.labels[idx * self.batch_size:(idx + 1) * self.batch_size]
+        # print(batch_x, batch_y)
         return batch_x, batch_y
 
     def __len__(self):
         return np.int64(np.ceil(len(self.data_paths) / float(self.batch_size)))
 
-class LengthLongitudinalDataGenerator(Sequence):
+class LengthLongitudinalDataGenerator(tsSeq):
 
     def __init__(self, sizes_data_paths, labels, max_batch_size=50, iterForever=False, ndmin=None):
         self.max_batch_size = max_batch_size
@@ -136,6 +138,12 @@ class LengthLongitudinalDataGenerator(Sequence):
         batch_x = self.batches[idx]
         batch_x = self.__load(batch_x)
         batch_y = self.labels[idx]
+        # print(batch_x)
+        # print("{} : =====".format(idx))
+        # print(self.batches[idx])
+        # for x in batch_x:
+        #     print(x.shape)
+        # print("=====")
         # self.__save_batch(idx, batch_x, batch_y)
         return batch_x, batch_y
 
@@ -175,7 +183,7 @@ class NoteeventsLengthLongitudinalDataGenerator(LengthLongitudinalDataGenerator)
         return x
 
 
-class LongitudinalDataGenerator(Sequence):
+class LongitudinalDataGenerator(tsSeq):
 
     def __init__(self, dataPaths, labels, batchSize, iterForever=False, saved_batch_dir='saved_batch/'):
         self.batchSize = batchSize
@@ -244,7 +252,7 @@ class LongitudinalDataGenerator(Sequence):
     def __len__(self):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
-class AutoencoderDataGenerator(Sequence):
+class AutoencoderDataGenerator(tsSeq):
     #TODO: change for batch loading
     def __init__(self, dataPaths, batch_size=30, iterForever=False):
         self.__filesList = dataPaths
@@ -279,7 +287,7 @@ class AutoencoderDataGenerator(Sequence):
     def __len__(self):
         return len(self.__filesList)
 
-class Word2VecTextEmbeddingGenerator(Sequence):
+class Word2VecTextEmbeddingGenerator(tsSeq):
     def __init__(self, dataPath, word2vecModel, batchSize, embeddingSize=200, iterForever=False):
         self.dataPath = dataPath
         if self.dataPath[-1] != '/':
@@ -362,7 +370,7 @@ class Word2VecTextEmbeddingGenerator(Sequence):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
 
-class MetaLearnerDataGenerator(Sequence):
+class MetaLearnerDataGenerator(tsSeq):
 
     def __init__(self, dataPaths, labels, batchSize, num_models, representation_chunk_size, iterForever=False):
         self.batchSize = batchSize

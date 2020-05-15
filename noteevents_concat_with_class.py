@@ -3,6 +3,10 @@ import html
 import json
 import logging
 import os
+
+import sys
+from ast import literal_eval
+
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
@@ -60,53 +64,25 @@ data_csv = data_csv[data_csv['icustay_id'].isin(data)]
 data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
 print("========= Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
-# Using a seed always will get the same data split even if the training stops
+new_representation_path = "/home/mattyws/Documents/mimic/concateneted_words_and_class.csv"
+new_data = []
+total_files = len(data)
+consumed = -1
+for icustay, clas in zip(data, classes):
+    consumed += 1
+    sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+    concat_text = ""
+    icustay_id = icustay.split('/')[-1].split('.')[0]
+    events = pd.read_csv(icustay)
+    events = events.replace(np.nan, '')
+    for event in events['words']:
+        event = literal_eval(event)
+        concat_text += ' '.join(event)
+    icustay_concat = dict()
+    icustay_concat["words"] = concat_text
+    icustay_concat["class"] = clas
+    icustay_concat["icustay_id"] = icustay_id
+    new_data.append(icustay_concat)
 
-X_train, data, y_train, classes = train_test_split(data, classes, test_size=0.20, random_state=15, stratify=classes)
-
-
-kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
-
-embedding_size = parameters['embedding_size']
-min_count = parameters['min_count']
-workers = parameters['workers']
-window = parameters['window']
-iterations = parameters['iterations']
-inputShape = (None, embedding_size)
-
-text_to_ids = TextToBertIDs(data, model_dir="/home/mattyws/Downloads/albert_base/")
-text_to_ids.transform("/home/mattyws/Documents/mimic/bert_last_ids/")
-data = np.array(text_to_ids.get_new_paths(data))
-
-i = 0
-# ====================== Script that start training new models
-with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the results for each fold are appended
-    dictWriter = None
-    for trainIndex, testIndex in kf.split(data, classes):
-        if config is not None and config['fold'] > i:
-            print("Pass fold {}".format(i))
-            i += 1
-            continue
-        print_with_time("Fold {}".format(i))
-        print_with_time("Creating generators")
-        train_generator = BertDataGenerator(data[trainIndex], classes[trainIndex], 4)
-        test_generator = BertDataGenerator(data[testIndex], classes[testIndex], 4)
-        if os.path.exists("../mimic/albert_raw_training/checkpoint/albert_model_{}.model".format(i)):
-            adapter = KerasAdapter.load_model("../mimic/albert_raw_training/checkpoint/albert_model_{}.model".format(i))
-        else:
-            # for index in range(len(train_generator)):
-            #     print(train_generator[index][0].shape)
-            #     exit()
-            model_generator = BertModelCreator((None,512))
-            model, l_bert = model_generator.create_representation_model()
-            model.fit_generator(generator=train_generator, epochs=3, max_queue_size=5, use_multiprocessing=True)
-            adapter = KerasAdapter(model)
-        metrics = test_model(adapter, test_generator, i)
-        if dictWriter is None:
-            dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
-        if metrics['fold'] == 0:
-            dictWriter.writeheader()
-        dictWriter.writerow(metrics)
-        print("Saving models")
-        adapter.save("../mimic/albert_raw_training/checkpoint/albert_model_{}.model".format(i))
-        i += 1
+new_data = pd.DataFrame(new_data)
+new_data.to_csv(new_representation_path, index=False)

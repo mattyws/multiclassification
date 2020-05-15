@@ -12,7 +12,7 @@ import sys
 from keras.wrappers.scikit_learn import KerasClassifier
 from sklearn.cluster.hierarchical import AgglomerativeClustering
 from sklearn.ensemble import AdaBoostClassifier
-from sklearn.utils import resample
+from sklearn.utils import resample, class_weight
 from dtaidistance import dtw
 
 import functions
@@ -64,7 +64,7 @@ class TrainEnsembleBagging():
             epochs=10, n_estimators=10, batch_size=30, saved_model_path="bagging_{}.model",
             saved_data_samples_path="bagging_samples_{}.model"):
         positive_indexes, negative_indexes = split_classes(classes)
-        indexes = negative_indexes
+        indexes = range(len(data)) #negative_indexes
         for n in range(n_estimators):
             print_with_time("Estimator {} of {}".format(n+1, n_estimators))
             if os.path.exists(saved_model_path.format(n)):
@@ -79,14 +79,21 @@ class TrainEnsembleBagging():
                     train_samples = training_data_samples[n]
                     train_classes = training_classes_samples[n]
                 else:
-                    # train_indexes = resample(indexes, replace=False, n_samples=int(len(positive_indexes) * split_rate))
-                    train_indexes = self.resample(indexes, n_samples=int(len(positive_indexes) * split_rate))
-                    train_indexes.extend(positive_indexes)
+                    train_indexes = resample(indexes, replace=True, n_samples=len(indexes)-1, stratify=classes) #n_samples=int(len(positive_indexes) * split_rate))
+                    # train_indexes = self.resample(indexes, n_samples=int(len(positive_indexes) * split_rate))
+                    # train_indexes.extend(positive_indexes)
                     train_samples = data[train_indexes]
                     train_classes = classes[train_indexes]
                 data_train_generator = self.__create_generator(train_samples, train_classes, batch_size)
+                class_weights = class_weight.compute_class_weight('balanced',
+                                                                  numpy.unique(train_classes),
+                                                                  train_classes)
+                mapped_weights = dict()
+                for value in numpy.unique(classes):
+                    mapped_weights[value] = class_weights[value]
+                class_weights = mapped_weights
                 adapter = model_creator.create()
-                adapter.fit(data_train_generator, epochs=epochs, use_multiprocessing=False)
+                adapter.fit(data_train_generator, epochs=epochs, use_multiprocessing=False, class_weights=class_weights)
                 adapter.save(saved_model_path.format(n))
             with open(saved_data_samples_path.format(n), 'wb') as file_handler:
                 pickle.dump((train_samples, train_classes), file_handler)
