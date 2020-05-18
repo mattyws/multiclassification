@@ -3,8 +3,6 @@ import datetime
 import json
 import os
 import pickle
-from collections import Counter
-from pprint import PrettyPrinter
 
 import pandas
 import pandas as pd
@@ -12,8 +10,6 @@ import numpy as np
 
 import keras
 import sys
-from keras import backend as K
-import tensorflow as tf
 from keras.regularizers import l1_l2
 
 from sklearn.model_selection._split import StratifiedKFold
@@ -22,7 +18,8 @@ from tensorflow.keras.models import Model
 
 import functions
 from adapter import KerasAdapter
-from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator
+from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator, \
+    ArrayDataGenerator
 from data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
 from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging, split_classes
 from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
@@ -56,6 +53,32 @@ def change_weak_classifiers(model):
     new_model = Model(inputs=model.input, outputs=model.layers[-2].output)
     new_model.compile(loss=model.loss, optimizer=model.optimizer)
     return new_model
+
+def train_meta_model_on_data(data, classes, parameters):
+    meta_data_input_shape = (len(classes),)
+    modelCreator = EnsembleModelCreator(meta_data_input_shape, parameters['meta_learner_num_output_neurons'],
+                                        output_units=parameters['meta_learner_output_units'],
+                                        loss=parameters['meta_learner_loss'],
+                                        layers_activation=parameters['meta_learner_layers_activations'],
+                                        network_activation=parameters['meta_learner_network_activation'],
+                                        use_dropout=parameters['meta_learner_use_dropout'],
+                                        dropout=parameters['meta_learner_dropout'],
+                                        # kernel_regularizer=l1_l2(l1=0.001, l2=0.01),
+                                        metrics=[keras.metrics.binary_accuracy],
+                                        optimizer=parameters['meta_learner_optimizer'])
+    kerasAdapter = modelCreator.create()
+    epochs = parameters['meta_learner_training_epochs']
+    start = datetime.datetime.now()
+    class_weights = class_weight.compute_class_weight('balanced',
+                                                      np.unique(classes[trainIndex]),
+                                                      classes[trainIndex])
+    mapped_weights = dict()
+    for value in np.unique(classes):
+        mapped_weights[value] = class_weights[value]
+    class_weights = mapped_weights
+    dataGenerator = ArrayDataGenerator(data, classes, parameters['meta_learner_batch_size'])
+    kerasAdapter.fit(dataGenerator, epochs=epochs, use_multiprocessing=False, class_weights=class_weights)
+    return kerasAdapter
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
@@ -153,16 +176,22 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         if os.path.exists(parameters['training_directory_path'] + parameters['checkpoint']
                             + parameters['fold_predictions_file_csv'].format(fold)):
             print("Pass fold {}".format(fold))
-            fold_predictions = pandas.read_csv(parameters['training_directory_path'] + parameters['checkpoint']
+            fold_predictions.to_csv(parameters['training_directory_path'] + parameters['checkpoint']
                                     + parameters['fold_predictions_file_csv'].format(fold))
-            fold_metrics = pandas.read_csv(parameters['training_directory_path'] + parameters['checkpoint']
+            fold_metrics.to_csv(parameters['training_directory_path'] + parameters['checkpoint']
                                 + parameters['fold_metrics_file_csv'].format(fold))
+            fold_representations.to_csv(parameters['training_directory_path'] + parameters['checkpoint']
+                                        + parameters['fold_representations_file_csv'].format(fold))
+            print(fold_predictions)
+
             if all_predictions is None:
                 all_predictions = fold_predictions
                 all_metrics = fold_metrics
+                all_representations = fold_representations
             else:
                 all_predictions.append(fold_predictions)
                 all_metrics.append(fold_metrics)
+                all_representations.append(fold_representations)
             fold += 1
             continue
         print_with_time("Fold {}".format(fold))
@@ -252,14 +281,15 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 icustay = key.split('/')[-1].split('.')[0]
                 fold_predictions[model_creator.name][icustay] = results[key]
             model = change_weak_classifiers(adapter.model)
-            files = []
             for i in range(len(dataTestGenerator)):
                 sys.stderr.write('\rdone {0:%}'.format(i / len(dataTestGenerator)))
                 data = dataTestGenerator[i]
-                r = model.predict(data[0])
-                r = r.flatten()
-                files.extend(dataTestGenerator.batches[i])
-                print(r)
+                representations = model.predict(data[0])
+                print(representations)
+                for f, r in zip(dataTestGenerator.batches[i], representations):
+                    if f not in fold_representations.keys():
+                        fold_representations[f] = []
+                    fold_representations[f].extend(representations)
 
 
         end = datetime.datetime.now()
@@ -313,6 +343,16 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                 fold_predictions[model_creator.name + "_textual"] = dict()
             icustay = key.split('/')[-1].split('.')[0]
             fold_predictions[model_creator.name + "_textual"][icustay] = results[key]
+        model = change_weak_classifiers(adapter.model)
+        for i in range(len(dataTestGenerator)):
+            sys.stderr.write('\rdone {0:%}'.format(i / len(dataTestGenerator)))
+            data = dataTestGenerator[i]
+            representations = model.predict(data[0])
+            print(representations)
+            for f, r in zip(dataTestGenerator.batches[i], representations):
+                if f not in fold_representations.keys():
+                    fold_representations[f] = []
+                fold_representations[f].extend(representations)
 
         end = datetime.datetime.now()
         time_to_train = end - start
@@ -324,18 +364,27 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
                                                                                                int(seconds)))
         fold_predictions = pandas.DataFrame(fold_predictions)
         fold_metrics = pandas.DataFrame(fold_metrics)
+        fold_representations = pandas.DataFrame(fold_representations)
 
         fold_predictions.to_csv(parameters['training_directory_path'] + parameters['checkpoint']
                                 + parameters['fold_predictions_file_csv'].format(fold))
         fold_metrics.to_csv(parameters['training_directory_path'] + parameters['checkpoint']
                                 + parameters['fold_metrics_file_csv'].format(fold))
+        fold_representations.to_csv(parameters['training_directory_path'] + parameters['checkpoint']
+                            + parameters['fold_representations_file_csv'].format(fold))
+        print(fold_predictions)
+
         if all_predictions is None:
             all_predictions = fold_predictions
             all_metrics = fold_metrics
+            all_representations = fold_representations
         else:
             all_predictions.append(fold_predictions)
             all_metrics.append(fold_metrics)
+            all_representations.append(fold_representations)
         fold += 1
+
+from scipy.stats import zscore
 
 # TODO: check if exists
 all_predictions.to_csv(parameters['training_directory_path'] + parameters['checkpoint']
@@ -345,13 +394,40 @@ all_metrics.to_csv(parameters['training_directory_path'] + parameters['checkpoin
 print(all_predictions)
 print(all_metrics)
 dataset_patients = pandas.read_csv('/home/mattyws/Documents/mimic/sepsis3-df-no-exclusions.csv')
-meta_data_predictions_structured = dataset_patients[['icustay_id', 'age', 'sex', 'height', 'weight']]
-#TODO: z-score normalization
-meta_data_predictions_structured = pandas.merge(all_predictions, meta_data_predictions_structured, left_index=True,
-                                                right_on="icustay_id")
-# TODO: add true class
+meta_data_extra = dataset_patients[['icustay_id', 'age', 'sex', 'height', 'weight']]
+dataset_patients[['age', 'sex', 'height', 'weight']] = dataset_patients[['age', 'sex', 'height', 'weight']].apply(zscore)
+dataset_patients[['age', 'sex', 'height', 'weight']] = dataset_patients[['age', 'sex', 'height', 'weight']].fillna(0)
 
-# TODO: create meta classifier data using age, height, weight, n maybe sofa
+
+struct_predictions = all_predictions.loc[:, [c for c in all_predictions.colums if '_textual' not in c]]
+meta_data_predictions_structured = pandas.merge(struct_predictions, meta_data_extra, left_index=True,
+                                                right_on="icustay_id")
+print(meta_data_predictions_structured.columns)
+meta_data_predictions_structured = pandas.merge(meta_data_predictions_structured, data_csv[['icustay_id', 'class']],
+                                                left_index=True, right_on="icustay_id")
+print(meta_data_predictions_structured.columns)
+training_values = meta_data_predictions_structured.loc[:, meta_data_predictions_structured.columns != 'class']
+training_classes = meta_data_predictions_structured['class']
+
+meta_adapter = train_level_zero_classifiers(training_values, training_classes, parameters)
+
+# TODO: test model with the splited data
+
+meta_data_predictions = pandas.merge(all_predictions, meta_data_extra, left_index=True,
+                                                right_on="icustay_id")
+print(meta_data_predictions.columns)
+meta_data_predictions = pandas.merge(meta_data_predictions, data_csv[['icustay_id', 'class']],
+                                                left_index=True, right_on="icustay_id")
+print(meta_data_predictions.columns)
+training_values = meta_data_predictions.loc[:, meta_data_predictions.columns != 'class']
+training_classes = meta_data_predictions['class']
+
+meta_adapter = train_level_zero_classifiers(training_values, training_classes, parameters)
+
+# TODO: test model with the splited data
+
+
+
 # print_with_time("Get model from adapters")
 # aux_level_zero_models = []
 # for adapter in level_zero_models:

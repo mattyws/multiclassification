@@ -17,10 +17,32 @@ from ast import literal_eval
 from nltk import WhitespaceTokenizer
 
 from data_representation import Word2VecEmbeddingCreator
-import sentencepiece as spm
 
 from tensorflow.python.keras.utils.data_utils import Sequence as tsSeq
 
+
+class ArrayDataGenerator(tsSeq):
+
+    def __init__(self, data, labels, batch_size):
+        self.data_paths = data
+        self.labels = labels
+        self.batch_size = batch_size
+
+    def __iter__(self):
+        return self
+
+    def __getitem__(self, idx):
+        """
+        :param idx:
+        :return:
+        """
+        batch_x = self.data[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_y = self.labels[idx * self.batch_size:(idx + 1) * self.batch_size]
+        # print(batch_x, batch_y)
+        return batch_x, batch_y
+
+    def __len__(self):
+        return np.int64(np.ceil(len(self.data_paths) / float(self.batch_size)))
 
 class BertDataGenerator(tsSeq):
 

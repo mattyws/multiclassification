@@ -9,8 +9,10 @@ parameters = {
 
     "fold_predictions_file_csv" : "fold_prediction_{}.csv",
     "fold_metrics_file_csv" : "fold_result_{}.csv",
+    "fold_representations_file_csv": "fold_representation_{}.csv",
     "predictions_file_csv" : "prediction.csv",
     "metrics_file_csv" : "result.csv",
+    "representation_file_csv": "representations.csv",
 
     "normalization_value_counts_dir" : "value_counts/",
     "meta_representation_path": "meta_representation_fold_{}/",
