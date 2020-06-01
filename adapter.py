@@ -85,7 +85,8 @@ class KerasAdapter(ModelAdapter):
             r = r.flatten()
             predicted.extend(r)
             trueClasses.extend(data[1])
-            files.extend(generator.batches[i])
+            if batches_files:
+                files.extend(generator.batches[i])
         if batches_files:
             return trueClasses, predicted, files
         return trueClasses, predicted

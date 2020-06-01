@@ -41,6 +41,17 @@ class BertModelCreator(object):
         self.albert_model_dir = albert_model_dir
         self.input_shape = input_shape
 
+    def create_from_model_dir(self, model_dir, cptk_name):
+        bert_params = bert.params_from_pretrained_ckpt(model_dir)
+
+        model, l_bert = self.build_model(bert_params)
+
+        bert_ckpt_file = os.path.join(model_dir, cptk_name)
+        bert.load_stock_weights(l_bert, bert_ckpt_file)
+
+        bert.load_albert_weights(l_bert, bert_ckpt_file)
+        return model, l_bert
+
     def create_representation_model(self, albert_model_name = "albert_base_v2"):
         albert_dir = bert.fetch_google_albert_model(albert_model_name, ".models")
         model_ckpt = os.path.join(albert_dir, "model.ckpt-best")
@@ -72,7 +83,7 @@ class BertModelCreator(object):
         l_input_ids = keras.layers.Input(shape=self.input_shape[-1])
         output = l_bert(l_input_ids)
         output = keras.layers.Lambda(lambda x: x[:, 0, :])(output)
-        output = Dropout(0.3)
+        output = Dropout(0.3)(output)
         output = keras.layers.Dense(1, activation="sigmoid", kernel_regularizer=l1_l2())(output)
         model = keras.Model(inputs=l_input_ids, outputs=output)
 

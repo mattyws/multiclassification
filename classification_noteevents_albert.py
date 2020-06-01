@@ -17,7 +17,7 @@ from sklearn.model_selection._split import StratifiedKFold, train_test_split
 from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator, BertDataGenerator
 
-from data_representation import TransformClinicalTextsRepresentations, TextToBertIDs
+from data_representation import TransformClinicalTextsRepresentations, TextToBioBertIDs
 from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     divide_by_events_lenght, remove_sepsis_mentions, train_representation_model
@@ -55,9 +55,9 @@ data_csv = pd.read_csv(parameters['datasetCsvFilePath'])
 data_csv = data_csv.sort_values(['icustay_id'])
 # Get the values in data_csv that have events saved
 data = np.array([itemid for itemid in list(data_csv['icustay_id'])
-                 if os.path.exists(parameters['dataPath'] + '{}.csv'.format(itemid))])
+                 if os.path.exists("../mimic/textual_normalized_preprocessed/" + '{}.csv'.format(itemid))])
 data_csv = data_csv[data_csv['icustay_id'].isin(data)]
-data = np.array([parameters['dataPath'] + '{}.csv'.format(itemid) for itemid in data])
+data = np.array(["../mimic/textual_normalized_preprocessed/" + '{}.csv'.format(itemid) for itemid in data])
 print("========= Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
 # Using a seed always will get the same data split even if the training stops
@@ -74,8 +74,8 @@ window = parameters['window']
 iterations = parameters['iterations']
 inputShape = (None, embedding_size)
 
-text_to_ids = TextToBertIDs(data, model_dir="/home/mattyws/Downloads/albert_base/")
-text_to_ids.transform("/home/mattyws/Documents/mimic/bert_last_ids/")
+text_to_ids = TextToBioBertIDs(data, model_dir="../mimic/biobert_large/")
+text_to_ids.transform("../mimic/biobert_last_ids/")
 data = np.array(text_to_ids.get_new_paths(data))
 
 i = 0
@@ -89,16 +89,17 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             continue
         print_with_time("Fold {}".format(i))
         print_with_time("Creating generators")
-        train_generator = BertDataGenerator(data[trainIndex], classes[trainIndex], 4)
-        test_generator = BertDataGenerator(data[testIndex], classes[testIndex], 4)
-        if os.path.exists("../mimic/albert_raw_training/checkpoint/albert_model_{}.model".format(i)):
-            adapter = KerasAdapter.load_model("../mimic/albert_raw_training/checkpoint/albert_model_{}.model".format(i))
+        train_generator = BertDataGenerator(data[trainIndex], classes[trainIndex], 512)
+        test_generator = BertDataGenerator(data[testIndex], classes[testIndex], 512)
+        if os.path.exists("../mimic/biobert_raw_training/checkpoint/albert_model_{}.model".format(i)):
+            adapter = KerasAdapter.load_model("../mimic/biobert_raw_training/checkpoint/albert_model_{}.model".format(i))
         else:
             # for index in range(len(train_generator)):
             #     print(train_generator[index][0].shape)
             #     exit()
             model_generator = BertModelCreator((None,512))
-            model, l_bert = model_generator.create_representation_model()
+            model, l_bert = model_generator.create_from_model_dir("../mimic/biobert_large/",
+                                                                  "bio_bert_large_1000k.ckpt")
             model.fit_generator(generator=train_generator, epochs=3, max_queue_size=5, use_multiprocessing=True)
             adapter = KerasAdapter(model)
         metrics = test_model(adapter, test_generator, i)
@@ -108,5 +109,5 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             dictWriter.writeheader()
         dictWriter.writerow(metrics)
         print("Saving models")
-        adapter.save("../mimic/albert_raw_training/checkpoint/albert_model_{}.model".format(i))
+        adapter.save("../mimic/biobert_raw_training/checkpoint/albert_model_{}.model".format(i))
         i += 1

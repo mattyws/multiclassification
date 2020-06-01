@@ -67,7 +67,7 @@ def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%
         if buckets.empty:
             icustays_to_remove.append(patient['icustay_id'])
         else:
-            buckets.to_csv(new_events_path+'{}.csv'.format(patient['icustay_id']), index=False)
+            buckets.to_csv(new_events_path+'{}.csv'.format(patient['icustay_id']))
         if manager_queue is not None:
             manager_queue.put(index)
     return icustays_to_remove

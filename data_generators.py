@@ -24,7 +24,7 @@ from tensorflow.python.keras.utils.data_utils import Sequence as tsSeq
 class ArrayDataGenerator(tsSeq):
 
     def __init__(self, data, labels, batch_size):
-        self.data_paths = data
+        self.data = data
         self.labels = labels
         self.batch_size = batch_size
 
@@ -42,7 +42,7 @@ class ArrayDataGenerator(tsSeq):
         return batch_x, batch_y
 
     def __len__(self):
-        return np.int64(np.ceil(len(self.data_paths) / float(self.batch_size)))
+        return np.int64(np.ceil(len(self.data) / float(self.batch_size)))
 
 class BertDataGenerator(tsSeq):
 

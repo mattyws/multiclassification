@@ -58,7 +58,7 @@ parameters = {
     "structured_gru": False,
     "structured_tcn": True,
     "structured_use_dropout": True,
-    "structured_dropout": 0.5,
+    "structured_dropout": 0.3,
     "structured_training_epochs": 40,
     "structured_n_estimators": 15,
     "structured_batch_size": 50,

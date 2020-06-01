@@ -9,6 +9,7 @@ from tensorflow.keras.models import Model
 
 import tensorflow as tf
 from tensorflow import keras
+from biobert import tokenization as biobert_tokenizer
 
 import multiprocessing
 # import sentencepiece as spm
@@ -16,6 +17,80 @@ import numpy
 import numpy as np
 import pandas
 import sys
+
+class TextToBioBertIDs():
+    def __init__(self, data_paths, model_dir=None, use_last_tokens=False):
+        self.data_paths = data_paths
+        vocab_file = os.path.join(model_dir, "vocab_cased_pubmed_pmc_30k.txt")
+        self.vocab = biobert_tokenizer.load_vocab(vocab_file)
+        self.tokenizer = biobert_tokenizer.FullTokenizer(vocab_file)
+        self.do_lower_case = True
+        self.use_last_tokens = use_last_tokens
+        self.new_paths = dict()
+
+    def transform(self, new_representation_path):
+        self.new_paths = dict()
+        self.new_paths = self.transform_docs(self.data_paths, new_representation_path)
+        # with multiprocessing.Pool(processes=4) as pool:
+        #     manager = multiprocessing.Manager()
+            # manager_queue = manager.Queue()
+            # self.lock = manager.Lock()
+            # partial_transform_docs = partial(self.transform_docs,
+            #                                  new_representation_path=new_representation_path)
+            # data = numpy.array_split(self.data_paths, 6)
+            # # partial_transform_docs(data[0])
+            # total_files = len(self.data_paths)
+            # map_obj = pool.map_async(partial_transform_docs, data)
+            # consumed=0
+            # while not map_obj.ready() or manager_queue.qsize() != 0:
+            #     for _ in range(manager_queue.qsize()):
+            #         manager_queue.get()
+            #         consumed += 1
+            #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            # print()
+            # result = map_obj.get()
+            # for r in result:
+            #     self.new_paths.update(r)
+
+
+    def transform_docs(self, filesNames, new_representation_path, manager_queue=None):
+        x = dict()
+        consumed = 0
+        total_files = len(filesNames)
+        for fileName in filesNames:
+            consumed += 1
+            file_name = fileName.split('/')[-1].split('.')[0]
+            if manager_queue is not None:
+                manager_queue.put(fileName)
+            else:
+                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            new_file_name = new_representation_path + file_name + '.pkl'
+            if os.path.exists(new_file_name):
+                x[fileName] = new_file_name
+                continue
+            data = pandas.read_csv(fileName)
+            data = data.replace(np.nan, '')
+            text = ' '.join(data["preprocessed_note"])
+            processed_text = self.tokenizer.tokenize(text)
+            if len(processed_text) < 510:
+                processed_text = ["[CLS]"] + processed_text + ["[PAD]"] * (510 - len(processed_text)) + ["[SEP]"]
+            else:
+                processed_text = ["[CLS]"] + processed_text[-510:] + ["[SEP]"]
+            ids = self.tokenizer.convert_tokens_to_ids(processed_text)
+            with open(new_file_name, 'wb') as pkl_file:
+                pickle.dump(ids, pkl_file)
+            x[fileName] = new_file_name
+        return x
+
+    def get_new_paths(self, files_list):
+        if self.new_paths is not None and len(self.new_paths.keys()) != 0:
+            new_list = []
+            for file in files_list:
+                if file in self.new_paths.keys():
+                    new_list.append(self.new_paths[file])
+            return new_list
+        else:
+            raise Exception("Data not transformed!")
 
 
 # class TextToBertIDs():
