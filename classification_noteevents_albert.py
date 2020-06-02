@@ -58,7 +58,7 @@ print("========= Transforming classes")
 classes = np.array([1 if c == 'sepsis' else 0 for c in list(data_csv['class'])])
 # Using a seed always will get the same data split even if the training stops
 
-# X_train, data, y_train, classes = train_test_split(data, classes, test_size=0.20, random_state=15, stratify=classes)
+X_train, data, y_train, classes = train_test_split(data, classes, test_size=0.20, random_state=15, stratify=classes)
 
 
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
