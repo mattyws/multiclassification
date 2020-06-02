@@ -70,7 +70,7 @@ window = parameters['window']
 iterations = parameters['iterations']
 inputShape = (None, embedding_size)
 
-text_to_ids = TextToBioBertIDs(data, model_dir="../mimic/biobert_large/")
+text_to_ids = TextToBioBertIDs(data, model_dir="../mimic/biobert_v1.0_pubmed/")
 text_to_ids.transform("../mimic/biobert_last_ids/")
 data = np.array(text_to_ids.get_new_paths(data))
 
@@ -94,7 +94,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             #     print(train_generator[index][0].shape)
             #     exit()
             model_generator = BertModelCreator((None,512))
-            model, l_bert = model_generator.create_from_model_dir("../mimic/biobert_large/",
+            model, l_bert = model_generator.create_from_model_dir("../mimic/biobert_v1.0_pubmed/",
                                                                   "bio_bert_large_1000k.ckpt")
             model.fit_generator(generator=train_generator, epochs=3, max_queue_size=5, use_multiprocessing=True)
             adapter = KerasAdapter(model)
