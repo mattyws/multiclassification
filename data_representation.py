@@ -19,9 +19,9 @@ import pandas
 import sys
 
 class TextToBioBertIDs():
-    def __init__(self, data_paths, model_dir=None, use_last_tokens=False):
+    def __init__(self, data_paths, model_dir=None, vocab_file="vocab.txt", use_last_tokens=False):
         self.data_paths = data_paths
-        vocab_file = os.path.join(model_dir, "vocab_cased_pubmed_pmc_30k.txt")
+        self.vocab_file = os.path.join(model_dir, vocab_file)
         self.vocab = biobert_tokenizer.load_vocab(vocab_file)
         self.tokenizer = biobert_tokenizer.FullTokenizer(vocab_file)
         self.do_lower_case = True
