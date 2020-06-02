@@ -22,8 +22,8 @@ class TextToBioBertIDs():
     def __init__(self, data_paths, model_dir=None, vocab_file="vocab.txt", use_last_tokens=False):
         self.data_paths = data_paths
         self.vocab_file = os.path.join(model_dir, vocab_file)
-        self.vocab = biobert_tokenizer.load_vocab(vocab_file)
-        self.tokenizer = biobert_tokenizer.FullTokenizer(vocab_file)
+        self.vocab = biobert_tokenizer.load_vocab(self.vocab_file)
+        self.tokenizer = biobert_tokenizer.FullTokenizer(self.vocab_file)
         self.do_lower_case = True
         self.use_last_tokens = use_last_tokens
         self.new_paths = dict()
