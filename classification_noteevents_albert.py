@@ -95,7 +95,7 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             #     exit()
             model_generator = BertModelCreator((None,512))
             model, l_bert = model_generator.create_from_model_dir("../mimic/biobert_v1.0_pubmed/",
-                                                                  "bio_bert_large_1000k.ckpt")
+                                                                  "biobert_model.ckpt")
             model.fit_generator(generator=train_generator, epochs=3, max_queue_size=5, use_multiprocessing=True)
             adapter = KerasAdapter(model)
         metrics = test_model(adapter, test_generator, i)
