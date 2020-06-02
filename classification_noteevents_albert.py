@@ -85,8 +85,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
             continue
         print_with_time("Fold {}".format(i))
         print_with_time("Creating generators")
-        train_generator = BertDataGenerator(data[trainIndex], classes[trainIndex], 512)
-        test_generator = BertDataGenerator(data[testIndex], classes[testIndex], 512)
+        train_generator = BertDataGenerator(data[trainIndex], classes[trainIndex], 16)
+        test_generator = BertDataGenerator(data[testIndex], classes[testIndex], 16)
         if os.path.exists("../mimic/biobert_raw_training/checkpoint/albert_model_{}.model".format(i)):
             adapter = KerasAdapter.load_model("../mimic/biobert_raw_training/checkpoint/albert_model_{}.model".format(i))
         else:
