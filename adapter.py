@@ -7,6 +7,8 @@ import sys
 from gensim.models import Word2Vec, Doc2Vec
 from tensorflow.keras.models import load_model
 
+from result_evaluation import ModelEvaluation
+
 
 class ModelAdapter(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
@@ -73,7 +75,12 @@ class KerasAdapter(ModelAdapter):
     def load_model(model_path):
         return KerasAdapter(load_model(model_path))
 
-    def predict_generator(self, generator, batches_files=False):
+    def predict_generator(self, generator):
+        """
+
+        :param generator:
+        :return: class ModelEvaluation
+        """
         predicted = []
         trueClasses = []
         files = []
@@ -81,15 +88,11 @@ class KerasAdapter(ModelAdapter):
             sys.stderr.write('\rdone {0:%}'.format(i / len(generator)))
             data = generator[i]
             r = self.predict(data[0])
-            r = (r > 0.5).astype(np.int)
             r = r.flatten()
             predicted.extend(r)
             trueClasses.extend(data[1])
-            if batches_files:
-                files.extend(generator.batches[i])
-        if batches_files:
-            return trueClasses, predicted, files
-        return trueClasses, predicted
+            files.extend(generator.batches[i])
+        return ModelEvaluation(self.model, files, trueClasses, predicted)
 
 
 class KerasAutoencoderAdapter(ModelAdapter):

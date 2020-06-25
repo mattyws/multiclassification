@@ -128,6 +128,7 @@ if not os.path.exists(parameters['mimic_data_path']+temporary_pivoted_filename):
     for icustay_id, icu_pivoted_sofa in pivoted_sofa.groupby('icustay_id'):
         icu_pivoted_sofa = icu_pivoted_sofa.ffill()
         icu_pivoted_sofa = icu_pivoted_sofa.bfill()
+        # icu_pivoted_sofa = icu_pivoted_sofa.fillna(0)
         new_pivoted_sofa = pd.concat([new_pivoted_sofa, icu_pivoted_sofa], ignore_index=True)
     new_pivoted_sofa.to_csv(parameters['mimic_data_path']+temporary_pivoted_filename, index=False)
 else:

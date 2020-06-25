@@ -1,25 +1,28 @@
 import multiprocessing
+import os
+import sys
 from functools import partial
 
 import numpy
 import pandas as pd
-import os
-import sys
-from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
-    text_to_lower, remove_sepsis_mentions, remove_only_special_characters_tokens, whitespace_tokenize_text, \
-    train_representation_model
 
-new_representation_path = "/home/mattyws/Documents/mimic/textual_normalized_preprocessed/"
+from functions import print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+    text_to_lower, remove_only_special_characters_tokens, whitespace_tokenize_text
+from multiclassification.parameters.dataset_parameters import parameters
+
+new_representation_path = parameters['mimic_data_path'] + parameters['multiclassification_directory']  \
+                              + parameters['noteevents_anonymized_tokens_normalized_preprocessed']
 if not os.path.exists(new_representation_path):
     os.mkdir(new_representation_path)
 
-def transform_representations(icustays, new_representation_path=None, manager_queue=None):
+def transform_representations(icustays, representation_path=None, new_representation_path=None, manager_queue=None):
     for icustay in icustays:
-        if os.path.exists(new_representation_path + "{}.csv".format(icustay)):
-            continue
         if manager_queue is not None:
             manager_queue.put(icustay)
-        textual_data = pd.read_csv("/home/mattyws/Documents/mimic/textual_anonymized_data/{}.csv".format(icustay))
+        if not os.path.exists(representation_path + "{}.csv".format(icustay)) \
+            or os.path.exists(new_representation_path + "{}.csv".format(icustay)):
+            continue
+        textual_data = pd.read_csv(representation_path + "{}.csv".format(icustay))
         preprocessed_texts = []
         for text_index, text_row in textual_data.iterrows():
             text = text_row['Note']
@@ -31,16 +34,21 @@ def transform_representations(icustays, new_representation_path=None, manager_qu
         textual_data = textual_data.drop(columns=['Unnamed: 0'])
         textual_data.to_csv(new_representation_path + "{}.csv".format(icustay), index=False)
 
+representation_path = parameters['mimic_data_path'] + parameters['multiclassification_directory']  \
+                              + parameters['noteevents_anonymized_tokens_normalized']
+
 preprocessing_pipeline = [escape_invalid_xml_characters, escape_html_special_entities, text_to_lower,
-                              whitespace_tokenize_text, remove_only_special_characters_tokens, remove_sepsis_mentions]
+                              whitespace_tokenize_text, remove_only_special_characters_tokens]
 print_with_time("Loading data")
-data_csv = pd.read_csv("/home/mattyws/Documents/mimic/new_dataset_patients.csv")
-icustays = data_csv['icustay_id'].tolist()
+data_csv = pd.read_csv(parameters['mimic_data_path'] + parameters['multiclassification_directory']
+                      + parameters['all_stays_csv_w_events'])
+icustays = data_csv['ICUSTAY_ID'].tolist()
 
 with multiprocessing.Pool(processes=1) as pool:
     manager = multiprocessing.Manager()
     manager_queue = manager.Queue()
     partial_transform_representation = partial(transform_representations,
+                                               representation_path=representation_path,
                                                new_representation_path=new_representation_path,
                                                 manager_queue=manager_queue)
     data = numpy.array_split(icustays, 6)

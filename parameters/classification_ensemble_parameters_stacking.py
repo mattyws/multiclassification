@@ -3,7 +3,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import activations
 
 parameters = {
-    "training_directory_path" : "../mimic/ensenble_training_stacking_last_24/",
+    "training_directory_path" : "../mimic/ensenble_training_stacking/",
     "dataset_csv_file_path": "../mimic/new_dataset_patients.csv",
     "ensemble_training_method" : "bagging",
     "use_structured_data" : True,
@@ -38,13 +38,13 @@ parameters = {
     "textual_representation_representation_data_path": "transformed_textual_representation/",
     "textual_representation_padded_representation_files_path": "padded_textual_representation/",
 
-    "structured_data_path" : "../mimic/sepsis_articles_bucket_last_24/",
-    "textual_data_path" : "../mimic/textual_anonymized_data_last_24/",
+    "structured_data_path" : "../mimic/sepsis_articles_bucket/",
+    "textual_data_path" : "../mimic/textual_normalized_preprocessed/",
     "notes_textual_representation_path" : "../mimic/trained_doc2vec/50/transformed_representation/",
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
 
-    "checkpoint" : "checkpoint_4/",
+    "checkpoint" : "checkpoint/",
     "ensemble_models_path": "ensemble_models_fold_{}/",
     "structured_ensemble_models_name_prefix" : "structured_bagging_level_zero_{}.model",
     "structured_ensemble_samples_name_prefix" : "structured_bagging_level_zero_samples_{}.pkl",

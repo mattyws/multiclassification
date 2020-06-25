@@ -347,7 +347,7 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         for i, model_creator in enumerate(structured_model_creator):
             adapter = model_creator.create()
             adapter.fit(dataTrainGenerator, epochs=parameters['structured_training_epochs'], callbacks=None,
-                        class_weights=False, use_multiprocessing=False)
+                        class_weights=class_weights, use_multiprocessing=False)
             metrics, results = test_model(adapter, dataTestGenerator, fold, return_predictions=True)
             metrics['model'] = model_creator.name
             fold_metrics.append(metrics)

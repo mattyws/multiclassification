@@ -11,8 +11,8 @@ parameters = functions.load_parameters_file()
 dataset = pd.read_csv(parameters['mimic_data_path']+parameters['dataset_file_name'])
 icustays = set(dataset['icustay_id'])
 print(dataset['class'].value_counts())
-noteevents_path = parameters['mimic_data_path'] + 'sepsis_noteevents/'
-chartevents_path = parameters['mimic_data_path'] + 'structured_data/'
+noteevents_path = parameters['mimic_data_path'] + 'textual_anonymized_data/'
+chartevents_path = parameters['mimic_data_path'] + 'sepsis_articles_bucket/'
 
 has_noteevents = set([int(x.split('.')[0]) for x in os.listdir(noteevents_path)])
 has_chartevents = set([int(x.split('.')[0]) for x in os.listdir(chartevents_path)])

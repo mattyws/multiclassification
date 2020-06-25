@@ -265,39 +265,12 @@ def remove_only_special_characters_tokens(tokens):
 
 
 def test_model(kerasAdapter, dataTestGenerator, fold, return_predictions=False):
-    if return_predictions:
-        testClasses, result, files = kerasAdapter.predict_generator(dataTestGenerator, batches_files=True)
-    else:
-        testClasses, result = kerasAdapter.predict_generator(dataTestGenerator)
-    metrics = dict()
-    metrics['w_fscore'] = f1_score(testClasses, result, average='weighted')
-    metrics['w_precision'] = precision_score(testClasses, result, average='weighted')
-    metrics['w_recall'] = recall_score(testClasses, result, average='weighted')
-    metrics['w_auc'] = roc_auc_score(testClasses, result, average='weighted')
-
-    metrics['mi_fscore'] = f1_score(testClasses, result, average='micro')
-    metrics['mi_precision'] = precision_score(testClasses, result, average='micro')
-    metrics['mi_recall'] = recall_score(testClasses, result, average='micro')
-    metrics['mi_auc'] = roc_auc_score(testClasses, result, average='micro')
-
-    metrics['ma_fscore'] = f1_score(testClasses, result, average='macro')
-    metrics['ma_precision'] = precision_score(testClasses, result, average='macro')
-    metrics['ma_recall'] = recall_score(testClasses, result, average='macro')
-    metrics['ma_auc'] = roc_auc_score(testClasses, result, average='macro')
-
-    metrics['fscore_b'] = f1_score(testClasses, result)
-    metrics['precision_b'] = precision_score(testClasses, result)
-    metrics['recall_b'] = recall_score(testClasses, result)
-    metrics['auc_b'] = roc_auc_score(testClasses, result)
-
-    metrics['kappa'] = cohen_kappa_score(testClasses, result)
-    metrics['accuracy'] = accuracy_score(testClasses, result)
-    tn, fp, fn, metrics['tp_rate'] = confusion_matrix(testClasses, result).ravel()
-    print(classification_report(testClasses, result))
+    evaluation = kerasAdapter.predict_generator(dataTestGenerator)
+    metrics = evaluation.metrics
     metrics["fold"] = fold
     if return_predictions:
         result_dict = dict()
-        for f, r in zip(files, result):
+        for f, r in zip(evaluation.files, evaluation.predictions_classes):
             result_dict[f] = r
         return metrics, result_dict
     return metrics
@@ -349,3 +322,48 @@ def tokenize_sentences(sentences):
 
 def get_ensemble_results(meta_model_results, weak_models_results, ensemble_parameters):
     pass
+
+def get_antibiotic_prescriptions(prescriptions):
+    antibiotics_names = ['adoxa', 'ala-tet', 'alodox', 'amikacin', 'amikin', 'amoxicillin',
+                         'clavulanate', 'ampicillin', 'augmentin', 'avelox', 'avidoxy', 'azactam', 'azithromycin',
+                         'aztreonam', 'axetil', 'bactocill', 'bactrim', 'bethkis', 'biaxin', 'bicillin l-a', 'cayston',
+                         'cefazolin', 'cedax', 'cefoxitin', 'ceftazidime', 'cefaclor', 'cefadroxil', 'cefdinir', 'cefditoren',
+                         'cefepime', 'cefotetan', 'cefotaxime', 'cefpodoxime', 'cefprozil', 'ceftibuten', 'ceftin',
+                         'cefuroxime ', 'cefuroxime', 'cephalexin', 'chloramphenicol', 'cipro', 'ciprofloxacin', 'claforan',
+                         'clarithromycin', 'cleocin', 'clindamycin', 'cubicin', 'dicloxacillin', 'doryx', 'doxycycline',
+                         'duricef', 'ery-tab', 'eryped', 'eryc', 'erythrocin', 'erythromycin', 'factive', 'flagyl',
+                         'fortaz', 'furadantin', 'garamycin', 'gentamicin', 'kanamycin', 'keflex', 'ketek', 'levaquin',
+                         'levofloxacin', 'lincocin', 'macrobid', 'macrodantin', 'maxipime', 'mefoxin', 'metronidazole',
+                         'minocin', 'minocycline', 'monodox', 'morgidox', 'moxatag', 'moxifloxacin', 'myrac',
+                         'nafcillin sodium', 'nicazel doxy 30', 'nitrofurantoin', 'noroxin', 'ocudox', 'ofloxacin',
+                         'omnicef', 'oracea', 'oraxyl', 'oxacillin', 'pc pen vk', 'pce dispertab', 'panixine',
+                         'pediazole', 'penicillin', 'periostat', 'pfizerpen', 'piperacillin', 'tazobactam', 'primsol',
+                         'proquin', 'raniclor', 'rifadin', 'rifampin', 'rocephin', 'smz-tmp', 'septra', 'septra ds',
+                         'septra', 'solodyn', 'spectracef', 'streptomycin sulfate', 'sulfadiazine', 'sulfamethoxazole',
+                         'trimethoprim', 'sulfatrim', 'sulfisoxazole', 'suprax', 'synercid', 'tazicef', 'tetracycline',
+                         'timentin', 'tobi', 'tobramycin', 'trimethoprim', 'unasyn', 'vancocin', 'vancomycin', 'vantin',
+                         'vibativ', 'vibra-tabs', 'vibramycin', 'zinacef', 'zithromax', 'zmax', 'zosyn', 'zyvox']
+    drug_types = ['MAIN', 'ADDITIVE']
+    route_eq = ['ou', 'os', 'od', 'au', 'as', 'ad', 'tp']
+    route_in = ['eye', 'cream', 'desensitization', 'ophth oint', 'gel']
+    prescriptions.loc[:, 'DRUG'] = prescriptions['DRUG'].astype('string').str.lower()
+    prescriptions.loc[:, 'ROUTE'] = prescriptions['ROUTE'].astype('string').str.lower()
+    prescriptions = prescriptions[prescriptions['DRUG_TYPE'].isin(drug_types)]
+    antibiotics_prescriptions = pd.DataFrame([])
+    for index, prescription in prescriptions.iterrows():
+        if pd.notna(prescription['ROUTE']):
+            if prescription['ROUTE'] not in route_eq:
+                if any([prescription['ROUTE'] in x for x in route_in]):
+                    continue
+                if any([prescription['DRUG'] in x for x in antibiotics_names]):
+                    antibiotics_prescriptions = antibiotics_prescriptions.append(prescription)
+    return antibiotics_prescriptions
+
+def remove_columns_for_classification(data, columns=None):
+    if columns is None:
+        columns = ['icustay_id', 'starttime', 'charttime', 'endtime', 'bucket']
+    columns.extend([x for x in data.columns if 'Unnamed' in x])
+    for column in columns:
+        if column in data.columns:
+            data = data.drop(columns=[column])
+    return data

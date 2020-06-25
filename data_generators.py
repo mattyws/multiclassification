@@ -450,10 +450,12 @@ class TaggedNoteeventsDataGenerator(object):
             patient_noteevents = pandas.read_csv(path)
             patient_id = os.path.basename(path).split('.')[0]
             for index, row in patient_noteevents.iterrows():
-                text = row['Note']
+                text = row['text']
+                # print(path)
+                # print(text)
                 if self.preprocessing_pipeline is not None:
                     for func in self.preprocessing_pipeline:
                         text = func(text)
-                tagged_doc = TaggedDocument(words=text, tags=["{}_{}".format(patient_id,row['charttime'])])
+                tagged_doc = TaggedDocument(words=text, tags=["{}_{}".format(patient_id,row['starttime'])])
                 yield tagged_doc
         return self

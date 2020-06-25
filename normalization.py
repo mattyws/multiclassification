@@ -14,6 +14,8 @@ import sys
 
 from math import ceil
 
+from functions import remove_columns_for_classification
+
 
 def get_file_value_counts(file, pickle_object_path):
     """
@@ -260,16 +262,7 @@ class Normalization(object):
         if os.path.exists(self.temporary_path + fileName):
             return file, self.temporary_path + fileName
         data = pd.read_csv(file)
-        if 'Unnamed: 0' in data.columns:
-            data = data.drop(columns=['Unnamed: 0'])
-        if 'chartevents_Unnamed: 0' in data.columns:
-            data = data.drop(columns=['chartevents_Unnamed: 0'])
-        if 'labevents_Unnamed: 0' in data.columns:
-            data = data.drop(columns=['labevents_Unnamed: 0'])
-        if 'starttime' in data.columns:
-            data = data.drop(columns=['starttime'])
-        if 'endtime' in data.columns:
-            data = data.drop(columns=['endtime'])
+        data = remove_columns_for_classification(data)
         try:
             data = self.__normalize_dataframe(data, self.normalization_values)
         except Exception as e:

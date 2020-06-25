@@ -2,35 +2,32 @@
 Creates the binary columns for nominal data, adding the columns that doesn't appear at each patients events
 """
 import csv
+import multiprocessing as mp
 import os
+import sys
 from functools import partial
 
 import numpy
 import pandas as pd
-import numpy as np
-import multiprocessing as mp
-
-import sys
-import json
 
 parametersFilePath = "parameters.json"
 
 #Loading parameters file
 print("========= Loading Parameters")
-parameters = None
-with open(parametersFilePath, 'r') as parametersFileHandler:
-    parameters = json.load(parametersFileHandler)
-if parameters is None:
-    exit(1)
+from multiclassification.parameters.dataset_parameters import parameters
 
 mimic_data_path = parameters['mimic_data_path']
-new_events_files_path = mimic_data_path + 'sepsis_raw_merged/'
+new_events_files_path = mimic_data_path + parameters['multiclassification_directory'] \
+                        + parameters['merged_events_dirname']
 if not os.path.exists(new_events_files_path):
     os.mkdir(new_events_files_path)
-chartevents_files_path= mimic_data_path + "sepsis_chartevents/"
-labevents_files_path= mimic_data_path + "sepsis_labevents/"
+chartevents_files_path= mimic_data_path + parameters['multiclassification_directory'] \
+                        + parameters['raw_events_dirname'].format('chartevents')
+labevents_files_path= mimic_data_path + parameters['multiclassification_directory'] \
+                      + parameters['raw_events_dirname'].format('labevents')
 
-dataset_csv = pd.read_csv(parameters['mimic_data_path'] + parameters['dataset_file_name'])
+dataset_csv = pd.read_csv(parameters['mimic_data_path'] + parameters['multiclassification_directory']
+                          + parameters['all_stays_csv'])
 
 def merge_events(icustay_ids, chartevents_files_path, labevents_files_path, new_events_files_path, datetime_pattern,
                  manager_queue=None):
@@ -67,7 +64,7 @@ def merge_events(icustay_ids, chartevents_files_path, labevents_files_path, new_
 
 total_files = len(dataset_csv)
 # Using as arg only the icustay_id, bc of fixating the others parameters
-args = numpy.array_split(list(dataset_csv['icustay_id']), 10)
+args = numpy.array_split(list(dataset_csv['ICUSTAY_ID']), 10)
 # Creating a partial maintaining some arguments with fixed values
 with mp.Pool(processes=6) as pool:
     m = mp.Manager()

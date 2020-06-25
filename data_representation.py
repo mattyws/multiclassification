@@ -177,11 +177,10 @@ class TransformClinicalTextsRepresentations(object):
     The patients notes must be into different csv.
     """
     def __init__(self, representation_model, embedding_size=200, text_max_len=None, window=2,
-                 texts_path=None, representation_save_path=None, is_word2vec=True):
+                 representation_save_path=None, is_word2vec=True):
         self.representation_model = representation_model
         self.embedding_size = embedding_size
         self.window = window
-        self.texts_path = texts_path
         self.text_max_len = text_max_len
         self.representation_save_path = representation_save_path
         if not os.path.exists(representation_save_path):
@@ -246,7 +245,7 @@ class TransformClinicalTextsRepresentations(object):
             transformed_texts = []
             for index, row in data.iterrows():
                 try:
-                    note = row['Note']
+                    note = row['text']
                 except Exception as e:
                     print(path)
                     raise Exception("deu errado")
@@ -257,14 +256,19 @@ class TransformClinicalTextsRepresentations(object):
                     new_representation = self.create_embedding_matrix(note)
                 else:
                     icustay_id = os.path.basename(path).split('.')[0]
-                    new_representation = self.get_docvec(icustay_id, row['charttime'])
+                    new_representation = self.representation_model.infer_vector(note)
+                    # new_representation = self.get_docvec(icustay_id, row['charttime'])
                 if new_representation is not None:
                     transformed_texts.append(new_representation)
+                else:
+                    print("Is none", note)
             if len(transformed_texts) != 0:
                 transformed_texts = numpy.array(transformed_texts)
                 with open(transformed_doc_path, 'wb') as handler:
                     pickle.dump(transformed_texts, handler)
                 new_paths[path] = transformed_doc_path
+            else:
+                print("Is empty", path)
         return new_paths
 
     def transform(self, docs_paths, preprocessing_pipeline=None):
