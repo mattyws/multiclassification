@@ -5,10 +5,15 @@ from ast import literal_eval
 from functools import partial
 
 import bert
+import scispacy
+import spacy
 from tensorflow.keras.models import Model
 
 import tensorflow as tf
 from tensorflow import keras
+from transformers.modeling_auto import AutoModel
+from transformers.tokenization_auto import AutoTokenizer
+
 from biobert import tokenization as biobert_tokenizer
 
 import multiprocessing
@@ -17,6 +22,10 @@ import numpy
 import numpy as np
 import pandas
 import sys
+
+from multiclassification import constants
+
+
 
 class TextToBioBertIDs():
     def __init__(self, data_paths, model_dir=None, vocab_file="vocab.txt", use_last_tokens=False):
@@ -171,7 +180,7 @@ class TextToBioBertIDs():
 #         else:
 #             raise Exception("Data not transformed!")
 
-class TransformClinicalTextsRepresentations(object):
+class TransformClinicalTextsRepresentations():
     """
     Changes the representation for patients notes using a word2vec model.
     The patients notes must be into different csv.
@@ -256,7 +265,10 @@ class TransformClinicalTextsRepresentations(object):
                     new_representation = self.create_embedding_matrix(note)
                 else:
                     icustay_id = os.path.basename(path).split('.')[0]
-                    new_representation = self.representation_model.infer_vector(note)
+                    if note == constants.NO_TEXT_CONSTANT:
+                        new_representation = np.zeros(self.embedding_size)
+                    else:
+                        new_representation = self.representation_model.infer_vector(note)
                     # new_representation = self.get_docvec(icustay_id, row['charttime'])
                 if new_representation is not None:
                     transformed_texts.append(new_representation)
@@ -774,3 +786,65 @@ class AutoencoderDataCreator():
             return new_list
         else:
             raise Exception("Data not transformed!")
+
+
+class ClinicalBertTextRepresentationTransform():
+
+    def __init__(self):
+        self.clinical_tokenizer = ClinicalTokenizer()
+        self.bert_transformer = TransformTextsWithHuggingfaceBert()
+
+
+    def transform(self, data_df: pandas.DataFrame, text_paths_column:str):
+        for index, row in data_df.iterrows():
+            texts_df = pandas.read_csv(row[text_paths_column], index_col='bucket').sort_index()
+            print(texts_df.columns)
+            ids_series:pandas.Series = self.clinical_tokenizer.process_texts_df_for_bert(texts_df)
+            self.bert_transformer.transform_ids_series(ids_series)
+            # print(encoded_sentences)
+
+            exit()
+
+class TransformTextsWithHuggingfaceBert():
+
+    def __init__(self):
+        self.model = None
+
+    def load_clinical_bert(self):
+        if self.model is None:
+            self.model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+
+    def transform_ids_series(self, ids_series:pandas.Series):
+        if self.model is None:
+            self.load_clinical_bert()
+        encoded_sentences = pandas.Series([])
+        for index, value in ids_series.iteritems():
+            outputs = self.model(**value)
+            print(outputs[0])
+            exit()
+
+
+
+class ClinicalTokenizer():
+
+    def __init__(self):
+        self.bert_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+        self.sentence_tokenizer = spacy.load("en_core_sci_md")
+
+    def process_texts_df_for_bert(self, texts_df:pandas.DataFrame):
+        encoded_sentences = pandas.Series([])
+        for index, row in texts_df.iterrows():
+            sentences = self.tokenize_sentences(row['text'])
+            sentences = self.bert_encode_sentences(sentences)
+            encoded_sentences = encoded_sentences.append(pandas.Series([sentences], index=[index]))
+        return encoded_sentences
+
+    def tokenize_sentences(self, text:str):
+        tokenized_sentences = self.sentence_tokenizer(text)
+        return list(tokenized_sentences.sents)
+
+    def bert_encode_sentences(self, sentences:[]):
+        encoded_sentences = []
+        for sentence in sentences:
+            encoded_sentences.append(self.bert_tokenizer.encode(str(sentence)))
+        return encoded_sentences

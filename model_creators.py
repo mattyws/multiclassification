@@ -2,6 +2,9 @@ import abc
 import copy
 
 import bert
+import tensorflow
+from kerastuner import HyperModel
+from kerastuner.engine.tuner import Tuner
 from tensorflow.keras.regularizers import l1_l2
 from tensorflow import keras
 from tensorflow.keras.layers import TimeDistributed
@@ -16,6 +19,10 @@ from tensorflow.keras.losses import mse, binary_crossentropy
 from tensorflow.keras import backend as K
 from tcn import TCN
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.backend import concatenate
+from tensorflow.python.keras.layers import LeakyReLU
+from tensorflow.python.keras.optimizer_v2.adam import Adam
+from tensorflow.python.keras.utils.vis_utils import plot_model
 
 import adapter
 from adapter import KerasAutoencoderAdapter
@@ -34,6 +41,34 @@ class ModelCreator(object, metaclass=abc.ABCMeta):
     def create(self):
         raise NotImplementedError('users must define \'create\' to use this base class')
 
+
+class KerasTunerModelCreator(ModelCreator):
+
+    def __init__(self, tuner : Tuner, hyper_model:HyperModel, model_name : str, remove_last_layer: bool = False):
+        self.tuner = tuner
+        self.hyper_model = hyper_model
+        self.best_hp = tuner.get_best_hyperparameters(num_trials=1)[0]
+        self.name = model_name
+        self.remove_last_layer = remove_last_layer
+
+    def create(self, model_summary_filename=None):
+        # model = self.tuner.hypermodel.build(self.best_hp)
+        model = self.hyper_model.build(self.best_hp)
+        print(model.summary())
+        if model_summary_filename is not None:
+            with open(model_summary_filename, 'w') as summary_file:
+                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
+        if self.remove_last_layer:
+            model = self.remove_last_model_layer(model)
+        return adapter.KerasAdapter(model)
+
+    def remove_last_model_layer(self, model):
+        print(model.layers)
+        # exit()
+        new_model = Model(inputs=model.input, outputs=model.layers[-2].output)
+        new_model.compile(loss=model.loss, optimizer=model.optimizer)
+        print(new_model.summary())
+        return new_model
 
 class BertModelCreator(object):
 
@@ -293,7 +328,7 @@ class EnsembleModelCreator(ModelCreator):
                     dropout = Dropout(self.dropout)(layer)
                     layer = dropout
                 layer = Dense(self.output_units[i])(layer)
-                activation = copy.deepcopy(self.layers_activatkion[i])
+                activation = copy.deepcopy(self.layers_activation[i])
                 layer = activation(layer)
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
@@ -360,9 +395,12 @@ class MultilayerKerasRecurrentNNCreator(ModelCreator):
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
-        output = Dense(self.numOutputNeurons, activation=self.networkActivation,
-                       kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
-                       activity_regularizer=self.activity_regularizer)(layer)
+        if self.numOutputNeurons is not None:
+            output = Dense(self.numOutputNeurons, activation=self.networkActivation,
+                           kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
+                           activity_regularizer=self.activity_regularizer)(layer)
+        else:
+            output = layer
         return input, output
 
     def create(self, model_summary_filename=None):
@@ -452,7 +490,7 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
     def __init__(self, input_shape, outputUnits, numOutputNeurons,
                  layersActivations=None, networkActivation='sigmoid', pooling=None, kernel_sizes=None,
                  loss='categorical_crossentropy', optimizer='adam', use_dropout=False, dropout=0.5,
-                 dilations=[[1, 2, 4]], nb_stacks=[1],
+                 dilations=[[1, 2, 4]], nb_stacks=[1], model_input_name:str=None,
                  metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
         self.inputShape = input_shape
         self.outputUnits = outputUnits
@@ -473,13 +511,17 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
         self.activity_regularizer = activity_regularizer
         self.__check_parameters()
         self.name = "TCN_MODEL"
+        self.model_input_name = model_input_name
 
     def __check_parameters(self):
         if self.layersActivations is not None and len(self.layersActivations) != len(self.outputUnits):
             raise ValueError("Output units must have the same size as activations!")
 
     def build_network(self):
-        input = Input(self.inputShape)
+        if self.model_input_name is None:
+            input = Input(self.inputShape)
+        else:
+            input = Input(self.inputShape, name=self.model_input_name)
         if len(self.outputUnits) == 1:
             layer = TCN(self.outputUnits[0], kernel_size=self.kernel_sizes[0], dilations=self.dilatations[0]
                         , nb_stacks=self.nb_stacks[0], return_sequences=False)(input)
@@ -505,15 +547,81 @@ class MultilayerTemporalConvolutionalNNCreator(ModelCreator):
         if self.use_dropout:
             dropout = Dropout(self.dropout)(layer)
             layer = dropout
-        output = Dense(self.numOutputNeurons, activation=self.networkActivation,
-                       kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
-                       activity_regularizer=self.activity_regularizer)(layer)
+        if self.numOutputNeurons is not None:
+            output = Dense(self.numOutputNeurons, activation=self.networkActivation,
+                           kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
+                           activity_regularizer=self.activity_regularizer)(layer)
+        else:
+            output = layer
         return input, output
 
     def create(self, model_summary_filename=None):
         input, output = self.build_network()
         model = Model(inputs=input, outputs=output)
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        if model_summary_filename is not None:
+            with open(model_summary_filename, 'w') as summary_file:
+                model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
+        return adapter.KerasAdapter(model)
+
+    @staticmethod
+    def create_from_path(filepath, custom_objects=None):
+        model = load_model(filepath, custom_objects=custom_objects)
+        return adapter.KerasAdapter(model)
+
+
+class MixedInputModelCreator(ModelCreator):
+
+    def __init__(self, input_models: [Model], outputUnits, numOutputNeurons,
+                 layersActivations=None, networkActivation='sigmoid',
+                 loss='categorical_crossentropy', optimizer='adam', use_dropout=False, dropout=0.5,
+                 metrics=['accuracy'], kernel_regularizer=None, bias_regularizer=None, activity_regularizer=None):
+        self.input_models = input_models
+        self.output_units = outputUnits
+        self.num_output_neurons = numOutputNeurons
+        self.network_activation = networkActivation
+        self.layers_activation = layersActivations
+        self.loss = loss
+        self.optimizer = optimizer
+        self.use_dropout = use_dropout
+        self.dropout = dropout
+        self.metrics = metrics
+        self.kernel_regularizer = kernel_regularizer
+        self.bias_regularizer = bias_regularizer
+        self.activity_regularizer = activity_regularizer
+        self.name = "MIXED_MODEL"
+
+    def build_network(self):
+        inputs = []
+        outputs = []
+        for model in self.input_models:
+            inputs.append(model.input)
+            outputs.append(model.output)
+        input = concatenate(outputs)
+        layer = Dense(self.output_units[0])(input)
+        activation = copy.deepcopy(self.layers_activation[0])
+        layer = activation(layer)
+        if len(self.output_units) > 1:
+            for i in range(1, len(self.output_units)):
+                if self.use_dropout:
+                    dropout = Dropout(self.dropout)(layer)
+                    layer = dropout
+                layer = Dense(self.output_units[i])(layer)
+                activation = copy.deepcopy(self.layers_activation[i])
+                layer = activation(layer)
+        if self.use_dropout:
+            dropout = Dropout(self.dropout)(layer)
+            layer = dropout
+        output = Dense(self.num_output_neurons, activation=self.network_activation,
+                       kernel_regularizer=self.kernel_regularizer, bias_regularizer=self.bias_regularizer,
+                       activity_regularizer=self.activity_regularizer)(layer)
+        return inputs, output
+
+    def create(self, model_summary_filename=None):
+        input, output = self.build_network()
+        model = Model(inputs=input, outputs=output)
+        model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
+        plot_model(model, to_file="model.png")
         if model_summary_filename is not None:
             with open(model_summary_filename, 'w') as summary_file:
                 model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
@@ -621,3 +729,193 @@ class KerasVariationalAutoencoder(ModelCreator):
         decoder = load_model('decoder_' + filename)
         vae = load_model(filename)
         return KerasAutoencoderAdapter(encoder, decoder, vae)
+
+
+def generate_n_ints(n, min_int, max_int, int_step, name_pattern, hp):
+    random_ints = []
+    for i in range(n):
+        generated_int = hp.Int(name_pattern.format(i),
+               min_value=min_int,
+               max_value=max_int,
+               step=int_step)
+        random_ints.append(generated_int)
+    return random_ints
+
+
+def generate_n_choices(n, choices, name_pattern, hp):
+    random_choices = []
+    for i in range(n):
+        choice = hp.Choice(name_pattern.format(i), choices)
+        random_choices.append(choice)
+    return random_choices
+
+
+def generate_n_int_arrays(n, min_size, max_size, size_step, array_name_pattern,
+                          min_int, max_int, int_step, int_name_pattern, hp):
+    random_arrays = []
+    for i in range(n):
+        array_size = hp.Int(array_name_pattern.format(i),
+               min_value=min_size,
+               max_value=max_size,
+               step=size_step)
+        random_array = generate_n_ints(array_size, min_int, max_int, int_step,
+                                       array_name_pattern.format(i) + '_' + int_name_pattern, hp)
+        random_arrays.append(random_array)
+    return random_arrays
+
+
+def get_activation_by_string(activation_string):
+    if activation_string == "leakyrelu":
+        return LeakyReLU()
+
+
+def get_optimizers_by_string(optimizer_string):
+    if optimizer_string == "adam":
+        return Adam(
+            learning_rate=0.01,
+            beta_1=0.9,
+            beta_2=0.999,
+            epsilon=1e-07,
+            amsgrad=True
+        )
+
+
+class MultilayerTemporalConvolutionalNNHyperModel(HyperModel):
+
+    name = "TCN_MODEL"
+
+    def __init__(self, input_shape, output_units, metrics, params,
+                 model_input_name:str=None):
+        self.input_shape = input_shape
+        self.output_units = output_units
+        self.params = params
+        self.metrics = metrics
+        self.model_input_name = model_input_name
+
+    def build(self, hp):
+        layers = hp.Int('layers',
+                        min_value=self.params['layers_min'],
+                        max_value=self.params['layers_max'],
+                        step=self.params['layers_step'])
+        print("Layers ", layers )
+        hidden_output_units = generate_n_ints(layers, self.params['hidden_output_units_min'],
+                                              self.params['hidden_output_units_max'],
+                                              self.params['hidden_output_units_steps'],
+                                              'units_{}', hp)
+        print("Hidden units ", hidden_output_units)
+        loss = hp.Choice('loss', self.params['losses'])
+        print("Loss ", loss)
+        hidden_activations = generate_n_choices(layers, self.params['hidden_activations'],'activation_{}', hp)
+        aux = []
+        for activation in hidden_activations:
+            aux.append(get_activation_by_string(activation))
+        hidden_activations = aux
+        print("Activations ", hidden_activations)
+        network_activation = hp.Choice('networkActivation', self.params['network_activations'])
+        # network_activation = get_activation_by_string(network_activation)
+        print("Net activations ", network_activation)
+        pooling = generate_n_choices(layers, self.params['hidden_pooling'], 'pooling_{}', hp)
+        print("Pooling ", pooling)
+        kernel_sizes = generate_n_ints(layers, self.params['kernel_size_min'], self.params['kernel_size_max'],
+                                       self.params['kernel_size_step'], 'kernel_size_{}', hp)
+        print("Kernel sizes ", kernel_sizes)
+        dilations = generate_n_int_arrays(layers, self.params['min_dilation_size'], self.params['max_dilation_size'],
+                                          self.params['dilation_size_step'], 'dilation_{}', self.params['min_dilation'],
+                                          self.params['max_dilation'], self.params['dilation_step'], 'num_{}', hp)
+        print("Dilations ", dilations)
+        num_stacks = generate_n_ints(layers, self.params['stacks_min'], self.params['stacks_max'],
+                                     self.params['stacks_steps'], 'stack_{}', hp)
+        print("Number of stacks ", num_stacks)
+        use_dropout = hp.Choice('use_dropout', self.params['use_dropout'])
+        print("Use dropout? ", use_dropout)
+        dropout = None
+        if use_dropout:
+            dropout = hp.Choice('dropout', self.params['dropout_choices'])
+        print("Dropout ", dropout)
+        optimizer = hp.Choice('optimizer', self.params['optimizers'])
+        optimizer = get_optimizers_by_string(optimizer)
+        print("Network optimizer ", optimizer)
+        model_creator = MultilayerTemporalConvolutionalNNCreator(self.input_shape,
+                                                 hidden_output_units,
+                                                 self.output_units,
+                                                 loss=loss,
+                                                 layersActivations=hidden_activations,
+                                                 networkActivation=network_activation,
+                                                 pooling=pooling,
+                                                 kernel_sizes=kernel_sizes,
+                                                 use_dropout=use_dropout,
+                                                 dilations=dilations,
+                                                 nb_stacks=num_stacks,
+                                                 dropout=dropout,
+                                                 kernel_regularizer=None,
+                                                 metrics=self.metrics,
+                                                 model_input_name=self.model_input_name,
+                                                 optimizer=optimizer)
+        adapter = model_creator.create()
+        model = adapter.model
+        return model
+
+
+class MultilayerKerasRecurrentNNHyperModel(HyperModel):
+
+    name = "RNN_MODEL"
+
+    def __init__(self, input_shape, output_units, is_gru, metrics, params):
+        self.input_shape = input_shape
+        self.output_units = output_units
+        self.is_gru = is_gru
+        self.params = params
+        self.metrics = metrics
+        if is_gru:
+            self.name = "GRU_MODEL"
+        else:
+            self.name = "LSTM_MODEL"
+
+    def build(self, hp):
+        layers = hp.Int('layers',
+                        min_value=self.params['layers_min'],
+                        max_value=self.params['layers_max'],
+                        step=self.params['layers_step'])
+        print("Layers ", layers )
+        hidden_output_units = generate_n_ints(layers, self.params['hidden_output_units_min'],
+                                              self.params['hidden_output_units_max'],
+                                              self.params['hidden_output_units_steps'],
+                                              'units_{}', hp)
+        print("Hidden units ", hidden_output_units)
+        loss = hp.Choice('loss', self.params['losses'])
+        print("Loss ", loss)
+        hidden_activations = generate_n_choices(layers, self.params['hidden_activations'],'activation_{}', hp)
+        aux = []
+        for activation in hidden_activations:
+            aux.append(get_activation_by_string(activation))
+        hidden_activations = aux
+        print("Activations ", hidden_activations)
+        network_activation = hp.Choice('networkActivation', self.params['network_activations'])
+        # network_activation = get_activation_by_string(network_activation)
+        print("Net activations ", network_activation)
+        pooling = generate_n_choices(layers, self.params['hidden_pooling'], 'pooling_{}', hp)
+        print("Pooling ", pooling)
+        use_dropout = hp.Choice('use_dropout', self.params['use_dropout'])
+        print("Use dropout? ", use_dropout)
+        dropout = None
+        if use_dropout:
+            dropout = hp.Choice('dropout', self.params['dropout_choices'])
+        print("Dropout ", dropout)
+        optimizer = hp.Choice('optimizer', self.params['optimizers'])
+        optimizer = get_optimizers_by_string(optimizer)
+        print("Network optimizer ", optimizer)
+        model_creator = MultilayerKerasRecurrentNNCreator(self.input_shape,
+                                                        hidden_output_units,
+                                                         self.output_units,
+                                                         loss=loss,
+                                                         layersActivations=hidden_activations,
+                                                         networkActivation=network_activation,
+                                                         gru=self.is_gru,
+                                                          kernel_regularizer=None,
+                                                         use_dropout=use_dropout,
+                                                        dropout=dropout,
+                                                         metrics=self.metrics,
+                                                         optimizer=optimizer)
+        adapter = model_creator.create()
+        model = adapter.model
+        return model

@@ -43,7 +43,7 @@ def chunk_lst(data, SIZE=10000):
 
 
 def train_representation_model(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None,
-                               preprocessing_pipeline=None, word2vec=True):
+                               preprocessing_pipeline=None, word2vec=True, hs=1, dm=1, negative=0):
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
     model_trainer = None
     if word2vec and noteevents_iterator is None:
@@ -51,7 +51,7 @@ def train_representation_model(files_paths, saved_model_path, min_count, size, w
         model_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
     elif not word2vec and noteevents_iterator is None:
         noteevents_iterator = TaggedNoteeventsDataGenerator(files_paths, preprocessing_pipeline=preprocessing_pipeline)
-        model_trainer = Doc2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
+        model_trainer = Doc2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations, hs=1, dm=1, negative=0)
     if model_trainer is not None and os.path.exists(saved_model_path):
         model = model_trainer.load_model(saved_model_path)
         return model
@@ -249,6 +249,43 @@ def divide_by_events_lenght(data_list, classes, sizes_filename=None, classes_fil
     return sizes, labels
 
 
+def mixed_divide_by_events_lenght(data_df:pd.DataFrame, path_column, sizes_filename=None):
+    """
+    Divide a dataset based on their number of timesteps
+    :param data_list: list of data
+    :param classes: labels for these data
+    :param sizes_filename: filename used to save the final sizes object
+    :param classes_filename: filename to save the final labels object
+    :return:
+    """
+    sizes = None
+    if sizes_filename is not None:
+        if os.path.exists(sizes_filename):
+            with open(sizes_filename, 'rb') as sizes_handler:
+                sizes = pickle.load(sizes_handler)
+    if sizes is None:
+        sizes = dict()
+        aux = 0
+        for index, row in data_df.iterrows():
+            sys.stderr.write('\rdone {0:%}'.format(aux / len(data_df)))
+            with open(row[path_column], 'rb') as file_handler:
+                try:
+                    values = pickle.load(file_handler)
+                except Exception as e:
+                    print(row[path_column])
+                    print("test")
+                    print(e)
+                    raise ValueError()
+                if len(values) not in sizes.keys():
+                    sizes[len(values)] = []
+                sizes[len(values)].append(row['episode'])
+            aux += 1
+        if sizes_filename is not None:
+            with open(sizes_filename, 'wb') as sizes_handler:
+                pickle.dump(sizes, sizes_handler)
+    return sizes
+
+
 def load_ctakes_parameters_file():
     if not os.path.exists('ctakes_parameters.json'):
         raise FileNotFoundError("cTakes parameter file doesn't exists!")
@@ -270,7 +307,7 @@ def test_model(kerasAdapter, dataTestGenerator, fold, return_predictions=False):
     metrics["fold"] = fold
     if return_predictions:
         result_dict = dict()
-        for f, r in zip(evaluation.files, evaluation.predictions_classes):
+        for f, r in zip(evaluation.files, evaluation.predictions_scores):
             result_dict[f] = r
         return metrics, result_dict
     return metrics

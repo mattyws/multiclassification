@@ -37,8 +37,9 @@ class ModelAdapter(object, metaclass=abc.ABCMeta):
 
 class KerasAdapter(ModelAdapter):
 
-    def __init__(self, model):
+    def __init__(self, model, model_name:str=None):
         self.model = model
+        self.name = model_name
 
     def fit(self, dataGenerator, epochs=1, batch_size=10, workers=4, validationDataGenerator = None,
             validationSteps=None, callbacks=None, use_multiprocessing=True, class_weights=None):
@@ -87,6 +88,7 @@ class KerasAdapter(ModelAdapter):
         for i in range(len(generator)):
             sys.stderr.write('\rdone {0:%}'.format(i / len(generator)))
             data = generator[i]
+            # print(data[0])
             r = self.predict(data[0])
             r = r.flatten()
             predicted.extend(r)
@@ -185,17 +187,20 @@ class Doc2VecTrainer(object):
         Perform training and save gensim doc2vec
         """
 
-    def __init__(self, min_count=2, size=200, workers=4, window=3, iter=10):
+    def __init__(self, min_count=2, size=200, workers=4, window=3, iter=10, hs=1, dm=1, negative=0):
         self.min_count = min_count
         self.size = size
         self.workers = workers
         self.window = window
         self.iter = iter
         self.model = None
+        self.hs = hs
+        self.dm = dm
+        self.negative = negative
 
     def train(self, corpus, sg=1):
         self.model = Doc2Vec(corpus, min_count=self.min_count, vector_size=self.size, workers=self.workers,
-                              window=self.window, epochs=self.iter)
+                              window=self.window, epochs=self.iter, dm=self.dm, hs=self.hs, negative=self.negative )
 
     def save(self, filename):
         self.model.save(filename)

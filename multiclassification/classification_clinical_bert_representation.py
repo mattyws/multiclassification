@@ -18,7 +18,8 @@ from sklearn.utils import class_weight
 from tensorflow.keras.metrics import AUC
 
 from adapter import KerasAdapter
-from multiclassification.parameters.classification_parameters import timeseries_training_parameters as parameters
+from data_representation import ClinicalBertTextRepresentationTransform
+from multiclassification.parameters.classification_parameters import timeseries_textual_training_parameters as parameters
 from multiclassification.parameters.classification_parameters import model_tuner_parameters as tuner_parameters
 
 import functions
@@ -30,12 +31,7 @@ from model_creators import MultilayerKerasRecurrentNNCreator, MultilayerTemporal
 from normalization import Normalization, NormalizationValues
 import kerastuner as kt
 
-def focal_loss(y_true, y_pred):
-    gamma = 2.0
-    alpha = 0.25
-    pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
-    pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
-    return -K.sum(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1))-K.sum((1-alpha) * K.pow( pt_0, gamma) * K.log(1. - pt_0))
+#TODO: Modify script to use text data
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
@@ -61,22 +57,18 @@ data_csv = data_csv.sort_values(['episode'])
 data = np.array(data_csv['structured_path'].tolist())
 print_with_time("Class distribution")
 print(data_csv['label'].value_counts())
-classes = np.array(data_csv['label'].tolist())
-data, X_val, classes, classes_evaluation = train_test_split(data, classes, stratify=classes,
-                                                             test_size=.10)
-print(pd.Series(classes).value_counts())
-print_with_time("Computing class weights")
-class_weights = class_weight.compute_class_weight('balanced',
-                                                 np.unique(classes),
-                                                 classes)
-mapped_weights = dict()
-for value in np.unique(classes):
-    mapped_weights[value] = class_weights[value]
-class_weights = mapped_weights
 
 
 # Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
+
+
+text_transformer = ClinicalBertTextRepresentationTransform()
+text_transformer.transform(data_csv, 'textual_path')
+
+
+
+exit()
 
 print_with_time("Preparing normalization values")
 normalization_value_counts_path = training_directory + parameters['normalization_value_counts_directory']

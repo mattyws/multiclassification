@@ -23,8 +23,6 @@ parameters = {
     "structured_dirname" : "structured_data/",
     "textual_dirname" : "textual_data/",
     
-    
-    
     "hotencoded_events_dirname" : "hotencoded_undersampled_{}/",
     "all_features_dirname" : "all_features_undersampled_{}/",
     "separated_features_types_dirname": "separated_features/",

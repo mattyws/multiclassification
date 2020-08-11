@@ -9,6 +9,7 @@ import os
 
 import pandas
 import pandas as pd
+import tensorflow
 from gensim.models.doc2vec import TaggedDocument
 from keras.preprocessing.sequence import pad_sequences
 from keras.utils import Sequence
@@ -27,6 +28,7 @@ class ArrayDataGenerator(tsSeq):
         self.data = data
         self.labels = labels
         self.batch_size = batch_size
+        self.batches = []
 
     def __iter__(self):
         return self
@@ -36,7 +38,12 @@ class ArrayDataGenerator(tsSeq):
         :param idx:
         :return:
         """
+        batch = []
+        for i in range(idx * self.batch_size, (idx + 1) * self.batch_size):
+            batch.append(i)
+        self.batches.append(batch)
         batch_x = self.data[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_x = batch_x.astype('float64')
         batch_y = self.labels[idx * self.batch_size:(idx + 1) * self.batch_size]
         # print(batch_x, batch_y)
         return batch_x, batch_y
@@ -167,6 +174,91 @@ class LengthLongitudinalDataGenerator(tsSeq):
         #     print(x.shape)
         # print("=====")
         # self.__save_batch(idx, batch_x, batch_y)
+        return batch_x, batch_y
+
+    def __len__(self):
+        return len(self.batches.keys())
+
+
+class MixedLengthDataGenerator(tsSeq):
+
+    def __init__(self, data_df:pd.DataFrame, max_batch_size:int=50, structured_df_column:str="",
+                 textual_df_column:str="", structured_model_input_name:str="",
+                 textual_model_input_name:str="", ndmin=None):
+        self.max_batch_size = max_batch_size
+        self.data_df = data_df
+        self.ndmin = ndmin
+        self.batches = None
+        self.structured_df_column = structured_df_column
+        self.textual_df_column = textual_df_column
+        self.structured_model_input_name = structured_model_input_name
+        self.textual_model_input_name = textual_model_input_name
+
+    def create_batches(self, sizes):
+        new_batches = dict()
+        batch_num = 0
+        for size in sizes.keys():
+            split_episodes = np.array_split(sizes[size], ceil(len(sizes[size])/self.max_batch_size))
+            for piece in split_episodes:
+                batch_df = self.data_df[self.data_df['episode'].isin(piece)]
+                new_batches[batch_num] = batch_df
+                batch_num += 1
+        self.batches = new_batches
+
+    def __load(self, data_df:pd.DataFrame):
+        structured_data = []
+        textual_data = []
+        instances = []
+        for index, row in data_df.iterrows():
+            instance = []
+            with open(row[self.structured_df_column], 'rb') as data_file:
+                # print("===== Structured =====")
+                data = np.asarray(pickle.load(data_file))
+                    # new_data.append(np.asarray(d))
+                # data = np.asarray(new_data)
+                instance.append(data)
+                structured_data.append(data)
+                # instance.append(data)
+            with open(row[self.textual_df_column], 'rb') as data_file:
+                # print("===== Textual =====")
+                data = np.asarray(pickle.load(data_file))
+                instance.append(data)
+                textual_data.append(data)
+                # instance.append(data)
+            # instance = np.asarray(instance)
+            instances.append(instance)
+            # x.append(instance)
+        try:
+            structured_data = np.asarray(structured_data)
+            # for d in structured_data:
+            #     print(d.shape)
+            # print(structured_data)
+            # print("========================================================================")
+            textual_data = np.asarray(textual_data)
+            # for d in textual_data:
+            #     print(d.shape)
+            # print(textual_data)
+        except Exception as e:
+            print(e)
+            print(data_df)
+            exit()
+        # return [structured_data, textual_data]
+        # instances = np.asarray(instances)
+        # instances = np.hstack((structured_data, textual_data))
+        return {self.structured_model_input_name: structured_data, self.textual_model_input_name:textual_data}
+
+    def __iter__(self):
+        return self
+
+    def __getitem__(self, idx):
+        """
+        :param idx:
+        :return:
+        """
+        batch_df = self.batches[idx]
+        # print(batch_df)
+        batch_x = self.__load(batch_df)
+        batch_y = np.asarray(batch_df['label'].tolist())
         return batch_x, batch_y
 
     def __len__(self):

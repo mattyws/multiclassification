@@ -7,6 +7,8 @@ from functools import partial
 import numpy
 import pandas as pd
 
+from multiclassification import constants
+
 
 def create_episodes(dataset, manager_queue, hours_since_intime=24, structured_events_path=None, note_events_path=None,
                     structured_mortality_events_path=None, textual_mortality_events_path=None):
@@ -53,9 +55,34 @@ def create_episodes(dataset, manager_queue, hours_since_intime=24, structured_ev
                                                                    format=parameters['datetime_pattern'])
             textual_events = textual_events[textual_events['endtime'] <=
                                                   intime + timedelta(hours=hours_since_intime)]
-            if textual_events.empty or textual_events.dropna().empty:
-                continue
+            empty_rows = []
+            bucket_tolist = textual_events['bucket'].tolist()
+            for index, srow in structured_events.iterrows():
+                if srow['bucket'] not in bucket_tolist:
+                    empty_row = dict()
+                    empty_row['starttime'] = srow['starttime']
+                    empty_row['endtime'] = srow['endtime']
+                    empty_row['bucket'] = srow['bucket']
+                    empty_row['text'] = constants.NO_TEXT_CONSTANT
+                    empty_rows.append(empty_row)
+            empty_rows = pd.DataFrame(empty_rows)
+            new_textual_events = pd.concat([empty_rows, textual_events], ignore_index=True)
+            new_textual_events = new_textual_events.sort_values(by='bucket')
+            textual_events = new_textual_events
             textual_events.to_csv(new_textual_events_path, index=False)
+            manager_queue.put([icustay_id, icustay_id, 'textual', new_textual_events_path, label])
+        else:
+            empty_rows = []
+            for index, srow in structured_events.iterrows():
+                empty_row = dict()
+                empty_row['starttime'] = srow['starttime']
+                empty_row['endtime'] = srow['endtime']
+                empty_row['bucket'] = srow['bucket']
+                empty_row['text'] = constants.NO_TEXT_CONSTANT
+                empty_rows.append(empty_row)
+            empty_rows = pd.DataFrame(empty_rows)
+            empty_rows = empty_rows.sort_values(by='bucket')
+            empty_rows.to_csv(new_textual_events_path, index=False)
             manager_queue.put([icustay_id, icustay_id, 'textual', new_textual_events_path, label])
     # return manager_queue
 
