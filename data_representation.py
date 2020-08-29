@@ -7,10 +7,12 @@ from functools import partial
 import bert
 import scispacy
 import spacy
+import torch
 from tensorflow.keras.models import Model
 
 import tensorflow as tf
 from tensorflow import keras
+from torch.tensor import Tensor
 from transformers.modeling_auto import AutoModel
 from transformers.tokenization_auto import AutoTokenizer
 
@@ -790,20 +792,55 @@ class AutoencoderDataCreator():
 
 class ClinicalBertTextRepresentationTransform():
 
-    def __init__(self):
+    def __init__(self, transformed_text_saving_path:str):
         self.clinical_tokenizer = ClinicalTokenizer()
         self.bert_transformer = TransformTextsWithHuggingfaceBert()
+        self.bert_transformer.load_clinical_bert()
+        self.transformed_text_saving_path = transformed_text_saving_path
 
-
-    def transform(self, data_df: pandas.DataFrame, text_paths_column:str):
+    def transform(self, data_df: pandas.DataFrame, text_paths_column:str, tokenization_strategy:str= "all", n_tokens:int=128,
+                  sentence_encoding_strategy:str="mean") -> pandas.Series:
+        """
+        Do the transformation of clinical texts
+        :param data_df: the dataset
+        :param text_paths_column: the column with the paths where the text is stored
+        :param tokenization_strategy: the text tokenization strategy: all sentences, only the first or last n_tokens in the texts
+        :param n_tokens: the number of tokens used for the first and last tokenization strategy
+        :param sentence_encoding_strategy: if use the mean over the sentences encoding to represent the text or to use only the [CLS] token
+        :return: the new paths for the encoded representation files
+        """
+        episodes = []
+        new_paths = []
+        consumed = 0
+        total_files = len(data_df)
         for index, row in data_df.iterrows():
+            sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            consumed += 1
+            episode_representation_path = self.__get_encoded_path(row['episode'])
+            if os.path.exists(episode_representation_path):
+                episodes.append(row['episode'])
+                new_paths.append(episode_representation_path)
+                continue
             texts_df = pandas.read_csv(row[text_paths_column], index_col='bucket').sort_index()
-            print(texts_df.columns)
-            ids_series:pandas.Series = self.clinical_tokenizer.process_texts_df_for_bert(texts_df)
-            self.bert_transformer.transform_ids_series(ids_series)
-            # print(encoded_sentences)
+            ids_series:pandas.Series = self.clinical_tokenizer.process_texts_df_for_bert(texts_df,
+                                                                                         text_strategy=tokenization_strategy,
+                                                                                         n_tokens=n_tokens)
+            encoded_text_sequence = self.bert_transformer.transform_ids_series(ids_series,
+                                                                               sentence_encoding_strategy=sentence_encoding_strategy)
+            encoded_text_sequence = np.asarray(encoded_text_sequence.values.tolist())
+            self.__save_encoded_text(episode_representation_path, encoded_text_sequence)
+            new_paths.append(episode_representation_path)
+            episodes.append(row['episode'])
+        new_paths = pandas.Series(new_paths, index=episodes)
+        return new_paths
 
-            exit()
+    def __get_encoded_path(self, episode:str) -> str :
+        return os.path.join(self.transformed_text_saving_path, '{}.pkl'.format(episode))
+
+    def __save_encoded_text(self, episode_saving_path:str, encoded_representation):
+        with open(episode_saving_path, 'wb') as file:
+            pickle.dump(encoded_representation, file)
+
 
 class TransformTextsWithHuggingfaceBert():
 
@@ -814,15 +851,47 @@ class TransformTextsWithHuggingfaceBert():
         if self.model is None:
             self.model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
 
-    def transform_ids_series(self, ids_series:pandas.Series):
+    def transform_ids_series(self, ids_series:pandas.Series, sentence_encoding_strategy:str="mean"):
         if self.model is None:
             self.load_clinical_bert()
-        encoded_sentences = pandas.Series([])
+        if sentence_encoding_strategy != "mean" and sentence_encoding_strategy != "cls":
+            return None
+        encoded_texts_sequence = pandas.Series([])
         for index, value in ids_series.iteritems():
-            outputs = self.model(**value)
-            print(outputs[0])
-            exit()
+            encoded_sentences = []
+            for tensor in value:
+                # print(tensor, tensor.shape)
+                # print("------------")
+                outputs = None
+                try:
+                    outputs = self.model(tensor)
+                except Exception as e:
+                    print(outputs)
+                    print(self.model)
+                    print(self)
+                    exit()
+                sentence_representation = None
+                if sentence_encoding_strategy == "mean":
+                    sentence_representation = self.__sentence_mean_strategy(outputs[0])
+                elif sentence_encoding_strategy == "cls":
+                    sentence_representation = self.__sentence_cls_strategy(outputs[0])
+                if sentence_representation is None:
+                    return None
+                sentence_representation = sentence_representation.tolist()
+                encoded_sentences.append(sentence_representation)
+            if sentence_encoding_strategy != "cls":
+                encoded_sentences = np.mean(encoded_sentences, axis=0)
+            text_representation = pandas.Series([encoded_sentences], index=[index])
+            encoded_texts_sequence = encoded_texts_sequence.append(text_representation)
+        return encoded_texts_sequence
 
+    def __sentence_mean_strategy(self, sentence_hidden_output:Tensor):
+        mean = torch.mean(sentence_hidden_output, 1, keepdim=True)
+        mean = torch.squeeze(mean)
+        return mean
+
+    def __sentence_cls_strategy(self, sentence_hidden_output:Tensor):
+        return sentence_hidden_output[0][0]
 
 
 class ClinicalTokenizer():
@@ -831,20 +900,55 @@ class ClinicalTokenizer():
         self.bert_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
         self.sentence_tokenizer = spacy.load("en_core_sci_md")
 
-    def process_texts_df_for_bert(self, texts_df:pandas.DataFrame):
+    def process_texts_df_for_bert(self, texts_df:pandas.DataFrame, text_strategy:str="all", n_tokens:int=128):
         encoded_sentences = pandas.Series([])
         for index, row in texts_df.iterrows():
-            sentences = self.tokenize_sentences(row['text'])
-            sentences = self.bert_encode_sentences(sentences)
-            encoded_sentences = encoded_sentences.append(pandas.Series([sentences], index=[index]))
+            encoded_texts = None
+            if text_strategy == "all":
+                encoded_texts = self.__bert_encode_all_strategy(index, row['text'], n_tokens)
+            elif text_strategy == "first":
+                encoded_texts = self.__bert_encode_first_strategy(index, row['text'], n_tokens)
+            elif text_strategy == "last":
+                encoded_texts = self.__bert_encode_last_strategy(index, row['text'], n_tokens)
+            encoded_sentences = encoded_sentences.append(encoded_texts)
         return encoded_sentences
+
+    def __bert_encode_all_strategy(self, index, text:str, n_tokens:int):
+        sentences = self.tokenize_sentences(text)
+        sentences = self.bert_encode_sentences(sentences, n_tokens)
+        return pandas.Series([sentences], index=[index])
+
+    def __bert_encode_first_strategy(self, index, text:str, n_tokens:int):
+        encoded_text = self.bert_encode_text(text)
+        encoded_text = encoded_text.tolist()[0]
+        if len(encoded_text) > n_tokens:
+            encoded_text = [encoded_text[:n_tokens-1] + [encoded_text[-1]]]
+        else:
+            encoded_text = [encoded_text]
+        encoded_text = torch.as_tensor([encoded_text])
+        return pandas.Series([encoded_text], index=[index])
+
+    def __bert_encode_last_strategy(self, index, text:str, n_tokens:int):
+        encoded_text = self.bert_encode_text(text)
+        encoded_text = encoded_text.tolist()[0]
+        if len(encoded_text) > n_tokens:
+            encoded_text = [[encoded_text[0]] + encoded_text[-(n_tokens - 1):]]
+        else:
+            encoded_text = [encoded_text]
+        encoded_text = torch.as_tensor([encoded_text])
+        return pandas.Series([encoded_text], index=[index])
 
     def tokenize_sentences(self, text:str):
         tokenized_sentences = self.sentence_tokenizer(text)
         return list(tokenized_sentences.sents)
 
-    def bert_encode_sentences(self, sentences:[]):
+    def bert_encode_sentences(self, sentences:[], n_tokens:int):
         encoded_sentences = []
         for sentence in sentences:
-            encoded_sentences.append(self.bert_tokenizer.encode(str(sentence)))
+            encoded_sentences.append(self.bert_tokenizer.encode(str(sentence), return_tensors="pt", padding=True, truncation=True,
+                                                                max_length=n_tokens))
         return encoded_sentences
+
+    def bert_encode_text(self, text:str):
+        encoded_text = self.bert_tokenizer.encode(text, return_tensors="pt")
+        return encoded_text

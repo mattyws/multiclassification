@@ -86,11 +86,12 @@ timeseries_model_parameters = {
 
 textual_execution_saving_parameters = {
     "execution_saving_path" : "texts/",
-    "training_checkpoint": "checkpoint/",
+    "training_checkpoint": "checkpoint_all_mean/",
     "execution_parameters_filename": "training_parameters.pkl",
 
     "bert_directory": os.path.expanduser("~/Documents/mimic/bert/"),
-    "notes_textual_representation_directory" : "transformed_representation/",
+    "tokenization_strategy": "all",
+    "sentence_encoding_strategy" : "mean",
 
     'tunning_directory' : 'tunning/',
 

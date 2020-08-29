@@ -62,22 +62,20 @@ print(data_csv['label'].value_counts())
 # Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 
+transformed_texts_path = os.path.join(parameters['bert_directory'], problem,
+                                      "{}_{}".format(parameters['tokenization_strategy'], parameters['sentence_encoding_strategy']))
+if not os.path.exists(transformed_texts_path):
+    os.makedirs(transformed_texts_path)
+text_transformer = ClinicalBertTextRepresentationTransform(transformed_texts_path)
+new_paths = text_transformer.transform(data_csv, 'textual_path', tokenization_strategy=parameters['tokenization_strategy'],
+                           sentence_encoding_strategy=parameters['sentence_encoding_strategy'])
+data_csv['textual_path'] = new_paths
+classes = np.asarray(data_csv['label'].tolist())
+data = np.asarray(data_csv['textual_path'].tolist())
 
-text_transformer = ClinicalBertTextRepresentationTransform()
-text_transformer.transform(data_csv, 'textual_path')
-
-
-
-exit()
-
-print_with_time("Preparing normalization values")
-normalization_value_counts_path = training_directory + parameters['normalization_value_counts_directory']
-normalization_values = NormalizationValues(data, pickle_object_path=normalization_value_counts_path)
-normalization_values.prepare()
 # Get input shape
-aux = pd.read_csv(data[0])
-aux = functions.remove_columns_for_classification(aux)
-inputShape = (None, len(aux.columns))
+aux = pickle.load(open(new_paths.values.tolist()[0], 'rb'))
+inputShape = (None, len(aux[0]))
 
 if parameters['model_tunning']:
     training_samples_path = training_directory + parameters['training_samples_filename']
@@ -105,15 +103,7 @@ if parameters['model_tunning']:
             data_opt = pickle.load(f)
         with open(optimization_classes_path, 'rb') as f:
             classes_opt = pickle.load(f)
-    opt_normalization_values_path = training_directory + parameters['optimization_normalization_values_filename']
-    values = normalization_values.get_normalization_values(data_opt,
-                                                           saved_file_name=opt_normalization_values_path)
-    opt_normalization_temporary_data_path = training_directory + parameters[
-        'optimization_normalization_temporary_data_directory']
-    normalizer = Normalization(values, temporary_path=opt_normalization_temporary_data_path)
-    print_with_time("Normalizing optimization data")
-    normalizer.normalize_files(data_opt)
-    normalized_data = np.array(normalizer.get_new_paths(data_opt))
+
     print_with_time("Creating optimization generators")
     training_events_sizes_file_path = training_directory + parameters['training_events_sizes_filename'].format('opt')
     training_events_sizes_labels_file_path = training_directory + parameters[
@@ -122,7 +112,7 @@ if parameters['model_tunning']:
     testing_events_sizes_labels_file_path = training_directory + parameters[
         'testing_events_sizes_labels_filename'].format('opt')
 
-    train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data
+    train_sizes, train_labels = functions.divide_by_events_lenght(data_opt
                                                                   , classes_opt
                                                                   , sizes_filename=training_events_sizes_file_path
                                                                   ,
@@ -180,16 +170,6 @@ with open(result_file_path, 'a+') as cvsFileHandler: # where the results for eac
         #     i += 1
         #     continue
         print_with_time("Fold {}".format(i))
-        print_with_time("Getting values for normalization")
-        # normalization_values = Normalization.get_normalization_values(data[trainIndex])
-        fold_normalization_values_path = training_directory + parameters['fold_normalization_values_filename'].format(i)
-        values = normalization_values.get_normalization_values(data[trainIndex],
-                                                               saved_file_name=fold_normalization_values_path)
-        fold_normalization_temporary_data_path = training_directory + parameters['fold_normalization_temporary_data_directory'].format(i)
-        normalizer = Normalization(values, temporary_path=fold_normalization_temporary_data_path)
-        print_with_time("Normalizing fold data")
-        normalizer.normalize_files(data)
-        normalized_data = np.array(normalizer.get_new_paths(data))
         print_with_time("Creating generators")
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
         #                                                classes[trainIndex], parameters['batchSize'])
@@ -201,11 +181,11 @@ with open(result_file_path, 'a+') as cvsFileHandler: # where the results for eac
         testing_events_sizes_file_path = training_directory + parameters['testing_events_sizes_filename'].format(i)
         testing_events_sizes_labels_file_path = training_directory + parameters['testing_events_sizes_labels_filename'].format(i)
 
-        train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
+        train_sizes, train_labels = functions.divide_by_events_lenght(data[trainIndex]
                                                                       , classes[trainIndex]
                                                                       , sizes_filename=training_events_sizes_file_path
                                                                       , classes_filename=training_events_sizes_labels_file_path)
-        test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
+        test_sizes, test_labels = functions.divide_by_events_lenght(data[testIndex], classes[testIndex]
                                                             , sizes_filename = testing_events_sizes_file_path
                                                             , classes_filename = testing_events_sizes_labels_file_path)
 
