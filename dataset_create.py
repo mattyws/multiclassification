@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import logging
 
-import functions
+from resources import functions
 
 logging.basicConfig(level=logging.INFO)
 

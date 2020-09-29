@@ -1,7 +1,7 @@
 import os
 import shutil
 
-import functions
+from resources import functions
 
 parameters = functions.load_parameters_file()
 

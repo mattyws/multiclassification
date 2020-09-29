@@ -15,7 +15,7 @@ import multiprocessing as mp
 
 import sys
 
-import functions
+from resources import functions
 
 
 def process_events(dataset, events_path, new_events_path, datetime_pattern='%Y-%m-%d %H:%M:%S',

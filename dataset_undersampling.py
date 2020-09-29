@@ -1,10 +1,6 @@
-import json
 import logging
-import os
 import pandas as pd
-from adapter import Word2VecTrainer
-from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataGenerator
-from functions import load_parameters_file
+from resources.functions import load_parameters_file
 
 parameters = load_parameters_file()
 

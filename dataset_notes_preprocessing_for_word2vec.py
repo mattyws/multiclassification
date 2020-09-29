@@ -6,7 +6,7 @@ import multiprocessing as mp
 import os
 
 import sys
-from functions import print_with_time, remove_only_special_characters_tokens, escape_invalid_xml_characters, \
+from resources.functions import print_with_time, remove_only_special_characters_tokens, escape_invalid_xml_characters, \
     escape_html_special_entities, text_to_lower, tokenize_text, tokenize_sentences, load_parameters_file
 
 

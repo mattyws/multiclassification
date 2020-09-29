@@ -13,19 +13,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = ""
 import pandas as pd
 import numpy as np
 
-import keras
-from keras.regularizers import l1_l2
-
-from sklearn.model_selection._split import StratifiedKFold, train_test_split
-
-from adapter import KerasAdapter
-from data_generators import LengthLongitudinalDataGenerator, BertDataGenerator
-
-from data_representation import TransformClinicalTextsRepresentations, TextToBertIDs
-from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
-    text_to_lower, remove_only_special_characters_tokens, whitespace_tokenize_text, \
-    divide_by_events_lenght, remove_sepsis_mentions, train_representation_model
-from keras_callbacks import Metrics
 from model_creators import MultilayerTemporalConvolutionalNNCreator, BertModelCreator
 
 from classification_noteevents_textual_parameters import parameters

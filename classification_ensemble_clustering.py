@@ -1,34 +1,24 @@
 import csv
 import datetime
-import json
 import os
 import pickle
-from collections import Counter
-from pprint import PrettyPrinter
 
 import pandas as pd
 import numpy as np
 
 import keras
-from keras import backend as K
-import tensorflow as tf
-from keras.regularizers import l1_l2
 
 from sklearn.model_selection._split import StratifiedKFold
 
-import functions
-from adapter import KerasAdapter
-from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator, \
-    AutoencoderDataGenerator
-from data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations, \
-    AutoencoderDataCreator
-from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging, split_classes, TrainEnsembleClustering
-from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+from resources import functions
+from data_generators import LengthLongitudinalDataGenerator, MetaLearnerDataGenerator
+from resources.data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
+from ensemble_training import TrainEnsembleBagging, split_classes, TrainEnsembleClustering
+from resources.functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, remove_sepsis_mentions, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     train_representation_model
-from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, EnsembleModelCreator, \
-    MultilayerTemporalConvolutionalNNCreator, NoteeventsClassificationModelCreator, KerasVariationalAutoencoder
+    MultilayerTemporalConvolutionalNNCreator, NoteeventsClassificationModelCreator
 from normalization import Normalization, NormalizationValues
 
 def train_level_zero_classifiers(data, classes, model_creator, training_data_samples=None, training_classes_samples=None,

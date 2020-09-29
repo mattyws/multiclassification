@@ -4,7 +4,7 @@ import pprint
 
 import sys
 
-import functions
+from resources import functions
 
 parameters = functions.load_parameters_file()
 

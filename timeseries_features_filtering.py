@@ -4,7 +4,7 @@ Analyse data using tsfresh package
 import pandas as pd
 import tsfresh
 
-import functions
+from resources import functions
 
 parameters = functions.load_parameters_file()
 data_path = parameters['mimic_data_path'] + parameters['chartevents_path']

@@ -17,12 +17,12 @@ from keras.regularizers import l1_l2
 from sklearn.model_selection._split import StratifiedKFold
 from sklearn.utils import class_weight
 
-import functions
+from resources import functions
 from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator
-from data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
+from resources.data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
 from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging, split_classes
-from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+from resources.functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, remove_sepsis_mentions, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     train_representation_model
 from keras_callbacks import Metrics

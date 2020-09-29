@@ -1,6 +1,6 @@
 import os
 import json
-import functions
+from resources import functions
 import pprint
 
 pp = pprint.PrettyPrinter(indent=5)

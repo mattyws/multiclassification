@@ -14,7 +14,7 @@ import sys
 
 from math import ceil
 
-from functions import remove_columns_for_classification
+from resources.functions import remove_columns_for_classification
 
 
 def get_file_value_counts(file, pickle_object_path):

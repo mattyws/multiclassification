@@ -2,7 +2,7 @@ import json
 import os
 import textdistance as td
 import pandas as pd
-import functions
+from resources import functions
 import re
 
 parameters = functions.load_parameters_file()

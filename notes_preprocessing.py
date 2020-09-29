@@ -5,7 +5,7 @@ import numpy
 import pandas as pd
 import os
 import sys
-from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+from resources.functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, remove_sepsis_mentions, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     train_representation_model
 

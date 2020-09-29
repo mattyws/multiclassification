@@ -6,7 +6,7 @@ from functools import partial
 import numpy
 import pandas as pd
 
-from functions import print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+from resources.functions import print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, remove_only_special_characters_tokens, whitespace_tokenize_text
 from multiclassification.parameters.dataset_parameters import parameters
 

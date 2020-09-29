@@ -23,8 +23,8 @@ from sklearn.model_selection._split import StratifiedKFold
 from adapter import Word2VecTrainer, Doc2VecTrainer
 from data_generators import LengthLongitudinalDataGenerator, NoteeventsTextDataGenerator
 
-from data_representation import TransformClinicalTextsRepresentations, TransformClinicalCtakesTextsRepresentations
-from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+from resources.data_representation import TransformClinicalTextsRepresentations, TransformClinicalCtakesTextsRepresentations
+from resources.functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, tokenize_text, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     divide_by_events_lenght, remove_sepsis_mentions, train_representation_model, remove_multiword_token
 from keras_callbacks import Metrics

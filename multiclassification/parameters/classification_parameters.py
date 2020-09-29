@@ -85,13 +85,18 @@ timeseries_model_parameters = {
 }
 
 textual_execution_saving_parameters = {
-    "execution_saving_path" : "texts/",
-    "training_checkpoint": "checkpoint_all_mean/",
+    "execution_saving_path" : "doc2vec_300_ntemporal/",
+    "training_checkpoint": "checkpoint/",
     "execution_parameters_filename": "training_parameters.pkl",
 
-    "bert_directory": os.path.expanduser("~/Documents/mimic/bert/"),
+    "bert_directory": os.path.expanduser("~/Documents/mimic/bert_ntemporal/"),
+    "textual_representation_model_path": os.path.expanduser("~/Documents/mimic/doc2vec/"),
+    'textual_representation_model_filename' : 'doc2vec.model',
+    "notes_textual_representation_directory": 'repr_ntemporal/',
     "tokenization_strategy": "all",
     "sentence_encoding_strategy" : "mean",
+    "remove_temporal_axis":True,
+    "remove_no_text_constant": True,
 
     'tunning_directory' : 'tunning/',
 
@@ -109,9 +114,18 @@ textual_execution_saving_parameters = {
 }
 
 textual_model_parameters = {
+    "textual_doc2vec_dm": 0,
+    "textual_doc2vec_hs": 0,
+    "textual_doc2vec_negative": 5,
+    "textual_embedding_size" : 300,
+    "textual_min_count" : 3,
+    "textual_workers" : 4,
+    "textual_window" : 3,
+    "textual_iterations" : 5,
+
     "outputUnits": [
-        16,
-        16
+        64,
+        32
     ],
     "numOutputNeurons": 1,
     "loss": "binary_crossentropy",
@@ -128,24 +142,25 @@ textual_model_parameters = {
     ],
     "networkActivation" : "sigmoid",
     "gru": False,
-    "tcn": False,
+    "tcn": True,
     "useDropout": True,
-    "dropout": 0.3,
-    "trainingEpochs": 28,
-    "batchSize": 8,
+    "dropout": 0.4,
+    "trainingEpochs": 30,
+    "batchSize": 32,
 
     # Convolution only parameters
     "kernel_sizes": [
-        3
+        3, 3
     ],
     "pooling": [
-        False
+        False, False
     ],
     "dilations": [
+        [1, 2, 4],
         [1, 2, 4]
     ],
     "nb_stacks": [
-        1
+        1, 1
     ],
 
     'model_tunning': True,
@@ -155,11 +170,11 @@ textual_model_parameters = {
 }
 
 model_tuner_parameters = {
-    'layers_min': 1,
-    'layers_max' : 2,
+    'layers_min': 2,
+    'layers_max' : 4,
     'layers_step': 1,
     'hidden_output_units_min' : 8,
-    'hidden_output_units_max': 32,
+    'hidden_output_units_max': 256,
     'hidden_output_units_steps': 8,
     'losses': ['binary_crossentropy'],
     'hidden_activations': ["leakyrelu"],
@@ -184,7 +199,7 @@ model_tuner_parameters = {
 
 timeseries_tuning_parameters = model_tuner_parameters
 textual_tuning_parameters = {
-'layers_min': 1,
+    'layers_min': 1,
     'layers_max' : 2,
     'layers_step': 1,
     'hidden_output_units_min' : 8,

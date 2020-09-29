@@ -12,8 +12,8 @@ import multiprocessing as mp
 
 import sys
 
-import functions
-from functions import escape_invalid_xml_characters, escape_html_special_entities, text_to_lower, \
+from resources import functions
+from resources.functions import escape_invalid_xml_characters, escape_html_special_entities, text_to_lower, \
     remove_sepsis_mentions, remove_only_special_characters_tokens, whitespace_tokenize_text
 
 

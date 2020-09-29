@@ -10,7 +10,7 @@ import sys
 from functools import partial
 from math import floor
 
-import functions
+from resources import functions
 import pandas as pd
 import numpy as np
 import multiprocessing as mp

@@ -6,9 +6,8 @@ import pandas as pd
 import multiprocessing as mp
 
 import sys
-from nltk import WhitespaceTokenizer
 
-import functions
+from resources import functions
 import re
 
 

@@ -4,7 +4,7 @@ Remove patients that have only structured data or only textual data.
 import os
 
 import pandas as pd
-import functions
+from resources import functions
 
 parameters = functions.load_parameters_file()
 

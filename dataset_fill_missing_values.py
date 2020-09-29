@@ -15,7 +15,7 @@ import multiprocessing as mp
 
 import sys
 
-import functions
+from resources import functions
 
 
 def fill_missing_values(icustays, events_path=None, new_events_path=None, manager_queue=None):

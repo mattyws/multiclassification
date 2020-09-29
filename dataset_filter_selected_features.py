@@ -2,7 +2,6 @@
 Filter selected features ids in mimic dataset and gets statistical values about the filtered features
 """
 from functools import partial
-from itertools import product
 
 import pandas as pd
 import numpy as np
@@ -11,7 +10,7 @@ import pprint
 
 import sys
 
-import functions
+from resources import functions
 import os
 
 def filter_features(files_list, events_ids, dataset_filtered_files_path, manager_queue=None):

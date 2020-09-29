@@ -17,9 +17,10 @@ from ast import literal_eval
 
 from nltk import WhitespaceTokenizer
 
-from data_representation import Word2VecEmbeddingCreator
+from resources.data_representation import Word2VecEmbeddingCreator, ClinicalTokenizer
 
 from tensorflow.python.keras.utils.data_utils import Sequence as tsSeq
+
 
 
 class ArrayDataGenerator(tsSeq):
@@ -366,41 +367,6 @@ class LongitudinalDataGenerator(tsSeq):
     def __len__(self):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
-class AutoencoderDataGenerator(tsSeq):
-    #TODO: change for batch loading
-    def __init__(self, dataPaths, batch_size=30, iterForever=False):
-        self.__filesList = dataPaths
-        self.iterForever = iterForever
-        self.batch_size = batch_size
-        self.__iterPos = 0
-        self.total_events = 0
-        self.consumed_idx = []
-
-    def __load(self, filesNames):
-        x = []
-        for fileName in filesNames:
-            with open(fileName, 'rb') as data_file:
-                x = pickle.load(data_file)
-        return x
-
-    def __iter__(self):
-        return self
-
-    def __getitem__(self, idx):
-        """
-        :param idx:
-        :return:
-        """
-        batch_x = self.__filesList[idx * self.batch_size:(idx + 1) * self.batch_size]
-        batch_x = self.__load(batch_x)
-        if idx not in self.consumed_idx:
-            self.consumed_idx.append(idx)
-            self.total_events += len(batch_x)
-        return batch_x, batch_x
-
-    def __len__(self):
-        return len(self.__filesList)
-
 class Word2VecTextEmbeddingGenerator(tsSeq):
     def __init__(self, dataPath, word2vecModel, batchSize, embeddingSize=200, iterForever=False):
         self.dataPath = dataPath
@@ -484,39 +450,6 @@ class Word2VecTextEmbeddingGenerator(tsSeq):
         return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
 
 
-class MetaLearnerDataGenerator(tsSeq):
-
-    def __init__(self, dataPaths, labels, batchSize, num_models, representation_chunk_size, iterForever=False):
-        self.batchSize = batchSize
-        self.__labels = labels
-        self.__filesList = dataPaths
-        self.iterForever = iterForever
-        self.__iterPos = 0
-        self.num_models = num_models
-        self.representation_chunk_size = representation_chunk_size
-
-
-    def __load(self, files_names):
-        x = []
-        for fileName in files_names:
-            with open(fileName, 'rb') as data_file:
-                data = pickle.load(data_file)
-            x.append(data[: self.num_models * self.representation_chunk_size])
-        x = np.array(x)
-        return x
-
-    def __iter__(self):
-        return self
-
-    def __getitem__(self, idx):
-        batch_x = self.__filesList[idx * self.batchSize:(idx + 1) * self.batchSize]
-        batch_x = self.__load(batch_x)
-        batch_y = self.__labels[idx * self.batchSize:(idx + 1) * self.batchSize]
-        return batch_x, batch_y
-
-    def __len__(self):
-        return np.int64(np.ceil(len(self.__filesList) / float(self.batchSize)))
-
 class NoteeventsTextDataGenerator(object):
 
     def __init__(self, data_paths, preprocessing_pipeline=None):
@@ -536,6 +469,7 @@ class TaggedNoteeventsDataGenerator(object):
     def __init__(self, data_paths, preprocessing_pipeline=None):
         self.data_paths = data_paths
         self.preprocessing_pipeline = preprocessing_pipeline
+        self.clinical_tokenizer = ClinicalTokenizer()
 
     def __iter__(self):
         for index, path in enumerate(self.data_paths):
@@ -543,11 +477,12 @@ class TaggedNoteeventsDataGenerator(object):
             patient_id = os.path.basename(path).split('.')[0]
             for index, row in patient_noteevents.iterrows():
                 text = row['text']
-                # print(path)
-                # print(text)
-                if self.preprocessing_pipeline is not None:
-                    for func in self.preprocessing_pipeline:
-                        text = func(text)
-                tagged_doc = TaggedDocument(words=text, tags=["{}_{}".format(patient_id,row['starttime'])])
-                yield tagged_doc
+                sentences = self.clinical_tokenizer.tokenize_sentences(text)
+                for num, sentence in enumerate(sentences):
+                    processed_sentence = sentence
+                    if self.preprocessing_pipeline is not None:
+                        for func in self.preprocessing_pipeline:
+                            processed_sentence = func(processed_sentence)
+                    tagged_doc = TaggedDocument(words=processed_sentence, tags=["{}_{}_{}".format(patient_id,row['starttime'], num)])
+                    yield tagged_doc
         return self

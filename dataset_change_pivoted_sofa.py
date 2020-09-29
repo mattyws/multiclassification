@@ -6,7 +6,8 @@ import os
 
 import pandas as pd
 
-import functions
+from resources import functions
+
 
 def get_coagulation_score(platelet):
     """

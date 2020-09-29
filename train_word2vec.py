@@ -7,7 +7,7 @@ import os
 import numpy
 import pandas as pd
 
-import functions
+from resources import functions
 from adapter import Word2VecTrainer
 from data_generators import NoteeventsTextDataGenerator
 

@@ -17,13 +17,13 @@ from sklearn.utils import class_weight
 from tensorflow.keras.models import Model
 from tensorflow.keras.regularizers import l1
 
-import functions
+from resources import functions
 from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator, \
     ArrayDataGenerator
-from data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
+from resources.data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
 from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging, split_classes
-from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+from resources.functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, remove_sepsis_mentions, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     train_representation_model
 from keras_callbacks import Metrics
@@ -324,15 +324,15 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         normalized_data = np.array(normalizer.get_new_paths(structured_data))
 
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
-                              , classes[trainIndex]
-                              , sizes_filename=parameters['training_directory_path'] +
+                                                                      , classes[trainIndex]
+                                                                      , sizes_filename=parameters['training_directory_path'] +
                                                parameters['structured_training_events_sizes_file'].format(fold)
-                              , classes_filename=parameters['training_directory_path'] +
+                                                                      , classes_filename=parameters['training_directory_path'] +
                                                  parameters['structured_training_events_sizes_labels_file'].format(fold))
         test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
-                                    , sizes_filename=parameters['training_directory_path'] +
+                                                                    , sizes_filename=parameters['training_directory_path'] +
                                                      parameters['structured_testing_events_sizes_file'].format(fold)
-                                    , classes_filename=parameters['training_directory_path'] +
+                                                                    , classes_filename=parameters['training_directory_path'] +
                                                        parameters['structured_testing_events_sizes_labels_file'].format(fold))
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
                                                              max_batch_size=parameters['structured_batch_size'])
@@ -376,15 +376,15 @@ with open(parameters['training_directory_path'] + parameters['checkpoint'] + par
         print_with_time('Took {:02}:{:02}:{:02} to train the level zero models for structured data'.format(int(hours), int(minutes), int(seconds)))
 
         train_sizes, train_labels = functions.divide_by_events_lenght(textual_transformed_data[trainIndex]
-                              , classes[trainIndex]
-                              , sizes_filename=parameters['training_directory_path'] +
+                                                                      , classes[trainIndex]
+                                                                      , sizes_filename=parameters['training_directory_path'] +
                                                 parameters['textual_training_events_sizes_file'].format(fold)
-                              , classes_filename=parameters['training_directory_path'] +
+                                                                      , classes_filename=parameters['training_directory_path'] +
                                                  parameters['textual_training_events_sizes_labels_file'].format(fold))
         test_sizes, test_labels = functions.divide_by_events_lenght(textual_transformed_data[testIndex], classes[testIndex]
-                            , sizes_filename=parameters['training_directory_path'] +
+                                                                    , sizes_filename=parameters['training_directory_path'] +
                                              parameters['textual_testing_events_sizes_file'].format(fold)
-                            , classes_filename=parameters['training_directory_path'] +
+                                                                    , classes_filename=parameters['training_directory_path'] +
                                                parameters['textual_testing_events_sizes_labels_file'].format(fold))
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
                                                              max_batch_size=parameters['structured_batch_size'])
@@ -519,15 +519,15 @@ print(normalized_evaluation)
 print(len(normalized_evaluation))
 
 train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data
-                              , classes
-                              , sizes_filename=parameters['training_directory_path'] +
+                                                              , classes
+                                                              , sizes_filename=parameters['training_directory_path'] +
                                                parameters['structured_training_events_sizes_file'].format("all")
-                              , classes_filename=parameters['training_directory_path'] +
+                                                              , classes_filename=parameters['training_directory_path'] +
                                                  parameters['structured_training_events_sizes_labels_file'].format("all"))
 test_sizes, test_labels = functions.divide_by_events_lenght(normalized_evaluation, classes_evaluation
-                            , sizes_filename=parameters['training_directory_path'] +
+                                                            , sizes_filename=parameters['training_directory_path'] +
                                              parameters['structured_testing_events_sizes_file'].format("all")
-                            , classes_filename=parameters['training_directory_path'] +
+                                                            , classes_filename=parameters['training_directory_path'] +
                                                parameters['structured_testing_events_sizes_labels_file'].format("all"))
 dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
                                                      max_batch_size=parameters['structured_batch_size'])
@@ -578,15 +578,15 @@ print_with_time("Training textual models on all data")
 textual_evaluate_predictions = dict()
 textual_evaluate_representations = dict()
 train_sizes, train_labels = functions.divide_by_events_lenght(textual_transformed_data
-                              , classes
-                              , sizes_filename=parameters['training_directory_path'] +
+                                                              , classes
+                                                              , sizes_filename=parameters['training_directory_path'] +
                                                 parameters['textual_training_events_sizes_file'].format("all")
-                              , classes_filename=parameters['training_directory_path'] +
+                                                              , classes_filename=parameters['training_directory_path'] +
                                                  parameters['textual_training_events_sizes_labels_file'].format("all"))
 test_sizes, test_labels = functions.divide_by_events_lenght(textual_evaluation, classes_evaluation
-                    , sizes_filename=parameters['training_directory_path'] +
+                                                            , sizes_filename=parameters['training_directory_path'] +
                                      parameters['textual_testing_events_sizes_file'].format("all")
-                    , classes_filename=parameters['training_directory_path'] +
+                                                            , classes_filename=parameters['training_directory_path'] +
                                        parameters['textual_testing_events_sizes_labels_file'].format("all"))
 dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
                                                      max_batch_size=parameters['structured_batch_size'])

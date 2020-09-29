@@ -18,7 +18,8 @@ from datetime import datetime, timedelta
 
 import sys
 
-import functions
+from resources import functions
+
 
 def filter_events(sepsis3_df_split, table_name, mimic_data_path="", manager_queue=None, events_dirname=""):
     events_csv_path = mimic_data_path + table_name + '/'

@@ -18,9 +18,9 @@ from sklearn.utils import class_weight
 
 from classification_parameters import parameters
 
-import functions
+from resources import functions
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator
-from functions import test_model, print_with_time
+from resources.functions import test_model, print_with_time
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, MultilayerTemporalConvolutionalNNCreator
 from normalization import Normalization, NormalizationValues
@@ -117,8 +117,8 @@ with open(parameters['resultFilePath'], 'a+') as cvsFileHandler: # where the res
                                                                       , sizes_filename=parameters['training_events_sizes_file'].format(i)
                                                                       , classes_filename=parameters['training_events_sizes_labels_file'].format(i))
         test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
-                                                            , sizes_filename = parameters['testing_events_sizes_file'].format(i)
-                                                            , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
+                                                                    , sizes_filename = parameters['testing_events_sizes_file'].format(i)
+                                                                    , classes_filename = parameters['testing_events_sizes_labels_file'].format(i))
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
         dataTrainGenerator.create_batches()
         dataTestGenerator = LengthLongitudinalDataGenerator(test_sizes, test_labels, max_batch_size=parameters['batchSize'])

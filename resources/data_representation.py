@@ -27,161 +27,6 @@ import sys
 
 from multiclassification import constants
 
-
-
-class TextToBioBertIDs():
-    def __init__(self, data_paths, model_dir=None, vocab_file="vocab.txt", use_last_tokens=False):
-        self.data_paths = data_paths
-        self.vocab_file = os.path.join(model_dir, vocab_file)
-        self.vocab = biobert_tokenizer.load_vocab(self.vocab_file)
-        self.tokenizer = biobert_tokenizer.FullTokenizer(self.vocab_file)
-        self.do_lower_case = True
-        self.use_last_tokens = use_last_tokens
-        self.new_paths = dict()
-
-    def transform(self, new_representation_path):
-        self.new_paths = dict()
-        self.new_paths = self.transform_docs(self.data_paths, new_representation_path)
-        # with multiprocessing.Pool(processes=4) as pool:
-        #     manager = multiprocessing.Manager()
-            # manager_queue = manager.Queue()
-            # self.lock = manager.Lock()
-            # partial_transform_docs = partial(self.transform_docs,
-            #                                  new_representation_path=new_representation_path)
-            # data = numpy.array_split(self.data_paths, 6)
-            # # partial_transform_docs(data[0])
-            # total_files = len(self.data_paths)
-            # map_obj = pool.map_async(partial_transform_docs, data)
-            # consumed=0
-            # while not map_obj.ready() or manager_queue.qsize() != 0:
-            #     for _ in range(manager_queue.qsize()):
-            #         manager_queue.get()
-            #         consumed += 1
-            #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-            # print()
-            # result = map_obj.get()
-            # for r in result:
-            #     self.new_paths.update(r)
-
-
-    def transform_docs(self, filesNames, new_representation_path, manager_queue=None):
-        x = dict()
-        consumed = 0
-        total_files = len(filesNames)
-        for fileName in filesNames:
-            consumed += 1
-            file_name = fileName.split('/')[-1].split('.')[0]
-            if manager_queue is not None:
-                manager_queue.put(fileName)
-            else:
-                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-            new_file_name = new_representation_path + file_name + '.pkl'
-            if os.path.exists(new_file_name):
-                x[fileName] = new_file_name
-                continue
-            data = pandas.read_csv(fileName)
-            data = data.replace(np.nan, '')
-            text = ' '.join(data["preprocessed_note"])
-            processed_text = self.tokenizer.tokenize(text)
-            if len(processed_text) < 510:
-                processed_text = ["[CLS]"] + processed_text + ["[PAD]"] * (510 - len(processed_text)) + ["[SEP]"]
-            else:
-                processed_text = ["[CLS]"] + processed_text[-510:] + ["[SEP]"]
-            ids = self.tokenizer.convert_tokens_to_ids(processed_text)
-            with open(new_file_name, 'wb') as pkl_file:
-                pickle.dump(ids, pkl_file)
-            x[fileName] = new_file_name
-        return x
-
-    def get_new_paths(self, files_list):
-        if self.new_paths is not None and len(self.new_paths.keys()) != 0:
-            new_list = []
-            for file in files_list:
-                if file in self.new_paths.keys():
-                    new_list.append(self.new_paths[file])
-            return new_list
-        else:
-            raise Exception("Data not transformed!")
-
-
-# class TextToBertIDs():
-#     def __init__(self, data_paths, model_dir=None, use_last_tokens=False):
-#         self.data_paths = data_paths
-#         spm_model = os.path.join(model_dir, "30k-clean.model")
-#         vocab_file = os.path.join(model_dir, "30k-clean.vocab")
-#         self.vocab = bert.albert_tokenization.load_vocab(vocab_file)
-#         self.sp = spm.SentencePieceProcessor()
-#         self.sp.load(spm_model)
-#         self.tokenizer = bert.albert_tokenization.FullTokenizer(vocab_file)
-#         self.do_lower_case = True
-#         self.use_last_tokens = use_last_tokens
-#         self.new_paths = dict()
-#
-#     def transform(self, new_representation_path):
-#         self.new_paths = dict()
-#         self.new_paths = self.transform_docs(self.data_paths, new_representation_path)
-#         # with multiprocessing.Pool(processes=4) as pool:
-#         #     manager = multiprocessing.Manager()
-#             # manager_queue = manager.Queue()
-#             # self.lock = manager.Lock()
-#             # partial_transform_docs = partial(self.transform_docs,
-#             #                                  new_representation_path=new_representation_path)
-#             # data = numpy.array_split(self.data_paths, 6)
-#             # # partial_transform_docs(data[0])
-#             # total_files = len(self.data_paths)
-#             # map_obj = pool.map_async(partial_transform_docs, data)
-#             # consumed=0
-#             # while not map_obj.ready() or manager_queue.qsize() != 0:
-#             #     for _ in range(manager_queue.qsize()):
-#             #         manager_queue.get()
-#             #         consumed += 1
-#             #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-#             # print()
-#             # result = map_obj.get()
-#             # for r in result:
-#             #     self.new_paths.update(r)
-#
-#
-#     def transform_docs(self, filesNames, new_representation_path, manager_queue=None):
-#         x = dict()
-#         consumed = 0
-#         total_files = len(filesNames)
-#         for fileName in filesNames:
-#             consumed += 1
-#             file_name = fileName.split('/')[-1].split('.')[0]
-#             if manager_queue is not None:
-#                 manager_queue.put(fileName)
-#             else:
-#                 sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-#             new_file_name = new_representation_path + file_name + '.pkl'
-#             if os.path.exists(new_file_name):
-#                 x[fileName] = new_file_name
-#                 continue
-#             data = pandas.read_csv(fileName)
-#             data = data.replace(np.nan, '')
-#             text = ' '.join(data["preprocessed_note"])
-#             processed_text = bert.albert_tokenization.preprocess_text(text, lower=self.do_lower_case)
-#             pieces = bert.albert_tokenization.encode_pieces(self.sp, processed_text)
-#             if len(pieces) < 510:
-#                 pieces = ["[CLS]"] + pieces + ["[PAD]"] * (510 - len(pieces)) + ["[SEP]"]
-#             else:
-#                 pieces = ["[CLS]"] + pieces[-510:] + ["[SEP]"]
-#             ids = [int(self.sp.PieceToId(piece)) for piece in pieces]
-#             with open(new_file_name, 'wb') as pkl_file:
-#                 pickle.dump(ids, pkl_file)
-#             x[fileName] = new_file_name
-#         return x
-#
-#     def get_new_paths(self, files_list):
-#         if self.new_paths is not None and len(self.new_paths.keys()) != 0:
-#             new_list = []
-#             for file in files_list:
-#                 if file in self.new_paths.keys():
-#                     new_list.append(self.new_paths[file])
-#             return new_list
-#         else:
-#             raise Exception("Data not transformed!")
-
 class TransformClinicalTextsRepresentations():
     """
     Changes the representation for patients notes using a word2vec model.
@@ -199,6 +44,7 @@ class TransformClinicalTextsRepresentations():
         self.new_paths = dict()
         self.lock = None
         self.is_word2vec = is_word2vec
+        self.clinical_tokenizer = ClinicalTokenizer()
 
     def create_embedding_matrix(self, text):
         """
@@ -235,78 +81,73 @@ class TransformClinicalTextsRepresentations():
         x = np.array(x)
         return x
 
-    def get_docvec(self, icustay_id, charttime):
-        return np.array(self.representation_model.docvecs["{}_{}".format(icustay_id, charttime)])
-
-    def transform_docs(self, docs_path, preprocessing_pipeline=[], manager_queue=None):
-        new_paths = dict()
-        total_files = len(docs_path)
-        consumed = 0
-        for path in docs_path:
-            file_name = path.split('/')[-1]
-            if manager_queue is not None:
-                # manager_queue.put(path)
-                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-                consumed += 1
-            transformed_doc_path = self.representation_save_path + os.path.splitext(file_name)[0] + '.pkl'
-            if os.path.exists(transformed_doc_path):
-                new_paths[path] = transformed_doc_path
+    def transform_texts(self, texts_df:pandas.DataFrame, preprocessing_pipeline=[],
+                       remove_temporal_axis: bool = False, remove_no_text_constant:bool=False) -> list:
+        transformed_texts = []
+        sentences_num = 0
+        for index, row in texts_df.iterrows():
+            note = row['text']
+            if remove_no_text_constant and note == constants.NO_TEXT_CONSTANT:
                 continue
-            data = pandas.read_csv(path)
-            transformed_texts = []
-            for index, row in data.iterrows():
-                try:
-                    note = row['text']
-                except Exception as e:
-                    print(path)
-                    raise Exception("deu errado")
+            sentences = self.clinical_tokenizer.tokenize_sentences(note)
+            transformed_sentences = []
+            for sentence in sentences:
+                sentences_num += 1
+                processed_sentence = sentence
                 if preprocessing_pipeline is not None:
                     for func in preprocessing_pipeline:
-                        note = func(note)
+                        processed_sentence = func(processed_sentence)
                 if self.is_word2vec:
-                    new_representation = self.create_embedding_matrix(note)
+                    new_representation = self.create_embedding_matrix(processed_sentence)
                 else:
-                    icustay_id = os.path.basename(path).split('.')[0]
-                    if note == constants.NO_TEXT_CONSTANT:
-                        new_representation = np.zeros(self.embedding_size)
-                    else:
-                        new_representation = self.representation_model.infer_vector(note)
-                    # new_representation = self.get_docvec(icustay_id, row['charttime'])
+                    new_representation = self.representation_model.infer_vector(processed_sentence)
                 if new_representation is not None:
-                    transformed_texts.append(new_representation)
+                    transformed_sentences.append(new_representation)
                 else:
                     print("Is none", note)
+                    exit()
+            if remove_temporal_axis:
+                transformed_texts.extend(transformed_sentences)
+            else:
+                transformed_sentences = np.mean(transformed_sentences, axis=0)
+                transformed_texts.append(transformed_sentences)
+        return transformed_texts
+
+    def transform(self, data_df:pandas.DataFrame, text_paths_column:str, preprocessing_pipeline=[],
+                       remove_temporal_axis: bool = False, remove_no_text_constant:bool=False) -> pandas.DataFrame:
+        episodes = []
+        paths = []
+        labels = []
+        total_files = len(data_df)
+        consumed = 0
+        for index, row in data_df.iterrows():
+            # print(row['episode'])
+            sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+            consumed += 1
+            transformed_doc_path = os.path.join(self.representation_save_path, str(row['episode']) + '.pkl')
+            if os.path.exists(transformed_doc_path):
+                episodes.append(row['episode'])
+                paths.append(transformed_doc_path)
+                labels.append(row['label'])
+                continue
+            path = row[text_paths_column]
+            data = pandas.read_csv(path)
+            transformed_texts = self.transform_texts(data, preprocessing_pipeline=preprocessing_pipeline,
+                                                     remove_temporal_axis=remove_temporal_axis,
+                                                     remove_no_text_constant=remove_no_text_constant)
             if len(transformed_texts) != 0:
-                transformed_texts = numpy.array(transformed_texts)
+                transformed_texts = numpy.asarray(transformed_texts)
                 with open(transformed_doc_path, 'wb') as handler:
                     pickle.dump(transformed_texts, handler)
-                new_paths[path] = transformed_doc_path
+                episodes.append(row['episode'])
+                paths.append(transformed_doc_path)
+                labels.append(row['label'])
             else:
+                # print(data)
                 print("Is empty", path)
+                continue
+        new_paths = pandas.DataFrame({'path': paths, 'label': labels}, index=episodes)
         return new_paths
-
-    def transform(self, docs_paths, preprocessing_pipeline=None):
-        with multiprocessing.Pool(processes=4) as pool:
-            manager = multiprocessing.Manager()
-            manager_queue = manager.Queue()
-            self.lock = manager.Lock()
-            partial_transform_docs = partial(self.transform_docs,
-                                             preprocessing_pipeline=preprocessing_pipeline,
-                                             manager_queue=manager_queue)
-            # data = numpy.array_split(docs_paths, 6)
-            total_files = len(docs_paths)
-            self.new_paths = partial_transform_docs(docs_paths)
-            # map_obj = pool.map_async(partial_transform_docs, data)
-            # consumed=0
-            # while not map_obj.ready() or manager_queue.qsize() != 0:
-            #     for _ in range(manager_queue.qsize()):
-            #         manager_queue.get()
-            #         consumed += 1
-            #     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-            # print()
-            # result = map_obj.get()
-            # for r in result:
-            #     self.new_paths.update(r)
 
     def pad_sequence(self, value, pad_max_len):
         # if len(value) < 3:
@@ -697,99 +538,6 @@ class EnsembleMetaLearnerDataCreator():
         else:
             raise Exception("Data not transformed!")
 
-
-class AutoencoderDataCreator():
-
-    def __init__(self, encoder):
-        self.new_paths = []
-        self.encoder = encoder
-        pass
-
-    def transform_representations(self, dataset, new_representation_path=None, manager_queue=None):
-        """
-        Do the actual transformation
-        :param dataset: the paths for the events as .csv files
-        :param new_representation_path: the path where the new representations will be saved
-        :param manager_queue: the multiprocessing.Manager.Queue to use for progress checking
-        :return: dictionary {old_path : new_path}
-        """
-        new_paths = dict()
-        consumed = 0
-        total_files = len(dataset)
-        for path in dataset:
-            if isinstance(path, tuple):
-                icustayid = os.path.splitext(path[0].split('/')[-1])[0]
-            else:
-                icustayid = os.path.splitext(path.split('/')[-1])[0]
-            if manager_queue is not None:
-                manager_queue.put(path)
-            else:
-                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-            transformed_doc_path = new_representation_path + icustayid + '.pkl'
-            if os.path.exists(transformed_doc_path):
-                new_paths[icustayid] = transformed_doc_path
-                if self.representation_length is None:
-                    with open(transformed_doc_path, 'rb') as fhandler:
-                        new_representation = pickle.load(fhandler)
-                        self.representation_length = len(new_representation)
-                continue
-            data = self.__load_data(path)
-            new_representation = self.__transform(data)
-            if self.representation_length is None:
-                self.representation_length = len(new_representation)
-            with open(transformed_doc_path, 'wb') as fhandler:
-                pickle.dump(new_representation, fhandler)
-            new_paths[icustayid] = transformed_doc_path
-            consumed += 1
-        return new_paths
-
-    def create_autoencoder_representation(self, dataset, new_representation_path=None):
-        with multiprocessing.Pool(processes=1) as pool:
-            manager = multiprocessing.Manager()
-            manager_queue = manager.Queue()
-            partial_transform_representation = partial(self.transform_representations,
-                                                       new_representation_path=new_representation_path,
-                                                        manager_queue=manager_queue)
-            data = numpy.array_split(dataset, 6)
-            # self.transform_representations(data[0], new_representation_path=new_representation_path, manager_queue=manager_queue)
-            # exit()
-            total_files = len(dataset)
-            map_obj = pool.map_async(partial_transform_representation, data)
-            consumed = 0
-            while not map_obj.ready() or manager_queue.qsize() != 0:
-                for _ in range(manager_queue.qsize()):
-                    manager_queue.get()
-                    consumed += 1
-                sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
-            result = map_obj.get()
-            padded_paths = dict()
-            for r in result:
-                padded_paths.update(r)
-            self.new_paths = padded_paths
-
-    def __load_data(self, path):
-        if 'pkl' in path.split('.')[-1]:
-            with open(path, 'rb') as fhandler:
-                return pickle.load(fhandler)
-        elif 'csv' in path.split('.')[-1]:
-            return pandas.read_csv(path).values
-
-    def __transform(self, data):
-        data = np.array([data])
-        prediction = self.encoder.predict(data)
-        return prediction
-
-    def get_new_paths(self, files_list):
-        if self.new_paths is not None and len(self.new_paths.keys()) != 0:
-            new_list = []
-            for file in files_list:
-                if file in self.new_paths.keys():
-                    new_list.append(self.new_paths[file])
-            return new_list
-        else:
-            raise Exception("Data not transformed!")
-
-
 class ClinicalBertTextRepresentationTransform():
 
     def __init__(self, transformed_text_saving_path:str):
@@ -799,7 +547,7 @@ class ClinicalBertTextRepresentationTransform():
         self.transformed_text_saving_path = transformed_text_saving_path
 
     def transform(self, data_df: pandas.DataFrame, text_paths_column:str, tokenization_strategy:str= "all", n_tokens:int=128,
-                  sentence_encoding_strategy:str="mean") -> pandas.Series:
+                  sentence_encoding_strategy:str="mean", remove_temporal_axis:bool=False) -> pandas.DataFrame:
         """
         Do the transformation of clinical texts
         :param data_df: the dataset
@@ -809,8 +557,15 @@ class ClinicalBertTextRepresentationTransform():
         :param sentence_encoding_strategy: if use the mean over the sentences encoding to represent the text or to use only the [CLS] token
         :return: the new paths for the encoded representation files
         """
+        if remove_temporal_axis:
+            remove_no_text_constant = True
+            document_mean = False
+        else:
+            remove_no_text_constant = False
+            document_mean = True
         episodes = []
         new_paths = []
+        labels = []
         consumed = 0
         total_files = len(data_df)
         for index, row in data_df.iterrows():
@@ -820,18 +575,26 @@ class ClinicalBertTextRepresentationTransform():
             if os.path.exists(episode_representation_path):
                 episodes.append(row['episode'])
                 new_paths.append(episode_representation_path)
+                labels.append(row['label'])
                 continue
             texts_df = pandas.read_csv(row[text_paths_column], index_col='bucket').sort_index()
             ids_series:pandas.Series = self.clinical_tokenizer.process_texts_df_for_bert(texts_df,
                                                                                          text_strategy=tokenization_strategy,
-                                                                                         n_tokens=n_tokens)
+                                                                                         n_tokens=n_tokens,
+                                                                                         remove_no_text_constant=remove_no_text_constant)
+            if ids_series is None:
+                continue
+            if remove_temporal_axis:
+                ids_series = self.__remove_temporal_axis(ids_series)
             encoded_text_sequence = self.bert_transformer.transform_ids_series(ids_series,
-                                                                               sentence_encoding_strategy=sentence_encoding_strategy)
+                                                                               sentence_encoding_strategy=sentence_encoding_strategy,
+                                                                               document_mean=document_mean)
             encoded_text_sequence = np.asarray(encoded_text_sequence.values.tolist())
             self.__save_encoded_text(episode_representation_path, encoded_text_sequence)
             new_paths.append(episode_representation_path)
             episodes.append(row['episode'])
-        new_paths = pandas.Series(new_paths, index=episodes)
+            labels.append(row['label'])
+        new_paths = pandas.DataFrame({'path':new_paths, 'label':labels}, index=episodes)
         return new_paths
 
     def __get_encoded_path(self, episode:str) -> str :
@@ -841,17 +604,29 @@ class ClinicalBertTextRepresentationTransform():
         with open(episode_saving_path, 'wb') as file:
             pickle.dump(encoded_representation, file)
 
+    def __remove_temporal_axis(self, ids_series:pandas.Series):
+        new_series = []
+        for index, document in ids_series.iteritems():
+            for sentence in document:
+                sentence = sentence.tolist()
+                sentence = torch.as_tensor([sentence])
+                new_series.append(sentence)
+        new_series = pandas.Series(new_series)
+        return new_series
+
 
 class TransformTextsWithHuggingfaceBert():
 
     def __init__(self):
         self.model = None
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     def load_clinical_bert(self):
         if self.model is None:
             self.model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+            self.model = self.model.to(self.device)
 
-    def transform_ids_series(self, ids_series:pandas.Series, sentence_encoding_strategy:str="mean"):
+    def transform_ids_series(self, ids_series:pandas.Series, sentence_encoding_strategy:str="mean", document_mean:bool=True):
         if self.model is None:
             self.load_clinical_bert()
         if sentence_encoding_strategy != "mean" and sentence_encoding_strategy != "cls":
@@ -860,15 +635,17 @@ class TransformTextsWithHuggingfaceBert():
         for index, value in ids_series.iteritems():
             encoded_sentences = []
             for tensor in value:
+                tensor = tensor.to(self.device)
                 # print(tensor, tensor.shape)
                 # print("------------")
                 outputs = None
                 try:
-                    outputs = self.model(tensor)
+                    with torch.no_grad():
+                        outputs = self.model(tensor)
                 except Exception as e:
                     print(outputs)
                     print(self.model)
-                    print(self)
+                    print(e)
                     exit()
                 sentence_representation = None
                 if sentence_encoding_strategy == "mean":
@@ -879,8 +656,14 @@ class TransformTextsWithHuggingfaceBert():
                     return None
                 sentence_representation = sentence_representation.tolist()
                 encoded_sentences.append(sentence_representation)
-            if sentence_encoding_strategy != "cls":
+            if document_mean:
                 encoded_sentences = np.mean(encoded_sentences, axis=0)
+            else:
+                new_encoded_sentences = []
+                for sentence in encoded_sentences:
+                    sentence = np.squeeze(sentence)
+                    new_encoded_sentences.append(sentence)
+                encoded_sentences = np.asarray(new_encoded_sentences)
             text_representation = pandas.Series([encoded_sentences], index=[index])
             encoded_texts_sequence = encoded_texts_sequence.append(text_representation)
         return encoded_texts_sequence
@@ -900,10 +683,14 @@ class ClinicalTokenizer():
         self.bert_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
         self.sentence_tokenizer = spacy.load("en_core_sci_md")
 
-    def process_texts_df_for_bert(self, texts_df:pandas.DataFrame, text_strategy:str="all", n_tokens:int=128):
+    def process_texts_df_for_bert(self, texts_df:pandas.DataFrame, text_strategy:str="all", n_tokens:int=128,
+                                  remove_no_text_constant=False):
         encoded_sentences = pandas.Series([])
         for index, row in texts_df.iterrows():
             encoded_texts = None
+            if remove_no_text_constant:
+                if row['text'] == constants.NO_TEXT_CONSTANT:
+                    continue
             if text_strategy == "all":
                 encoded_texts = self.__bert_encode_all_strategy(index, row['text'], n_tokens)
             elif text_strategy == "first":
@@ -911,6 +698,8 @@ class ClinicalTokenizer():
             elif text_strategy == "last":
                 encoded_texts = self.__bert_encode_last_strategy(index, row['text'], n_tokens)
             encoded_sentences = encoded_sentences.append(encoded_texts)
+        if encoded_sentences.empty:
+            return None
         return encoded_sentences
 
     def __bert_encode_all_strategy(self, index, text:str, n_tokens:int):

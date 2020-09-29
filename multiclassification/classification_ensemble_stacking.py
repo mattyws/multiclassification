@@ -23,13 +23,13 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.regularizers import l1
 from tensorflow.keras.metrics import AUC
 
-import functions
+from resources import functions
 from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator, MetaLearnerDataGenerator, \
     ArrayDataGenerator
-from data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
+from resources.data_representation import EnsembleMetaLearnerDataCreator, TransformClinicalTextsRepresentations
 from ensemble_training import TrainEnsembleAdaBoosting, TrainEnsembleBagging, split_classes
-from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+from resources.functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, remove_sepsis_mentions, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     train_representation_model, remove_columns_for_classification
 from keras_callbacks import Metrics
@@ -40,7 +40,7 @@ from normalization import Normalization, NormalizationValues
 import kerastuner as kt
 
 from result_evaluation import ModelEvaluation
-
+import os
 
 def change_weak_classifiers(model):
     new_model = Model(inputs=model.input, outputs=model.layers[-2].output)
@@ -124,18 +124,6 @@ def test_sklearn_meta_models_on_generator(model, generator):
     evaluation =  ModelEvaluation(model, files, trueClasses, predicted)
     return evaluation.metrics
 
-# def train_evaluation_split_with_icustay(episodes, paths):
-#     train = []
-#     evaluation = []
-#     for path in paths:
-#         path_icustay = path.split('/')[-1].split('.')[0]
-#         if path_icustay in icustays:
-#             train.append(path)
-#         else:
-#             evaluation.append(path)
-#     return np.asarray(train), np.asarray(evaluation)
-
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 from multiclassification.parameters.classification_parameters import ensemble_stacking_parameters as parameters
@@ -187,19 +175,21 @@ print_with_time("Training/Loading representation model")
 preprocessing_pipeline = [whitespace_tokenize_text]
 texts_hourly_merged_dir = parameters['multiclassification_base_path'] + "textual_hourly_merged/"
 representation_model_data = [texts_hourly_merged_dir + x for x in os.listdir(texts_hourly_merged_dir)]
-textual_representation_model_path = parameters['textual_representation_model_path'] + \
-                                     "{}/{}".format(embedding_size, parameters['textual_representation_model_filename'])
-if not os.path.exists(parameters['textual_representation_model_path'] + "{}/".format(embedding_size)):
-    os.makedirs(parameters['textual_representation_model_path'] + "{}/".format(embedding_size))
+textual_representation_model_path = os.path.join(parameters['textual_representation_model_path'], str(embedding_size),
+                                                    parameters['textual_representation_model_filename'])
+if not os.path.exists(textual_representation_model_path):
+    os.makedirs(textual_representation_model_path)
 representation_model = train_representation_model(representation_model_data,
                                                 textual_representation_model_path,
                                                   min_count, embedding_size, workers, window, iterations,
                                                   hs=parameters['textual_doc2vec_hs'], dm=parameters['textual_doc2vec_dm'],
                                                   negative=parameters['textual_doc2vec_negative'],
                                                   preprocessing_pipeline=preprocessing_pipeline, word2vec=False)
+
 print_with_time("Transforming/Retrieving representation")
-notes_textual_representation_path = parameters['textual_representation_model_path'] \
-                                    + "{}/{}/{}".format(embedding_size, problem, parameters['notes_textual_representation_directory'])
+notes_textual_representation_path = os.path.join(parameters['textual_representation_model_path'],
+                                                 str(embedding_size), problem,
+                                                 parameters['notes_textual_representation_directory'])
 if not os.path.exists(notes_textual_representation_path):
     os.makedirs(notes_textual_representation_path)
 texts_transformer = TransformClinicalTextsRepresentations(representation_model, embedding_size=embedding_size,
@@ -568,12 +558,12 @@ for trainIndex, testIndex in kf.split(structured_data, classes):
                                      + parameters['structured_testing_events_sizes_labels_filename'].format(fold)
 
     train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
-                          , classes[trainIndex]
-                          , sizes_filename=training_events_sizes_file_path
-                          , classes_filename=training_events_sizes_labels_file_path)
+                                                                  , classes[trainIndex]
+                                                                  , sizes_filename=training_events_sizes_file_path
+                                                                  , classes_filename=training_events_sizes_labels_file_path)
     test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
-                                , sizes_filename=testing_events_sizes_file_path
-                                , classes_filename=testing_events_sizes_labels_file_path)
+                                                                , sizes_filename=testing_events_sizes_file_path
+                                                                , classes_filename=testing_events_sizes_labels_file_path)
 
     dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
                                                          max_batch_size=parameters['structured_batch_size'])
@@ -631,12 +621,12 @@ for trainIndex, testIndex in kf.split(structured_data, classes):
                                       + parameters['textual_testing_events_sizes_labels_filename'].format(fold)
 
     train_sizes, train_labels = functions.divide_by_events_lenght(textual_transformed_data[trainIndex]
-                          , classes[trainIndex]
-                          , sizes_filename=training_events_sizes_file_path
-                          , classes_filename=training_events_sizes_labels_file_path)
+                                                                  , classes[trainIndex]
+                                                                  , sizes_filename=training_events_sizes_file_path
+                                                                  , classes_filename=training_events_sizes_labels_file_path)
     test_sizes, test_labels = functions.divide_by_events_lenght(textual_transformed_data[testIndex], classes[testIndex]
-                        , sizes_filename=testing_events_sizes_file_path
-                        , classes_filename=testing_events_sizes_labels_file_path)
+                                                                , sizes_filename=testing_events_sizes_file_path
+                                                                , classes_filename=testing_events_sizes_labels_file_path)
     dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
                                                          max_batch_size=parameters['textual_batch_size'])
     dataTrainGenerator.create_batches()
@@ -783,12 +773,12 @@ testing_events_sizes_labels_file_path = training_directory \
                                  + parameters['structured_testing_events_sizes_labels_filename'].format("all")
 
 train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data
-                              , classes
-                              , sizes_filename=training_events_sizes_file_path
-                              , classes_filename=training_events_sizes_labels_file_path)
+                                                              , classes
+                                                              , sizes_filename=training_events_sizes_file_path
+                                                              , classes_filename=training_events_sizes_labels_file_path)
 test_sizes, test_labels = functions.divide_by_events_lenght(normalized_evaluation, classes_evaluation
-                            , sizes_filename=testing_events_sizes_file_path
-                            , classes_filename=testing_events_sizes_labels_file_path)
+                                                            , sizes_filename=testing_events_sizes_file_path
+                                                            , classes_filename=testing_events_sizes_labels_file_path)
 dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
                                                      max_batch_size=parameters['structured_batch_size'])
 dataTrainGenerator.create_batches()
@@ -847,12 +837,12 @@ testing_events_sizes_labels_file_path = training_directory \
                                         + parameters['textual_testing_events_sizes_labels_filename'].format("all")
 
 train_sizes, train_labels = functions.divide_by_events_lenght(textual_transformed_data
-                              , classes
-                              , sizes_filename=training_events_sizes_file_path
-                              , classes_filename=training_events_sizes_labels_file_path)
+                                                              , classes
+                                                              , sizes_filename=training_events_sizes_file_path
+                                                              , classes_filename=training_events_sizes_labels_file_path)
 test_sizes, test_labels = functions.divide_by_events_lenght(textual_evaluation, classes_evaluation
-                    , sizes_filename=testing_events_sizes_file_path
-                    , classes_filename=testing_events_sizes_labels_file_path)
+                                                            , sizes_filename=testing_events_sizes_file_path
+                                                            , classes_filename=testing_events_sizes_labels_file_path)
 dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
                                                      max_batch_size=parameters['structured_batch_size'])
 dataTrainGenerator.create_batches()

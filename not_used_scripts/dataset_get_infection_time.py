@@ -16,7 +16,7 @@ import pandas as pd
 import multiprocessing as mp
 import sys
 
-import functions
+from resources import functions
 
 pd.set_option('mode.chained_assignment', None)
 

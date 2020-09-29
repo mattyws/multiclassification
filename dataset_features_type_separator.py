@@ -9,7 +9,7 @@ import pprint
 import sys
 from functools import partial
 
-import functions
+from resources import functions
 import pandas as pd
 import numpy as np
 import multiprocessing as mp

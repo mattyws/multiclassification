@@ -15,10 +15,10 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.utils import resample, class_weight
 from dtaidistance import dtw
 
-import functions
+from resources import functions
 from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator
-from functions import print_with_time
+from resources.functions import print_with_time
 
 
 def split_classes(classes):

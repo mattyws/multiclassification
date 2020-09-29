@@ -16,7 +16,8 @@ import sys
 from nltk import WhitespaceTokenizer, RegexpTokenizer
 from nltk.tokenize.api import StringTokenizer
 
-import functions
+from resources import functions
+
 
 def create_features_dict():
     return {

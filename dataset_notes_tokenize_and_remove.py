@@ -8,9 +8,9 @@ import multiprocessing as mp
 import sys
 from nltk import WhitespaceTokenizer
 
-import functions
+from resources import functions
 
-from functions import remove_only_special_characters_tokens
+from resources.functions import remove_only_special_characters_tokens
 
 
  def process_notes(icustays, noteevents_data_path=None, tokenized_events_data_path=None, manager_queue=None):

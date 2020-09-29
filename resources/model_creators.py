@@ -44,16 +44,14 @@ class ModelCreator(object, metaclass=abc.ABCMeta):
 
 class KerasTunerModelCreator(ModelCreator):
 
-    def __init__(self, tuner : Tuner, hyper_model:HyperModel, model_name : str, remove_last_layer: bool = False):
+    def __init__(self, tuner : Tuner, model_name : str, remove_last_layer: bool = False):
         self.tuner = tuner
-        self.hyper_model = hyper_model
         self.best_hp = tuner.get_best_hyperparameters(num_trials=1)[0]
         self.name = model_name
         self.remove_last_layer = remove_last_layer
 
     def create(self, model_summary_filename=None):
-        # model = self.tuner.hypermodel.build(self.best_hp)
-        model = self.hyper_model.build(self.best_hp)
+        model = self.tuner.hypermodel.build(self.best_hp)
         print(model.summary())
         if model_summary_filename is not None:
             with open(model_summary_filename, 'w') as summary_file:
@@ -88,7 +86,7 @@ class BertModelCreator(object):
         return model, l_bert
 
     def create_representation_model(self, albert_model_name = "albert_base_v2"):
-        albert_dir = bert.fetch_google_albert_model(albert_model_name, ".models")
+        albert_dir = bert.fetch_google_albert_model(albert_model_name, "../.models")
         model_ckpt = os.path.join(albert_dir, "model.ckpt-best")
 
         albert_params = bert.albert_params(albert_dir)
@@ -452,7 +450,7 @@ class MultilayerConvolutionalNNCreator(ModelCreator):
         activation = copy.deepcopy(self.layersActivations[0])
         layer = activation(layer)
         if self.pooling[0]:
-            layer = GlobalAveragePooling1D()(layer)
+            layer = MaxPool1D()(layer)
         if len(self.outputUnits) > 1:
             for i in range(1, len(self.outputUnits)):
                 if i == len(self.outputUnits) - 1:
@@ -621,7 +619,7 @@ class MixedInputModelCreator(ModelCreator):
         input, output = self.build_network()
         model = Model(inputs=input, outputs=output)
         model.compile(loss=self.loss, optimizer=self.optimizer, metrics=self.metrics)
-        plot_model(model, to_file="model.png")
+        plot_model(model, to_file="../model.png")
         if model_summary_filename is not None:
             with open(model_summary_filename, 'w') as summary_file:
                 model.summary(print_fn=lambda x: summary_file.write(x + '\n'))
@@ -778,6 +776,81 @@ def get_optimizers_by_string(optimizer_string):
             epsilon=1e-07,
             amsgrad=True
         )
+
+class MultilayerConvolutionalNNHyperModel(HyperModel):
+
+    name = "TCN_MODEL"
+
+    def __init__(self, input_shape, output_units, metrics, params,
+                 model_input_name:str=None):
+        self.input_shape = input_shape
+        self.output_units = output_units
+        self.params = params
+        self.metrics = metrics
+        self.model_input_name = model_input_name
+
+    def build(self, hp):
+        layers = hp.Int('layers',
+                        min_value=self.params['layers_min'],
+                        max_value=self.params['layers_max'],
+                        step=self.params['layers_step'])
+        print("Layers ", layers )
+        hidden_output_units = generate_n_ints(layers, self.params['hidden_output_units_min'],
+                                              self.params['hidden_output_units_max'],
+                                              self.params['hidden_output_units_steps'],
+                                              'units_{}', hp)
+        print("Hidden units ", hidden_output_units)
+        loss = hp.Choice('loss', self.params['losses'])
+        print("Loss ", loss)
+        hidden_activations = generate_n_choices(layers, self.params['hidden_activations'],'activation_{}', hp)
+        aux = []
+        for activation in hidden_activations:
+            aux.append(get_activation_by_string(activation))
+        hidden_activations = aux
+        print("Activations ", hidden_activations)
+        network_activation = hp.Choice('networkActivation', self.params['network_activations'])
+        # network_activation = get_activation_by_string(network_activation)
+        print("Net activations ", network_activation)
+        pooling = generate_n_choices(layers, self.params['hidden_pooling'], 'pooling_{}', hp)
+        print("Pooling ", pooling)
+        kernel_sizes = generate_n_ints(layers, self.params['kernel_size_min'], self.params['kernel_size_max'],
+                                       self.params['kernel_size_step'], 'kernel_size_{}', hp)
+        print("Kernel sizes ", kernel_sizes)
+        dilations = generate_n_int_arrays(layers, self.params['min_dilation_size'], self.params['max_dilation_size'],
+                                          self.params['dilation_size_step'], 'dilation_{}', self.params['min_dilation'],
+                                          self.params['max_dilation'], self.params['dilation_step'], 'num_{}', hp)
+        print("Dilations ", dilations)
+        num_stacks = generate_n_ints(layers, self.params['stacks_min'], self.params['stacks_max'],
+                                     self.params['stacks_steps'], 'stack_{}', hp)
+        print("Number of stacks ", num_stacks)
+        use_dropout = hp.Choice('use_dropout', self.params['use_dropout'])
+        print("Use dropout? ", use_dropout)
+        dropout = None
+        if use_dropout:
+            dropout = hp.Choice('dropout', self.params['dropout_choices'])
+        print("Dropout ", dropout)
+        optimizer = hp.Choice('optimizer', self.params['optimizers'])
+        optimizer = get_optimizers_by_string(optimizer)
+        print("Network optimizer ", optimizer)
+        model_creator = MultilayerTemporalConvolutionalNNCreator(self.input_shape,
+                                                 hidden_output_units,
+                                                 self.output_units,
+                                                 loss=loss,
+                                                 layersActivations=hidden_activations,
+                                                 networkActivation=network_activation,
+                                                 pooling=pooling,
+                                                 kernel_sizes=kernel_sizes,
+                                                 use_dropout=use_dropout,
+                                                 dilations=dilations,
+                                                 nb_stacks=num_stacks,
+                                                 dropout=dropout,
+                                                 kernel_regularizer=None,
+                                                 metrics=self.metrics,
+                                                 model_input_name=self.model_input_name,
+                                                 optimizer=optimizer)
+        adapter = model_creator.create()
+        model = adapter.model
+        return model
 
 
 class MultilayerTemporalConvolutionalNNHyperModel(HyperModel):

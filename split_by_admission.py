@@ -2,7 +2,7 @@ import csv
 import json
 import os
 import shutil
-import functions
+from resources import functions
 from time import time
 
 parameters = functions.load_parameters_file()

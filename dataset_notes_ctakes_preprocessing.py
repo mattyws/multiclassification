@@ -17,7 +17,8 @@ import sys
 
 from nltk import WhitespaceTokenizer, RegexpTokenizer
 
-import functions
+from resources import functions
+
 
 def escape_invalid_xml_characters(text):
     text = escape(text)

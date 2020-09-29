@@ -12,7 +12,7 @@ from itertools import product
 import numpy as np
 import pandas as pd
 
-import functions
+from resources import functions
 
 
 def filter_events(df_split, table_name, mimic_data_path="", manager_queue=None, events_dirname=""):

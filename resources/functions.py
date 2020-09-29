@@ -19,21 +19,18 @@ from os import pathsep
 import unicodedata
 
 from nltk import WhitespaceTokenizer
-from sklearn.metrics.classification import f1_score, precision_score, recall_score, cohen_kappa_score, accuracy_score, \
-    confusion_matrix, classification_report
-from sklearn.metrics.ranking import roc_auc_score
 
 from adapter import Word2VecTrainer, Doc2VecTrainer
-from data_generators import NoteeventsTextDataGenerator, TaggedNoteeventsDataGenerator
+from resources.data_generators import NoteeventsTextDataGenerator, TaggedNoteeventsDataGenerator
 
 DATE_PATTERN = "%Y-%m-%d"
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 
 
 def load_parameters_file():
-    if not os.path.exists('parameters.json'):
+    if not os.path.exists('../parameters.json'):
         raise FileNotFoundError("Parameter file doesn't exists!")
-    parameters = json.load(open('parameters.json'))
+    parameters = json.load(open('../parameters.json'))
     return parameters
 
 def chunk_lst(data, SIZE=10000):
@@ -51,7 +48,8 @@ def train_representation_model(files_paths, saved_model_path, min_count, size, w
         model_trainer = Word2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations)
     elif not word2vec and noteevents_iterator is None:
         noteevents_iterator = TaggedNoteeventsDataGenerator(files_paths, preprocessing_pipeline=preprocessing_pipeline)
-        model_trainer = Doc2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations, hs=1, dm=1, negative=0)
+        model_trainer = Doc2VecTrainer(min_count=min_count, size=size, workers=workers, window=window, iter=iterations,
+                                       hs=hs, dm=dm, negative=negative)
     if model_trainer is not None and os.path.exists(saved_model_path):
         model = model_trainer.load_model(saved_model_path)
         return model
@@ -337,7 +335,7 @@ def text_to_lower(text):
 
 def whitespace_tokenize_text(text):
     tokenizer = WhitespaceTokenizer()
-    return tokenizer.tokenize(text)
+    return tokenizer.tokenize(str(text))
 
 def tokenize_text(text):
     sentence_detector = nltk.data.load('tokenizers/punkt/english.pickle')

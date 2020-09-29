@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import pickle
+import sys
 from collections import Counter
 from pprint import PrettyPrinter
 
@@ -18,16 +19,16 @@ from sklearn.utils import class_weight
 from tensorflow.keras.metrics import AUC
 
 from adapter import KerasAdapter
-from data_representation import ClinicalBertTextRepresentationTransform
+from resources.data_representation import ClinicalBertTextRepresentationTransform
 from multiclassification.parameters.classification_parameters import timeseries_textual_training_parameters as parameters
 from multiclassification.parameters.classification_parameters import model_tuner_parameters as tuner_parameters
 
-import functions
+from resources import functions
 from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator
-from functions import test_model, print_with_time
+from resources.functions import test_model, print_with_time
 from keras_callbacks import Metrics
 from model_creators import MultilayerKerasRecurrentNNCreator, MultilayerTemporalConvolutionalNNCreator, \
-    KerasTunerModelCreator, MultilayerTemporalConvolutionalNNHyperModel
+    KerasTunerModelCreator, MultilayerTemporalConvolutionalNNHyperModel, MultilayerKerasRecurrentNNHyperModel
 from normalization import Normalization, NormalizationValues
 import kerastuner as kt
 
@@ -68,15 +69,63 @@ if not os.path.exists(transformed_texts_path):
     os.makedirs(transformed_texts_path)
 text_transformer = ClinicalBertTextRepresentationTransform(transformed_texts_path)
 new_paths = text_transformer.transform(data_csv, 'textual_path', tokenization_strategy=parameters['tokenization_strategy'],
-                           sentence_encoding_strategy=parameters['sentence_encoding_strategy'])
-data_csv['textual_path'] = new_paths
-classes = np.asarray(data_csv['label'].tolist())
-data = np.asarray(data_csv['textual_path'].tolist())
+                           sentence_encoding_strategy=parameters['sentence_encoding_strategy'], remove_temporal_axis=True)
+classes = np.asarray(new_paths['label'].tolist())
+data = np.asarray(new_paths['path'].tolist())
+
+
+def get_shape(lst, shape=()):
+    """
+    returns the shape of nested lists similarly to numpy's shape.
+
+    :param lst: the nested list
+    :param shape: the shape up to the current recursion depth
+    :return: the shape including the current depth
+            (finally this will be the full depth)
+    """
+
+    if not isinstance(lst, np.ndarray):
+        # base case
+        print(type(lst))
+        return shape
+
+    # peek ahead and assure all lists in the next depth
+    # have the same length
+    if isinstance(lst[0], np.ndarray):
+        l = len(lst[0])
+        if not all(len(item) == l for item in lst):
+            msg = 'not all lists have the same length'
+            raise ValueError(msg)
+
+    shape += (len(lst), )
+
+    # recurse
+    shape = get_shape(lst[0], shape)
+
+    return shape
+
+# consumed = 0
+# total_files = len(data)
+# for path in data:
+#     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+#     doc = pickle.load(open(path, 'rb'))
+#     new_doc = []
+#     for sentence in doc:
+#         sentence = np.squeeze(sentence)
+#         print(get_shape(sentence))
+#         new_doc.append(sentence)
+#     new_doc = np.asarray(new_doc)
+#     with open(path, 'wb') as f :
+#          pickle.dump(new_doc, f)
+#     consumed += 1
+
 
 # Get input shape
-aux = pickle.load(open(new_paths.values.tolist()[0], 'rb'))
+aux = pickle.load(open(data[0], 'rb'))
+print(get_shape(aux))
+aux = np.asarray(aux)
 inputShape = (None, len(aux[0]))
-
+parameters['model_tunning'] = False
 if parameters['model_tunning']:
     training_samples_path = training_directory + parameters['training_samples_filename']
     training_classes_path = training_directory + parameters['training_classes_filename']
@@ -112,6 +161,11 @@ if parameters['model_tunning']:
     testing_events_sizes_labels_file_path = training_directory + parameters[
         'testing_events_sizes_labels_filename'].format('opt')
 
+    # print(data_opt)
+    # print(classes_opt)
+    # print(training_events_sizes_file_path)
+    # print(training_events_sizes_labels_file_path)
+    # exit()
     train_sizes, train_labels = functions.divide_by_events_lenght(data_opt
                                                                   , classes_opt
                                                                   , sizes_filename=training_events_sizes_file_path
@@ -121,17 +175,23 @@ if parameters['model_tunning']:
                                                          max_batch_size=parameters['batchSize'])
     dataTrainGenerator.create_batches()
 
+    # model_builder = MultilayerKerasRecurrentNNHyperModel(inputShape,
+    #                                                     parameters['numOutputNeurons'],
+    #                                                     True,
+    #                                                     [AUC(name='auc')],
+    #                                                     tuner_parameters)
+
     model_builder = MultilayerTemporalConvolutionalNNHyperModel(inputShape, parameters['numOutputNeurons'],
                                                                 [AUC()], tuner_parameters)
     tunning_directory = checkpoint_directory + parameters['tunning_directory']
     tuner = kt.Hyperband(model_builder,
                          objective=kt.Objective('auc', direction="max"),
-                         max_epochs=10,
+                         max_epochs=40,
                          directory=tunning_directory,
                          project_name='timeseries',
-                         factor=3)
-    tuner.search(dataTrainGenerator, epochs=10)
-    modelCreator = KerasTunerModelCreator(tuner)
+                         factor=4)
+    tuner.search(dataTrainGenerator, epochs=40)
+    modelCreator = KerasTunerModelCreator(tuner, model_builder.name)
 else:
     if not parameters['tcn']:
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'],
@@ -186,8 +246,8 @@ with open(result_file_path, 'a+') as cvsFileHandler: # where the results for eac
                                                                       , sizes_filename=training_events_sizes_file_path
                                                                       , classes_filename=training_events_sizes_labels_file_path)
         test_sizes, test_labels = functions.divide_by_events_lenght(data[testIndex], classes[testIndex]
-                                                            , sizes_filename = testing_events_sizes_file_path
-                                                            , classes_filename = testing_events_sizes_labels_file_path)
+                                                                    , sizes_filename = testing_events_sizes_file_path
+                                                                    , classes_filename = testing_events_sizes_labels_file_path)
 
         dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels, max_batch_size=parameters['batchSize'])
         dataTrainGenerator.create_batches()
@@ -198,7 +258,7 @@ with open(result_file_path, 'a+') as cvsFileHandler: # where the results for eac
             epochs = parameters['trainingEpochs']
             metrics_callback = Metrics(dataTestGenerator)
             print_with_time("Training model")
-            kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None, class_weights=None)
+            kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None, class_weights=None, use_multiprocessing=False)
             kerasAdapter.save(trained_model_path)
         else:
             kerasAdapter = KerasAdapter.load_model(trained_model_path)

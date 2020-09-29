@@ -1,41 +1,30 @@
 import csv
-import json
 import os
 import pickle
-from collections import Counter
-from pprint import PrettyPrinter
 
 import pandas as pd
 import numpy as np
 
 import keras
-from keras import backend as K
-import tensorflow as tf
-from keras.regularizers import l1_l2
 
 from sklearn.model_selection._split import StratifiedKFold, train_test_split
-from sklearn.utils import class_weight
 from tensorflow.keras.metrics import AUC
 
 from adapter import KerasAdapter
-from multiclassification.parameters.classification_parameters import timeseries_training_parameters as parameters
+from resources.data_representation import TransformClinicalTextsRepresentations
+from multiclassification.parameters.classification_parameters import timeseries_textual_training_parameters as parameters
 from multiclassification.parameters.classification_parameters import model_tuner_parameters as tuner_parameters
 
 from resources import functions
-from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator
-from resources.functions import test_model, print_with_time
-from keras_callbacks import Metrics
-from model_creators import MultilayerKerasRecurrentNNCreator, MultilayerTemporalConvolutionalNNCreator, \
+from resources.data_generators import LengthLongitudinalDataGenerator
+from resources.functions import test_model, print_with_time, whitespace_tokenize_text, train_representation_model
+from resources.keras_callbacks import Metrics
+from resources.model_creators import MultilayerKerasRecurrentNNCreator, MultilayerTemporalConvolutionalNNCreator, \
     KerasTunerModelCreator, MultilayerTemporalConvolutionalNNHyperModel
-from normalization import Normalization, NormalizationValues
 import kerastuner as kt
 
-def focal_loss(y_true, y_pred):
-    gamma = 2.0
-    alpha = 0.25
-    pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
-    pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
-    return -K.sum(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1))-K.sum((1-alpha) * K.pow( pt_0, gamma) * K.log(1. - pt_0))
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
@@ -57,36 +46,108 @@ dataset_path = parameters['multiclassification_base_path'] + parameters[problem+
 
 data_csv = pd.read_csv(dataset_path)
 data_csv = data_csv.sort_values(['episode'])
-# Get the paths for the files
-data = np.array(data_csv['structured_path'].tolist())
+
 print_with_time("Class distribution")
 print(data_csv['label'].value_counts())
-classes = np.array(data_csv['label'].tolist())
-data, X_val, classes, classes_evaluation = train_test_split(data, classes, stratify=classes,
-                                                             test_size=.10)
-print(pd.Series(classes).value_counts())
-print_with_time("Computing class weights")
-class_weights = class_weight.compute_class_weight('balanced',
-                                                 np.unique(classes),
-                                                 classes)
-mapped_weights = dict()
-for value in np.unique(classes):
-    mapped_weights[value] = class_weights[value]
-class_weights = mapped_weights
 
 
 # Using a seed always will get the same data split even if the training stops
 kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=15)
 
-print_with_time("Preparing normalization values")
-normalization_value_counts_path = training_directory + parameters['normalization_value_counts_directory']
-normalization_values = NormalizationValues(data, pickle_object_path=normalization_value_counts_path)
-normalization_values.prepare()
-# Get input shape
-aux = pd.read_csv(data[0])
-aux = functions.remove_columns_for_classification(aux)
-inputShape = (None, len(aux.columns))
 
+print_with_time("Training/Loading representation model")
+embedding_size = parameters['textual_embedding_size']
+min_count = parameters['textual_min_count']
+workers = parameters['textual_workers']
+window = parameters['textual_window']
+iterations = parameters['textual_iterations']
+textual_input_shape = (None, embedding_size)
+preprocessing_pipeline = [whitespace_tokenize_text]
+
+texts_hourly_merged_dir = parameters['multiclassification_base_path'] + "textual_hourly_merged/"
+representation_model_data = [texts_hourly_merged_dir + x for x in os.listdir(texts_hourly_merged_dir)]
+textual_representation_path = os.path.join(parameters['textual_representation_model_path'], str(embedding_size))
+textual_representation_model_path = os.path.join(textual_representation_path,
+                                                    parameters['textual_representation_model_filename'])
+if not os.path.exists(textual_representation_path):
+    os.makedirs(textual_representation_path)
+representation_model = train_representation_model(representation_model_data,
+                                                textual_representation_model_path,
+                                                  min_count, embedding_size, workers, window, iterations,
+                                                  hs=parameters['textual_doc2vec_hs'], dm=parameters['textual_doc2vec_dm'],
+                                                  negative=parameters['textual_doc2vec_negative'],
+                                                  preprocessing_pipeline=preprocessing_pipeline, word2vec=False)
+
+
+print_with_time("Transforming/Retrieving representation")
+notes_textual_representation_path = os.path.join(textual_representation_path, problem,
+                                                 parameters['notes_textual_representation_directory'])
+if not os.path.exists(notes_textual_representation_path):
+    os.makedirs(notes_textual_representation_path)
+texts_transformer = TransformClinicalTextsRepresentations(representation_model, embedding_size=embedding_size,
+                                                          window=window,
+                                                          representation_save_path=notes_textual_representation_path,
+                                                          is_word2vec=False)
+representation_model = None
+new_paths = texts_transformer.transform(data_csv, 'textual_path', preprocessing_pipeline=preprocessing_pipeline,
+                                        remove_temporal_axis=parameters['remove_temporal_axis'],
+                                        remove_no_text_constant=parameters['remove_no_text_constant'])
+classes = np.asarray(new_paths['label'].tolist())
+data = np.asarray(new_paths['path'].tolist())
+
+
+def get_shape(lst, shape=()):
+    """
+    returns the shape of nested lists similarly to numpy's shape.
+
+    :param lst: the nested list
+    :param shape: the shape up to the current recursion depth
+    :return: the shape including the current depth
+            (finally this will be the full depth)
+    """
+
+    if not isinstance(lst, np.ndarray):
+        # base case
+        print(type(lst))
+        return shape
+
+    # peek ahead and assure all lists in the next depth
+    # have the same length
+    if isinstance(lst[0], np.ndarray):
+        l = len(lst[0])
+        if not all(len(item) == l for item in lst):
+            msg = 'not all lists have the same length'
+            raise ValueError(msg)
+
+    shape += (len(lst), )
+
+    # recurse
+    shape = get_shape(lst[0], shape)
+
+    return shape
+
+# consumed = 0
+# total_files = len(data)
+# for path in data:
+#     sys.stderr.write('\rdone {0:%}'.format(consumed / total_files))
+#     doc = pickle.load(open(path, 'rb'))
+#     new_doc = []
+#     for sentence in doc:
+#         sentence = np.squeeze(sentence)
+#         print(get_shape(sentence))
+#         new_doc.append(sentence)
+#     new_doc = np.asarray(new_doc)
+#     with open(path, 'wb') as f :
+#          pickle.dump(new_doc, f)
+#     consumed += 1
+
+
+# Get input shape
+aux = pickle.load(open(data[0], 'rb'))
+print(get_shape(aux))
+aux = np.asarray(aux)
+inputShape = (None, len(aux[0]))
+# parameters['model_tunning'] = False
 if parameters['model_tunning']:
     training_samples_path = training_directory + parameters['training_samples_filename']
     training_classes_path = training_directory + parameters['training_classes_filename']
@@ -113,15 +174,7 @@ if parameters['model_tunning']:
             data_opt = pickle.load(f)
         with open(optimization_classes_path, 'rb') as f:
             classes_opt = pickle.load(f)
-    opt_normalization_values_path = training_directory + parameters['optimization_normalization_values_filename']
-    values = normalization_values.get_normalization_values(data_opt,
-                                                           saved_file_name=opt_normalization_values_path)
-    opt_normalization_temporary_data_path = training_directory + parameters[
-        'optimization_normalization_temporary_data_directory']
-    normalizer = Normalization(values, temporary_path=opt_normalization_temporary_data_path)
-    print_with_time("Normalizing optimization data")
-    normalizer.normalize_files(data_opt)
-    normalized_data = np.array(normalizer.get_new_paths(data_opt))
+
     print_with_time("Creating optimization generators")
     training_events_sizes_file_path = training_directory + parameters['training_events_sizes_filename'].format('opt')
     training_events_sizes_labels_file_path = training_directory + parameters[
@@ -130,7 +183,12 @@ if parameters['model_tunning']:
     testing_events_sizes_labels_file_path = training_directory + parameters[
         'testing_events_sizes_labels_filename'].format('opt')
 
-    train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data
+    # print(data_opt)
+    # print(classes_opt)
+    # print(training_events_sizes_file_path)
+    # print(training_events_sizes_labels_file_path)
+    # exit()
+    train_sizes, train_labels = functions.divide_by_events_lenght(data_opt
                                                                   , classes_opt
                                                                   , sizes_filename=training_events_sizes_file_path
                                                                   ,
@@ -139,17 +197,23 @@ if parameters['model_tunning']:
                                                          max_batch_size=parameters['batchSize'])
     dataTrainGenerator.create_batches()
 
+    # model_builder = MultilayerKerasRecurrentNNHyperModel(inputShape,
+    #                                                     parameters['numOutputNeurons'],
+    #                                                     True,
+    #                                                     [AUC(name='auc')],
+    #                                                     tuner_parameters)
+
     model_builder = MultilayerTemporalConvolutionalNNHyperModel(inputShape, parameters['numOutputNeurons'],
                                                                 [AUC()], tuner_parameters)
     tunning_directory = checkpoint_directory + parameters['tunning_directory']
     tuner = kt.Hyperband(model_builder,
                          objective=kt.Objective('auc', direction="max"),
-                         max_epochs=10,
+                         max_epochs=40,
                          directory=tunning_directory,
                          project_name='timeseries',
-                         factor=3)
-    tuner.search(dataTrainGenerator, epochs=10)
-    modelCreator = KerasTunerModelCreator(tuner)
+                         factor=4)
+    tuner.search(dataTrainGenerator, epochs=40)
+    modelCreator = KerasTunerModelCreator(tuner, model_builder.name)
 else:
     if not parameters['tcn']:
         modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'],
@@ -188,16 +252,6 @@ with open(result_file_path, 'a+') as cvsFileHandler: # where the results for eac
         #     i += 1
         #     continue
         print_with_time("Fold {}".format(i))
-        print_with_time("Getting values for normalization")
-        # normalization_values = Normalization.get_normalization_values(data[trainIndex])
-        fold_normalization_values_path = training_directory + parameters['fold_normalization_values_filename'].format(i)
-        values = normalization_values.get_normalization_values(data[trainIndex],
-                                                               saved_file_name=fold_normalization_values_path)
-        fold_normalization_temporary_data_path = training_directory + parameters['fold_normalization_temporary_data_directory'].format(i)
-        normalizer = Normalization(values, temporary_path=fold_normalization_temporary_data_path)
-        print_with_time("Normalizing fold data")
-        normalizer.normalize_files(data)
-        normalized_data = np.array(normalizer.get_new_paths(data))
         print_with_time("Creating generators")
         # dataTrainGenerator = LongitudinalDataGenerator(normalized_data[trainIndex],
         #                                                classes[trainIndex], parameters['batchSize'])
@@ -209,11 +263,11 @@ with open(result_file_path, 'a+') as cvsFileHandler: # where the results for eac
         testing_events_sizes_file_path = training_directory + parameters['testing_events_sizes_filename'].format(i)
         testing_events_sizes_labels_file_path = training_directory + parameters['testing_events_sizes_labels_filename'].format(i)
 
-        train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
+        train_sizes, train_labels = functions.divide_by_events_lenght(data[trainIndex]
                                                                       , classes[trainIndex]
                                                                       , sizes_filename=training_events_sizes_file_path
                                                                       , classes_filename=training_events_sizes_labels_file_path)
-        test_sizes, test_labels = functions.divide_by_events_lenght(normalized_data[testIndex], classes[testIndex]
+        test_sizes, test_labels = functions.divide_by_events_lenght(data[testIndex], classes[testIndex]
                                                                     , sizes_filename = testing_events_sizes_file_path
                                                                     , classes_filename = testing_events_sizes_labels_file_path)
 
@@ -226,7 +280,7 @@ with open(result_file_path, 'a+') as cvsFileHandler: # where the results for eac
             epochs = parameters['trainingEpochs']
             metrics_callback = Metrics(dataTestGenerator)
             print_with_time("Training model")
-            kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None, class_weights=None)
+            kerasAdapter.fit(dataTrainGenerator, epochs=epochs, callbacks=None, class_weights=None, use_multiprocessing=False)
             kerasAdapter.save(trained_model_path)
         else:
             kerasAdapter = KerasAdapter.load_model(trained_model_path)

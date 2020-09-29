@@ -14,8 +14,8 @@ from sklearn.model_selection._split import StratifiedKFold, train_test_split
 from adapter import KerasAdapter
 from data_generators import LengthLongitudinalDataGenerator, BertDataGenerator
 
-from data_representation import TransformClinicalTextsRepresentations, TextToBioBertIDs
-from functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
+from resources.data_representation import TransformClinicalTextsRepresentations, TextToBioBertIDs
+from resources.functions import test_model, print_with_time, escape_invalid_xml_characters, escape_html_special_entities, \
     text_to_lower, remove_only_special_characters_tokens, whitespace_tokenize_text, \
     divide_by_events_lenght, remove_sepsis_mentions, train_representation_model
 from model_creators import MultilayerTemporalConvolutionalNNCreator, BertModelCreator
