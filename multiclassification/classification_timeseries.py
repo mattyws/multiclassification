@@ -22,12 +22,12 @@ from multiclassification.parameters.classification_parameters import timeseries_
 from multiclassification.parameters.classification_parameters import model_tuner_parameters as tuner_parameters
 
 from resources import functions
-from data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator
+from resources.data_generators import LengthLongitudinalDataGenerator, LongitudinalDataGenerator
 from resources.functions import test_model, print_with_time
-from keras_callbacks import Metrics
-from model_creators import MultilayerKerasRecurrentNNCreator, MultilayerTemporalConvolutionalNNCreator, \
+from resources.keras_callbacks import Metrics
+from resources.model_creators import MultilayerKerasRecurrentNNCreator, MultilayerTemporalConvolutionalNNCreator, \
     KerasTunerModelCreator, MultilayerTemporalConvolutionalNNHyperModel
-from normalization import Normalization, NormalizationValues
+from resources.normalization import Normalization, NormalizationValues
 import kerastuner as kt
 
 def focal_loss(y_true, y_pred):

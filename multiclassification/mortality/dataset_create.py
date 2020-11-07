@@ -10,7 +10,8 @@ import pandas as pd
 from multiclassification import constants
 
 
-def create_episodes(dataset, manager_queue, hours_since_intime=24, structured_events_path=None, note_events_path=None,
+def create_episodes(dataset, manager_queue, hours_since_intime=24,
+                    structured_events_path=None, note_events_path=None,
                     structured_mortality_events_path=None, textual_mortality_events_path=None):
     total = len(dataset)
     consumed = 0
@@ -90,19 +91,21 @@ def create_episodes(dataset, manager_queue, hours_since_intime=24, structured_ev
 
 from multiclassification.parameters.dataset_parameters import parameters
 
+multiclassification_base_dir = os.path.join(parameters['mimic_data_path'], parameters['multiclassification_directory'])
+
 structured_events_path =  parameters['mimic_data_path'] + parameters['multiclassification_directory'] \
                + parameters['events_hourly_merged_dirname']
 note_events_path = parameters['mimic_data_path'] + parameters['multiclassification_directory'] \
                   + parameters['noteevents_hourly_merged_dirname']
 
-structured_decompensation_events_path = parameters['mimic_data_path'] + parameters['multiclassification_directory'] \
-                                        + parameters['mortality_directory'] + parameters['structured_dirname']
-if not os.path.exists(structured_decompensation_events_path):
-    os.mkdir(structured_decompensation_events_path)
-textual_decompensation_events_path = parameters['mimic_data_path'] + parameters['multiclassification_directory'] \
-                                        + parameters['mortality_directory'] + parameters['textual_dirname']
-if not os.path.exists(textual_decompensation_events_path):
-    os.mkdir(textual_decompensation_events_path)
+structured_mortality_events_path = parameters['mimic_data_path'] + parameters['multiclassification_directory'] \
+                                   + parameters['mortality_directory'] + parameters['structured_dirname']
+if not os.path.exists(structured_mortality_events_path):
+    os.mkdir(structured_mortality_events_path)
+textual_mortality_events_path = parameters['mimic_data_path'] + parameters['multiclassification_directory'] \
+                                + parameters['mortality_directory'] + parameters['textual_dirname']
+if not os.path.exists(textual_mortality_events_path):
+    os.mkdir(textual_mortality_events_path)
 
 dataset = pd.read_csv(parameters['mimic_data_path'] + parameters['multiclassification_directory']
                       + parameters['all_stays_csv_w_events'])
@@ -124,8 +127,8 @@ with mp.Pool(processes=4) as pool:
                                       structured_events_path=structured_events_path,
                                       note_events_path=note_events_path,
                                       hours_since_intime=48,
-                                      structured_mortality_events_path=structured_decompensation_events_path,
-                                      textual_mortality_events_path=textual_decompensation_events_path)
+                                      structured_mortality_events_path=structured_mortality_events_path,
+                                      textual_mortality_events_path=textual_mortality_events_path)
     # queue = partial_normalize_files(dataset_for_mp)
     # partial_normalize_files(dataset_for_mp[0])
     # exit()
@@ -140,10 +143,10 @@ with mp.Pool(processes=4) as pool:
                 mortality_dataset[returned_data[0]]['episode'] = returned_data[0]
                 mortality_dataset[returned_data[0]]['icustay_id'] = returned_data[1]
             if returned_data[2] == 'structured':
-                mortality_dataset[returned_data[0]]['structured_path'] = returned_data[3]
+                mortality_dataset[returned_data[0]]['structured_path'] = returned_data[3].replace(multiclassification_base_dir, '')
                 mortality_dataset[returned_data[0]]['label'] = returned_data[4]
             elif returned_data[2] == 'textual':
-                mortality_dataset[returned_data[0]]['textual_path'] = returned_data[3]
+                mortality_dataset[returned_data[0]]['textual_path'] = returned_data[3].replace(multiclassification_base_dir, '')
                 if 'label' in mortality_dataset[returned_data[0]].keys():
                     mortality_dataset[returned_data[0]]['label'] = returned_data[4]
             consumed += 1
@@ -156,10 +159,10 @@ with mp.Pool(processes=4) as pool:
                 mortality_dataset[returned_data[0]]['episode'] = returned_data[0]
                 mortality_dataset[returned_data[0]]['icustay_id'] = returned_data[1]
             if returned_data[2] == 'structured':
-                mortality_dataset[returned_data[0]]['structured_path'] = returned_data[3]
+                mortality_dataset[returned_data[0]]['structured_path'] = returned_data[3].replace(multiclassification_base_dir, '')
                 mortality_dataset[returned_data[0]]['label'] = returned_data[4]
             elif returned_data[2] == 'textual':
-                mortality_dataset[returned_data[0]]['textual_path'] = returned_data[3]
+                mortality_dataset[returned_data[0]]['textual_path'] = returned_data[3].replace(multiclassification_base_dir, '')
                 if 'label' in mortality_dataset[returned_data[0]].keys():
                     mortality_dataset[returned_data[0]]['label'] = returned_data[4]
     mortality_dataset = pd.DataFrame(mortality_dataset)

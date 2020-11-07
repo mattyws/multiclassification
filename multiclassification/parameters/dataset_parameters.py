@@ -42,5 +42,9 @@ parameters = {
     "date_pattern" : "%Y-%m-%d",
     "datetime_pattern" : "%Y-%m-%d %H:%M:%S",
 
-    "notes_tokens_features_file_name": "notes_tokens_features.pkl"
+    "notes_tokens_features_file_name": "notes_tokens_features.pkl",
+    
+    'ctakes_input_dir': 'ctakes_input_dir/',
+    'ctakes_output_path': 'ctakes_output_dir/',
+    'ctakes_processed_data_path': 'textual_ctakes/'
 }
