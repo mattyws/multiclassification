@@ -153,7 +153,6 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
         icu_cuis = []
         for xml, text in zip(xmls, texts):
             text_cuis = dict()
-            #TODO: uma maneira de retornar path (e retirar o multiclassification_base_path) dos novos arquivos para adicionar ao csv
             filename = os.path.basename(text)
             text_cuis['bucket'] = filename.split('_')[0]
             text_cuis['starttime'] = filename.split('_')[1]
@@ -198,16 +197,12 @@ multiclassification_base_path = os.path.join(parameters['mimic_data_path'], para
 
 problem = 'mortality'
 problem_base_dir = os.path.join(multiclassification_base_path, parameters['{}_directory'.format(problem)])
-dataset_path = os.path.join(multiclassification_base_path, parameters['{}_dataset_csv'.format(problem)])
+dataset_path = os.path.join(problem_base_dir, parameters['{}_dataset_csv'.format(problem)])
 dataset_csv = pandas.read_csv(dataset_path)
-noteevents_path = parameters['mimic_data_path'] + parameters['noteevents_anonymized_tokens_normalized']
 dataset = np.split(dataset_csv, 10)
-ctakes_data_path = os.path.join(multiclassification_base_path, parameters['{}_directory'.format(problem)],
-                                parameters['ctakes_input_dir'])
-ctakes_result_data_path = os.path.join(multiclassification_base_path, parameters['{}_directory'.format(problem)],
-                                       parameters['ctakes_output_path'])
-extracted_words_and_cuis_path = os.path.join(multiclassification_base_path, parameters['{}_directory'.format(problem)],
-                                             parameters['ctakes_processed_data_path'])
+ctakes_data_path = os.path.join(problem_base_dir, parameters['ctakes_input_dir'])
+ctakes_result_data_path = os.path.join(problem_base_dir, parameters['ctakes_output_path'])
+extracted_words_and_cuis_path = os.path.join(problem_base_dir, parameters['ctakes_processed_data_path'])
 if not os.path.exists(ctakes_data_path):
     os.mkdir(ctakes_data_path)
 if not os.path.exists(ctakes_result_data_path):
