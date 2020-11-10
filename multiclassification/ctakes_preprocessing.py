@@ -199,6 +199,7 @@ problem = 'mortality'
 problem_base_dir = os.path.join(multiclassification_base_path, parameters['{}_directory'.format(problem)])
 dataset_path = os.path.join(problem_base_dir, parameters['{}_dataset_csv'.format(problem)])
 dataset_csv = pandas.read_csv(dataset_path)
+print(len(dataset_csv))
 dataset = np.split(dataset_csv, 10)
 ctakes_data_path = os.path.join(problem_base_dir, parameters['ctakes_input_dir'])
 ctakes_result_data_path = os.path.join(problem_base_dir, parameters['ctakes_output_path'])
