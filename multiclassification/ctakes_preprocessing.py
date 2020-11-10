@@ -36,7 +36,7 @@ def split_data_for_ctakes(dataset:pandas.DataFrame, multiclassification_base_pat
     for index, row in dataset.iterrows():
         if manager_queue is not None:
             manager_queue.put(row['icustay_id'])
-        icustay_path = os.path.join(ctakes_data_path, row['icustay_id'] )
+        icustay_path = os.path.join(ctakes_data_path, str(row['icustay_id']) )
         if os.path.exists(icustay_path):
             continue
         else:
@@ -200,7 +200,7 @@ problem_base_dir = os.path.join(multiclassification_base_path, parameters['{}_di
 dataset_path = os.path.join(problem_base_dir, parameters['{}_dataset_csv'.format(problem)])
 dataset_csv = pandas.read_csv(dataset_path)
 print(len(dataset_csv))
-dataset = np.split(dataset_csv, 4)
+dataset = np.array_split(dataset_csv, 10)
 ctakes_data_path = os.path.join(problem_base_dir, parameters['ctakes_input_dir'])
 ctakes_result_data_path = os.path.join(problem_base_dir, parameters['ctakes_output_path'])
 extracted_words_and_cuis_path = os.path.join(problem_base_dir, parameters['ctakes_processed_data_path'])
@@ -218,6 +218,8 @@ with mp.Pool(processes=4) as pool:
                                         multiclassification_base_path = multiclassification_base_path,
                                         ctakes_data_path=ctakes_data_path,
                                         manager_queue=queue)
+    partial_split_data_ctakes(dataset[0])
+    exit()
     print("===== Spliting events into different files =====")
     map_obj = pool.map_async(partial_split_data_ctakes, dataset)
     consumed = 0
