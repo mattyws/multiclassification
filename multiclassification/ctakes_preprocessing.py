@@ -218,8 +218,6 @@ with mp.Pool(processes=4) as pool:
                                         multiclassification_base_path = multiclassification_base_path,
                                         ctakes_data_path=ctakes_data_path,
                                         manager_queue=queue)
-    partial_split_data_ctakes(dataset[0])
-    exit()
     print("===== Spliting events into different files =====")
     map_obj = pool.map_async(partial_split_data_ctakes, dataset)
     consumed = 0
