@@ -33,9 +33,14 @@ def escape_html_special_entities(text):
 
 def split_data_for_ctakes(dataset:pandas.DataFrame, multiclassification_base_path=None, ctakes_data_path=None, manager_queue=None):
     tokenizer = WhitespaceTokenizer()
+    consumed = 0
+    total_rows = len(dataset)
     for index, row in dataset.iterrows():
+        consumed += 1
         if manager_queue is not None:
             manager_queue.put(row['icustay_id'])
+        else:
+            sys.stderr.write('\rdone {0:%}'.format(consumed / total_rows))
         icustay_path = os.path.join(ctakes_data_path, str(row['icustay_id']) )
         if os.path.exists(icustay_path):
             continue
@@ -217,7 +222,7 @@ with mp.Pool(processes=4) as pool:
     partial_split_data_ctakes = partial(split_data_for_ctakes,
                                         multiclassification_base_path = multiclassification_base_path,
                                         ctakes_data_path=ctakes_data_path,
-                                        manager_queue=queue)
+                                        manager_queue=None)
     print("===== Spliting events into different files =====")
     partial_split_data_ctakes(dataset_csv)
     # map_obj = pool.map_async(partial_split_data_ctakes, dataset)
