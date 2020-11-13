@@ -219,18 +219,19 @@ with mp.Pool(processes=4) as pool:
                                         ctakes_data_path=ctakes_data_path,
                                         manager_queue=queue)
     print("===== Spliting events into different files =====")
-    map_obj = pool.map_async(partial_split_data_ctakes, dataset)
-    consumed = 0
-    while not map_obj.ready():
-        for _ in range(queue.qsize()):
-            queue.get()
-            consumed += 1
-        sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
-    if queue.qsize() != 0:
-        for _ in range(queue.qsize()):
-            queue.get()
-            consumed += 1
-        sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
+    partial_split_data_ctakes(dataset_csv)
+    # map_obj = pool.map_async(partial_split_data_ctakes, dataset)
+    # consumed = 0
+    # while not map_obj.ready():
+    #     for _ in range(queue.qsize()):
+    #         queue.get()
+    #         consumed += 1
+    #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
+    # if queue.qsize() != 0:
+    #     for _ in range(queue.qsize()):
+    #         queue.get()
+    #         consumed += 1
+    #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
     ctakes_params = functions.load_ctakes_parameters_file()
     dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
     ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
