@@ -240,7 +240,7 @@ with mp.Pool(processes=4) as pool:
     ctakes_params = functions.load_ctakes_parameters_file()
     dirname = os.path.dirname(os.path.realpath(__file__)) + '/'
     ctakes_command = "sh {}bin/runClinicalPipeline.sh  -i {}  --xmiOut {}  --user {}  --pass {}"\
-        .format(ctakes_params['ctakes_path'], dirname + ctakes_data_path, dirname + ctakes_result_data_path,
+        .format(ctakes_params['ctakes_path'], ctakes_data_path, ctakes_result_data_path,
                 ctakes_params['umls_username'], ctakes_params['umls_password'])
     process = subprocess.Popen(ctakes_command, shell=True, stdout=subprocess.PIPE)
     for line in process.stdout:
