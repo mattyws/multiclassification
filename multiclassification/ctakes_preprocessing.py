@@ -138,7 +138,9 @@ def get_multiwords_references(words_references):
 
 def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes_result_path=None,
                                extracted_words_and_cuis_path=None, manager_queue=None):
+    consumed = 0
     for index, row in dataset.iterrows():
+        consumed += 1
         icustay = str(row['icustay_id'])
         extracted_words_and_cuis_icustay_path = os.path.join(extracted_words_and_cuis_path, '{}.csv'.format(icustay))
         icustay_file = dict()
@@ -147,6 +149,8 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
         if os.path.exists(extracted_words_and_cuis_icustay_path):
             if manager_queue is not None:
                 manager_queue.put(icustay_file)
+            else:
+                sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
             continue
         icustay_xmi_path = os.path.join(ctakes_result_path, icustay)
         icustay_text_path = os.path.join(texts_path, icustay)
@@ -191,6 +195,8 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
         icu_cuis.to_csv(extracted_words_and_cuis_icustay_path, index=False)
         if manager_queue is not None:
             manager_queue.put(icustay_file)
+        else:
+            sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
         # with open(sentences_data_path + '{}.txt'.format(icustay), 'w') as file:
         #     for sentence in icustay_sentences:
         #         file.write(sentence + '\n')
