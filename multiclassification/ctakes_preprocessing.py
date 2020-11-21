@@ -150,9 +150,9 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
             continue
         icustay_xmi_path = os.path.join(ctakes_result_path, icustay)
         icustay_text_path = os.path.join(texts_path, icustay)
-        xmls = [icustay_xmi_path + x for x in os.listdir(icustay_xmi_path)]
+        xmls = [os.path.join(icustay_xmi_path, x) for x in os.listdir(icustay_xmi_path)]
         xmls.sort()
-        texts = [icustay_text_path + x for x in os.listdir(icustay_text_path)]
+        texts = [os.path.join(icustay_text_path, x) for x in os.listdir(icustay_text_path)]
         texts.sort()
         icu_cuis = []
         for xml, text in zip(xmls, texts):
