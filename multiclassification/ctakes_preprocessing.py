@@ -140,7 +140,6 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
                                extracted_words_and_cuis_path=None, manager_queue=None):
     for index, row in dataset.iterrows():
         icustay = row['icustay_id']
-        ctakes_result_icustay_path = os.path.join(ctakes_result_path, icustay)
         extracted_words_and_cuis_icustay_path = os.path.join(extracted_words_and_cuis_path, '{}.csv'.format(icustay))
         icustay_file = dict()
         icustay_file['icustay_id'] = icustay
@@ -149,7 +148,7 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
             if manager_queue is not None:
                 manager_queue.put(icustay_file)
             continue
-        icustay_xmi_path = os.path.join(ctakes_result_path, icustay)
+        icustay_xmi_path = os.path.join(ctakes_result_path, str(icustay))
         icustay_text_path = os.path.join(texts_path, icustay)
         xmls = [icustay_xmi_path + x for x in os.listdir(icustay_xmi_path)]
         xmls.sort()
