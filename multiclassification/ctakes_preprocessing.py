@@ -141,6 +141,7 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
     consumed = 0
     returned_paths = []
     for index, row in dataset.iterrows():
+        print(row['icustay_id'])
         returned_path = dict()
         consumed += 1
         icustay = str(row['icustay_id'])
@@ -261,7 +262,7 @@ with mp.Pool(processes=4) as pool:
     # process.wait()
     partial_merge_results = partial(merge_ctakes_result_to_csv, texts_path=ctakes_data_path,
                                     ctakes_result_path=ctakes_result_data_path,
-                                    extracted_words_and_cuis_path=extracted_words_and_cuis_path, manager_queue=queue)
+                                    extracted_words_and_cuis_path=extracted_words_and_cuis_path, manager_queue=None)
     print("===== Merging events into a csv =====")
     icustay_paths = []
     consumed = 0
