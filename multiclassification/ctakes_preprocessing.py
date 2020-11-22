@@ -139,7 +139,9 @@ def get_multiwords_references(words_references):
 def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes_result_path=None,
                                extracted_words_and_cuis_path=None, manager_queue=None):
     consumed = 0
+    returned_paths = []
     for index, row in dataset.iterrows():
+        returned_path = dict()
         consumed += 1
         icustay = str(row['icustay_id'])
         extracted_words_and_cuis_icustay_path = os.path.join(extracted_words_and_cuis_path, '{}.csv'.format(icustay))
@@ -154,6 +156,8 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
             continue
         icustay_xmi_path = os.path.join(ctakes_result_path, icustay)
         icustay_text_path = os.path.join(texts_path, icustay)
+        if not os.path.exists(icustay_xmi_path) or not os.path.exists(icustay_text_path):
+            continue
         xmls = [os.path.join(icustay_xmi_path, x) for x in os.listdir(icustay_xmi_path)]
         xmls.sort()
         texts = [os.path.join(icustay_text_path, x) for x in os.listdir(icustay_text_path)]
@@ -193,6 +197,9 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
         icu_cuis['endtime'] = pandas.to_datetime(icu_cuis['endtime'], format=parameters['datetime_pattern'])
         icu_cuis = icu_cuis.sort_values(by=['bucket'])
         icu_cuis.to_csv(extracted_words_and_cuis_icustay_path, index=False)
+        returned_path["ctakes_file"] = icustay_file
+        returned_path['icustay'] = int(icustay)
+        returned_paths.append(returned_path)
         if manager_queue is not None:
             manager_queue.put(icustay_file)
         else:
@@ -200,6 +207,7 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
         # with open(sentences_data_path + '{}.txt'.format(icustay), 'w') as file:
         #     for sentence in icustay_sentences:
         #         file.write(sentence + '\n')
+    return returned_paths
 
 from multiclassification.parameters.dataset_parameters import parameters
 
