@@ -265,7 +265,8 @@ with mp.Pool(processes=4) as pool:
     print("===== Merging events into a csv =====")
     icustay_paths = []
     consumed = 0
-    partial_merge_results(dataset_csv)
+    icustay_paths = partial_merge_results(dataset_csv)
+    icustay_paths = pandas.DataFrame(icustay_paths)
     # map_obj = pool.map_async(partial_merge_results, dataset)
     # while not map_obj.ready() or queue.qsize() != 0:
     #     for _ in range(queue.qsize()):
@@ -275,4 +276,4 @@ with mp.Pool(processes=4) as pool:
     #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
     # if len(icustay_paths) != 0:
     #     icustay_paths = pandas.DataFrame(icustay_paths)
-    #     icustay_paths.to_csv(os.path.join(multiclassification_base_path, 'ctakes_paths.csv'))
+    icustay_paths.to_csv(os.path.join(multiclassification_base_path, 'ctakes_paths.csv'))
