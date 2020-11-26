@@ -213,12 +213,13 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
         #         file.write(sentence + '\n')
     return returned_paths
 
-def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, boc_files_path:str):
+def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, problem_base_path:str, boc_files_path:str):
     if not os.path.exists(boc_files_path):
         os.makedirs(boc_files_path)
     all_cuis = set()
     for index, row in ctakes_paths.iterrows():
-        icustay_cuis = pandas.read_csv(row['ctakes_file'])
+        ctakes_file = os.path.join(problem_base_dir, row['ctakes_file'])
+        icustay_cuis = pandas.read_csv(ctakes_file)
         for tindex, text_cuis in icustay_cuis.iterrows():
             all_cuis.add(text_cuis['cuis'])
     all_cuis = list(all_cuis)
@@ -228,7 +229,8 @@ def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, boc_files_path:str):
         icustay_boc_path = os.path.join(boc_files_path, str(row['icustay_id']))
         if os.path.exists(icustay_boc_path):
             continue
-        icustay_cuis = pandas.read_csv(row['ctakes_file'])
+        ctakes_file = os.path.join(problem_base_dir, row['ctakes_file'])
+        icustay_cuis = pandas.read_csv(ctakes_file)
         icustay_boc = []
         for tindex, text_cuis in icustay_cuis.iterrows():
             text_boc = dict()
@@ -323,7 +325,7 @@ with mp.Pool(processes=4) as pool:
     # if len(icustay_paths) != 0:
     #     icustay_paths = pandas.DataFrame(icustay_paths)
     icustay_paths.to_csv(os.path.join(problem_base_dir, 'ctakes_paths.csv'))
-    bag_of_cuis_df = generate_bag_of_cuis(icustay_paths, bag_of_cuis_files_path)
+    bag_of_cuis_df = generate_bag_of_cuis(icustay_paths, problem_base_dir, bag_of_cuis_files_path)
     print(bag_of_cuis_df)
     exit()
     bag_of_cuis_df.to_csv(os.path.join(problem_base_dir, 'bag_of_cuis_paths.csv'))
