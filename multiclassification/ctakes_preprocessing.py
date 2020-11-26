@@ -153,6 +153,9 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
             if manager_queue is not None:
                 manager_queue.put(icustay_file)
             else:
+                returned_path["ctakes_file"] = extracted_words_and_cuis_icustay_path
+                returned_path['icustay'] = int(icustay)
+                returned_paths.append(returned_path)
                 sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
             continue
         icustay_xmi_path = os.path.join(ctakes_result_path, icustay)
@@ -198,7 +201,7 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
         icu_cuis['endtime'] = pandas.to_datetime(icu_cuis['endtime'], format=parameters['datetime_pattern'])
         icu_cuis = icu_cuis.sort_values(by=['bucket'])
         icu_cuis.to_csv(extracted_words_and_cuis_icustay_path, index=False)
-        returned_path["ctakes_file"] = icustay_file
+        returned_path["ctakes_file"] = extracted_words_and_cuis_icustay_path
         returned_path['icustay'] = int(icustay)
         returned_paths.append(returned_path)
         if manager_queue is not None:
@@ -209,6 +212,44 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
         #     for sentence in icustay_sentences:
         #         file.write(sentence + '\n')
     return returned_paths
+
+def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, boc_files_path:str):
+    if not os.path.exists(boc_files_path):
+        os.makedirs(boc_files_path)
+    all_cuis = set()
+    for index, row in ctakes_paths.iterrows():
+        icustay_cuis = pandas.read_csv(row['ctakes_file'])
+        for tindex, text_cuis in icustay_cuis.iterrows():
+            all_cuis.add(text_cuis['cuis'])
+    all_cuis = list(all_cuis)
+    all_cuis.sort()
+    bag_of_cuis_df = []
+    for index, row in ctakes_paths.iterrows():
+        icustay_boc_path = os.path.join(boc_files_path, str(row['icustay_id']))
+        if os.path.exists(icustay_boc_path):
+            continue
+        icustay_cuis = pandas.read_csv(row['ctakes_file'])
+        icustay_boc = []
+        for tindex, text_cuis in icustay_cuis.iterrows():
+            text_boc = dict()
+            text_boc['bucket'] = text_cuis['bucket']
+            text_boc['starttime'] = text_cuis['starttime']
+            text_boc['endtime'] = text_cuis['endtime']
+            for cui in all_cuis:
+                if cui in text_cuis['cuis']:
+                    text_boc[cui] = 1
+                else:
+                    text_boc[cui] = 0
+            icustay_boc.append(text_boc)
+        icustay_boc = pandas.DataFrame(icustay_boc)
+        icustay_boc = icustay_boc.sort_values(axis=1)
+        icustay_boc = icustay_boc.sort_values(by=['bucket'])
+        icustay_boc.to_csv(icustay_boc_path)
+        print(icustay_boc)
+        bag_of_cuis_df.append({"icustay_id": row['icustay_id'], 'bag_of_cuis_path':icustay_boc_path})
+        break
+    bag_of_cuis_df = pandas.DataFrame(bag_of_cuis_df)
+    return bag_of_cuis_df
 
 from multiclassification.parameters.dataset_parameters import parameters
 
@@ -223,12 +264,15 @@ dataset = np.array_split(dataset_csv, 10)
 ctakes_data_path = os.path.join(problem_base_dir, parameters['ctakes_input_dir'])
 ctakes_result_data_path = os.path.join(problem_base_dir, parameters['ctakes_output_path'])
 extracted_words_and_cuis_path = os.path.join(problem_base_dir, parameters['ctakes_processed_data_path'])
+bag_of_cuis_files_path = os.path.join(problem_base_dir, parameters['bag_of_cuis_files_path'])
 if not os.path.exists(ctakes_data_path):
     os.mkdir(ctakes_data_path)
 if not os.path.exists(ctakes_result_data_path):
     os.mkdir(ctakes_result_data_path)
 if not os.path.exists(extracted_words_and_cuis_path):
     os.mkdir(extracted_words_and_cuis_path)
+if not os.path.exists(bag_of_cuis_files_path):
+    os.makedirs(bag_of_cuis_files_path)
 
 with mp.Pool(processes=4) as pool:
     m = mp.Manager()
@@ -268,6 +312,7 @@ with mp.Pool(processes=4) as pool:
     consumed = 0
     icustay_paths = partial_merge_results(dataset_csv)
     icustay_paths = pandas.DataFrame(icustay_paths)
+    icustay_paths['ctakes_file'] = icustay_paths['ctakes_file'].apply(lambda x: x.replace(problem_base_dir, ''))
     # map_obj = pool.map_async(partial_merge_results, dataset)
     # while not map_obj.ready() or queue.qsize() != 0:
     #     for _ in range(queue.qsize()):
@@ -277,4 +322,8 @@ with mp.Pool(processes=4) as pool:
     #     sys.stderr.write('\rdone {0:%}'.format(consumed / len(dataset_csv)))
     # if len(icustay_paths) != 0:
     #     icustay_paths = pandas.DataFrame(icustay_paths)
-    icustay_paths.to_csv(os.path.join(multiclassification_base_path, 'ctakes_paths.csv'))
+    icustay_paths.to_csv(os.path.join(problem_base_dir, 'ctakes_paths.csv'))
+    bag_of_cuis_df = generate_bag_of_cuis(icustay_paths, bag_of_cuis_files_path)
+    print(bag_of_cuis_df)
+    exit()
+    bag_of_cuis_df.to_csv(os.path.join(problem_base_dir, 'bag_of_cuis_paths.csv'))
