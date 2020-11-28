@@ -336,6 +336,7 @@ with mp.Pool(processes=4) as pool:
     #     icustay_paths = pandas.DataFrame(icustay_paths)
     icustay_paths.to_csv(os.path.join(problem_base_dir, 'ctakes_paths.csv'))
     bag_of_cuis_df = generate_bag_of_cuis(icustay_paths, problem_base_dir, bag_of_cuis_files_path)
+    bag_of_cuis_df['bag_of_cuis_path'] = bag_of_cuis_df['bag_of_cuis_path'].apply(lambda x: x.replace(problem_base_dir, ''))
     print(bag_of_cuis_df)
     exit()
     bag_of_cuis_df.to_csv(os.path.join(problem_base_dir, 'bag_of_cuis_paths.csv'))
