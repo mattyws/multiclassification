@@ -254,7 +254,7 @@ def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, problem_base_path:str, b
         icustay_boc = pandas.DataFrame(icustay_boc)
         icustay_boc = icustay_boc.reindex(sorted(icustay_boc.columns), axis=1)
         icustay_boc = icustay_boc.sort_values(by=['bucket'])
-        icustay_boc.to_csv(icustay_boc_path)
+        # icustay_boc.to_csv(icustay_boc_path)
         print(icustay_boc)
         print(icustay_boc.columns)
         bag_of_cuis_df.append({"icustay_id": row['icustay'], 'bag_of_cuis_path':icustay_boc_path})
