@@ -233,7 +233,7 @@ def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, problem_base_path:str, b
     for index, row in ctakes_paths.iterrows():
         consumed += 1
         sys.stderr.write('\rdone {0:%}'.format(consumed / len(ctakes_paths)))
-        icustay_boc_path = os.path.join(boc_files_path, str(row['icustay_id']))
+        icustay_boc_path = os.path.join(boc_files_path, str(row['icustay']))
         if os.path.exists(icustay_boc_path):
             continue
         ctakes_file = os.path.join(problem_base_dir, row['ctakes_file'])
@@ -255,7 +255,7 @@ def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, problem_base_path:str, b
         icustay_boc = icustay_boc.sort_values(by=['bucket'])
         icustay_boc.to_csv(icustay_boc_path)
         print(icustay_boc)
-        bag_of_cuis_df.append({"icustay_id": row['icustay_id'], 'bag_of_cuis_path':icustay_boc_path})
+        bag_of_cuis_df.append({"icustay_id": row['icustay'], 'bag_of_cuis_path':icustay_boc_path})
         break
     bag_of_cuis_df = pandas.DataFrame(bag_of_cuis_df)
     return bag_of_cuis_df
