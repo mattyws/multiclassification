@@ -224,7 +224,8 @@ def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, problem_base_path:str, b
         ctakes_file = os.path.join(problem_base_dir, row['ctakes_file'])
         icustay_cuis = pandas.read_csv(ctakes_file)
         for tindex, text_cuis in icustay_cuis.iterrows():
-            all_cuis.add(text_cuis['cuis'])
+            for cui in text_cuis['cuis']:
+                all_cuis.add(cui)
     all_cuis = list(all_cuis)
     all_cuis.sort()
     bag_of_cuis_df = []
