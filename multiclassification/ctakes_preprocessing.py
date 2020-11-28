@@ -141,7 +141,6 @@ def merge_ctakes_result_to_csv(dataset:pandas.DataFrame, texts_path=None, ctakes
     consumed = 0
     returned_paths = []
     for index, row in dataset.iterrows():
-        print(row['icustay_id'])
         returned_path = dict()
         consumed += 1
         icustay = str(row['icustay_id'])
@@ -217,7 +216,11 @@ def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, problem_base_path:str, b
     if not os.path.exists(boc_files_path):
         os.makedirs(boc_files_path)
     all_cuis = set()
+    consumed = 0
+    print("\nGetting text cuis")
     for index, row in ctakes_paths.iterrows():
+        consumed += 1
+        sys.stderr.write('\rdone {0:%}'.format(consumed / len(ctakes_paths)))
         ctakes_file = os.path.join(problem_base_dir, row['ctakes_file'])
         icustay_cuis = pandas.read_csv(ctakes_file)
         for tindex, text_cuis in icustay_cuis.iterrows():
@@ -225,7 +228,11 @@ def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, problem_base_path:str, b
     all_cuis = list(all_cuis)
     all_cuis.sort()
     bag_of_cuis_df = []
+    print("\nTransforming")
+    consumed = 0
     for index, row in ctakes_paths.iterrows():
+        consumed += 1
+        sys.stderr.write('\rdone {0:%}'.format(consumed / len(ctakes_paths)))
         icustay_boc_path = os.path.join(boc_files_path, str(row['icustay_id']))
         if os.path.exists(icustay_boc_path):
             continue
