@@ -255,11 +255,8 @@ def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, problem_base_path:str, b
         icustay_boc = pandas.DataFrame(icustay_boc)
         icustay_boc = icustay_boc.reindex(sorted(icustay_boc.columns), axis=1)
         icustay_boc = icustay_boc.sort_values(by=['bucket'])
-        # icustay_boc.to_csv(icustay_boc_path)
-        print(icustay_boc)
-        print(icustay_boc.columns)
+        icustay_boc.to_csv(icustay_boc_path)
         bag_of_cuis_df.append({"icustay_id": row['icustay'], 'bag_of_cuis_path':icustay_boc_path})
-        break
     bag_of_cuis_df = pandas.DataFrame(bag_of_cuis_df)
     return bag_of_cuis_df
 
@@ -337,6 +334,4 @@ with mp.Pool(processes=4) as pool:
     icustay_paths.to_csv(os.path.join(problem_base_dir, 'ctakes_paths.csv'))
     bag_of_cuis_df = generate_bag_of_cuis(icustay_paths, problem_base_dir, bag_of_cuis_files_path)
     bag_of_cuis_df['bag_of_cuis_path'] = bag_of_cuis_df['bag_of_cuis_path'].apply(lambda x: x.replace(problem_base_dir, ''))
-    print(bag_of_cuis_df)
-    exit()
     bag_of_cuis_df.to_csv(os.path.join(problem_base_dir, 'bag_of_cuis_paths.csv'))
