@@ -7,7 +7,7 @@ from html.parser import HTMLParser
 from xml.sax.saxutils import escape, quoteattr, unescape
 import xml.etree.ElementTree as ET
 import nltk.data
-
+from ast import literal_eval
 import pandas
 import html
 import unicodedata
@@ -224,7 +224,8 @@ def generate_bag_of_cuis(ctakes_paths:pandas.DataFrame, problem_base_path:str, b
         ctakes_file = os.path.join(problem_base_dir, row['ctakes_file'])
         icustay_cuis = pandas.read_csv(ctakes_file)
         for tindex, text_cuis in icustay_cuis.iterrows():
-            for cui in text_cuis['cuis']:
+            cuis = literal_eval(text_cuis['cuis'])
+            for cui in cuis:
                 all_cuis.add(cui)
     all_cuis = list(all_cuis)
     all_cuis.sort()
