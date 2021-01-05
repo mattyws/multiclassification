@@ -89,7 +89,15 @@ class KerasAdapter(ModelAdapter):
             sys.stderr.write('\rdone {0:%}'.format(i / len(generator)))
             data = generator[i]
             # print(data[0])
-            r = self.predict(data[0])
+            try:
+                r = self.predict(data[0])
+            except:
+                print("the error")
+                print(data[0])
+                new_data = np.asarray([data[0]])
+                print(new_data)
+                r = self.predict(new_data)
+                exit(1)
             r = r.flatten()
             predicted.extend(r)
             trueClasses.extend(data[1])

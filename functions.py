@@ -40,6 +40,23 @@ def chunk_lst(data, SIZE=10000):
         yield [k for k in islice(it, SIZE)]
 
 
+def remove_empty_textual_data_episodes(data:pd.DataFrame, textual_path_column:str) -> pd.DataFrame:
+    episodes_to_remove = []
+    for index, row in data.iterrows():
+        textual_data = pd.read_csv(row[textual_path_column])
+        textual_data = textual_data[ ~(textual_data['text'] == NO_TEXT_CONSTANT)]
+        print(textual_data)
+        if textual_data.empty:
+            episodes_to_remove.append(row['episode'])
+    print(len(episodes_to_remove))
+    print(len(data))
+    data = data[~data['episode'].isin(episodes_to_remove)]
+    print(len(data))
+    return data
+
+
+
+
 def train_representation_model(files_paths, saved_model_path, min_count, size, workers, window, iterations, noteevents_iterator=None,
                                preprocessing_pipeline=None, word2vec=True, hs=1, dm=1, negative=0):
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -284,15 +301,6 @@ def mixed_divide_by_events_lenght(data_df:pd.DataFrame, path_column, sizes_filen
                 pickle.dump(sizes, sizes_handler)
     return sizes
 
-def remove_empty_textual_data_episodes(data:pd.DataFrame, textual_path_column:str) -> pd.DataFrame:
-    episodes_to_remove = []
-    for index, row in data.iterrows():
-        textual_data = pd.read_csv(row[textual_path_column])
-        textual_data = textual_data[ ~(textual_data['text'] == NO_TEXT_CONSTANT)]
-        if textual_data.empty:
-            episodes_to_remove.append(row['episode'])
-    data = data[~data['episode'].isin(episodes_to_remove)]
-    return data
 
 def load_ctakes_parameters_file():
     if not os.path.exists('ctakes_parameters.json'):

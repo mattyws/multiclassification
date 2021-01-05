@@ -34,10 +34,7 @@ def filter_events(df_split, table_name, mimic_data_path="", manager_queue=None, 
         intime = row['INTIME']
         outtime = row['OUTTIME']
         events_in_patient = dict()
-        # If patient is not healthy either: it fits the sepsis 3 criteria or is getting worse at ICU
-        # Either way the events are handled at same manner
         cut_poe = outtime
-
         # Loading event csv
         events_df = pd.read_csv(csv_events_file_name)
         # Filter events that occurs between ICU intime and ICU outtime, as the csv corresponds to events that occurs

@@ -44,10 +44,7 @@ class TransformClinicalTextsRepresentations():
         self.new_paths = dict()
         self.lock = None
         self.is_word2vec = is_word2vec
-        self.clinical_tokenizer = ClinicalTokenizer(bert_tokenizer=False)
-
-    def clear(self):
-        del self.representation_model
+        self.clinical_tokenizer = ClinicalTokenizer()
 
     def create_embedding_matrix(self, text):
         """
@@ -129,8 +126,6 @@ class TransformClinicalTextsRepresentations():
             consumed += 1
             transformed_doc_path = os.path.join(self.representation_save_path, str(row['episode']) + '.pkl')
             if os.path.exists(transformed_doc_path):
-                if row[text_paths_column] not in self.new_paths.keys():
-                    self.new_paths[row[text_paths_column]] = transformed_doc_path
                 episodes.append(row['episode'])
                 paths.append(transformed_doc_path)
                 labels.append(row['label'])
@@ -144,8 +139,6 @@ class TransformClinicalTextsRepresentations():
                 transformed_texts = numpy.asarray(transformed_texts)
                 with open(transformed_doc_path, 'wb') as handler:
                     pickle.dump(transformed_texts, handler)
-                if row[text_paths_column] not in self.new_paths.keys():
-                    self.new_paths[row[text_paths_column]] = transformed_doc_path
                 episodes.append(row['episode'])
                 paths.append(transformed_doc_path)
                 labels.append(row['label'])
@@ -686,11 +679,8 @@ class TransformTextsWithHuggingfaceBert():
 
 class ClinicalTokenizer():
 
-    def __init__(self, bert_tokenizer=True):
-        if bert_tokenizer:
-            self.bert_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
-        else:
-            self.bert_tokenizer = None
+    def __init__(self):
+        self.bert_tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
         self.sentence_tokenizer = spacy.load("en_core_sci_md")
 
     def process_texts_df_for_bert(self, texts_df:pandas.DataFrame, text_strategy:str="all", n_tokens:int=128,

@@ -16,8 +16,8 @@ path_parameters = {
 }
 
 timeseries_execution_saving_parameters = {
-    "execution_saving_path" : "timeseries_w_opt/",
-    "training_checkpoint": "checkpoint_unweighted/",
+    "execution_saving_path" : "timeseries_balanced_2/",
+    "training_checkpoint": "checkpoint/",
     "execution_parameters_filename": "training_parameters.pkl",
 
     "normalization_value_counts_directory" : "value_counts/",
@@ -29,8 +29,17 @@ timeseries_execution_saving_parameters = {
     "training_events_sizes_labels_filename" : "training_sizes_labels_{}.pkl",
     "testing_events_sizes_filename" : "testing_sizes_{}.pkl",
     "testing_events_sizes_labels_filename" : "testing_sizes_labels_{}.pkl",
+
+
+    "evaluation_normalization_values_filename": "eval_normalization_values.pkl",
+    "evaluation_normalization_temporary_data_directory": "evaluation_normalization_tmp/",
+    "evaluation_events_sizes_filename": "evaluation_sizes.pkl",
+    "evaluation_events_sizes_labels_filename": "evaluation_sizes_labels.pkl",
+
     "training_samples_filename" : "training_samples.pkl",
     "training_classes_filename" : "training_classes.pkl",
+    "testing_samples_filename": "testing_samples.pkl",
+    "testing_classes_filename": "testing_classes.pkl",
     "optimization_samples_filename" : "optimization_samples.pkl",
     "optimization_classes_filename" : "optimization_classes.pkl",
 
@@ -80,6 +89,7 @@ timeseries_model_parameters = {
 
     'model_tunning': True,
     'optimization_split_rate': .20,
+    "train_test_split_rate": .10,
     'optimization_normalization_values_filename': "opt_normalization_values.pkl",
     'optimization_normalization_temporary_data_directory': "opt_data_tmp/"
 }
@@ -92,7 +102,7 @@ textual_execution_saving_parameters = {
     "bert_directory": os.path.expanduser("~/Documents/mimic/bert_ntemporal/"),
     "textual_representation_model_path": os.path.expanduser("~/Documents/mimic/doc2vec/"),
     'textual_representation_model_filename' : 'doc2vec.model',
-    "notes_textual_representation_directory": 'repr_ntemporal/',
+    "notes_textual_representation_directory": 'transformed_wt_no_text_constant/',
     "tokenization_strategy": "all",
     "sentence_encoding_strategy" : "mean",
     "remove_temporal_axis":True,
@@ -227,12 +237,13 @@ textual_tuning_parameters = {
 }
 
 ensemble_stacking_parameters = {
-    "execution_saving_path" : "mixed_model/",
+    "execution_saving_path" : "ensemble_training_wt_no_text_constraint_balanced/",
     "training_checkpoint" : "checkpoint/",
 
     "use_structured_data" : True,
     "use_textual_data": True,
     "use_class_weight": False,
+    "balance_training_data": True,
 
     "train_test_split_rate": .10,
     "training_samples_filename" : "training_samples.pkl",
@@ -251,6 +262,7 @@ ensemble_stacking_parameters = {
     "level_zero_result_filename": "level_zero_result.csv",
 
     "fold_metrics_filename" : "fold_result_{}.csv",
+    "fold_evaluation_metrics_filename" : "fold_evaluation_result_{}.csv",
     "metrics_filename" : "result.csv",
     "ensemble_results_filename" : "ensemble_result.csv",
 
@@ -269,6 +281,13 @@ ensemble_stacking_parameters = {
     "fold_normalization_temporary_data_directory" : "data_tmp_{}/",
     "normalization_value_counts_dir" : "value_counts/",
 
+
+    "evaluation_normalization_values_filename": "eval_normalization_values.pkl",
+    "evaluation_normalization_temporary_data_directory": "evaluation_normalization_tmp/",
+    "evaluation_events_sizes_filename": "evaluation_sizes.pkl",
+    "evaluation_events_sizes_labels_filename": "evaluation_sizes_labels.pkl",
+
+
     "structured_training_events_sizes_filename" : "structured_training_sizes_{}.pkl",
     "structured_training_events_sizes_labels_filename" : "structured_training_sizes_labels_{}.pkl",
     "structured_testing_events_sizes_filename" : "structured_testing_sizes_{}.pkl",
@@ -286,9 +305,10 @@ ensemble_stacking_parameters = {
     "textual_weak_model_all": "textual_weak_all_{}.model",
 
 
-    "notes_textual_representation_directory" : "notes_transformed_representation/",
+    "notes_textual_representation_directory" : "transformed_wt_no_text_constant/",
     'textual_representation_model_path': os.path.expanduser("~/Documents/mimic/trained_doc2vec/"),
     'textual_representation_model_filename' : 'doc2vec.model',
+    "remove_no_text_constant" : True,
 
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",

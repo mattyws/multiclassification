@@ -138,7 +138,7 @@ class NormalizationValues(object):
         total_files = len(lst)
         chunks_size = ceil(len(lst) / 10)
         lst = [x for x in chunk_lst(lst, SIZE=chunks_size)]
-        with mp.Pool(processes=4) as pool:
+        with mp.Pool(processes=len(lst)) as pool:
             m = mp.Manager()
             queue = m.Queue()
             partial_seq_cal_sum = partial(self.cal_sum, queue=queue)
@@ -222,7 +222,7 @@ class Normalization(object):
         chunks_size = ceil(len(filesList)/10)
         filesList = [x for x in chunk_lst(filesList, SIZE=chunks_size)]
         self.new_paths = dict()
-        with mp.Pool(processes=2) as pool:
+        with mp.Pool(processes=len(filesList)) as pool:
             m = mp.Manager()
             queue = m.Queue()
             partial_normalize_files = partial(self.do_normalization, queue=queue)

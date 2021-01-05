@@ -1,7 +1,7 @@
 import os
 parameters = {
-    # "mimic_data_path" : os.path.expanduser("~/Documents/mimic/"),
-    "mimic_data_path" : "/scratch/mfgrawe/mimic",
+    "mimic_data_path" : os.path.expanduser("~/Documents/mimic/"),
+    # "mimic_data_path" : "/scratch/mfgrawe/mimic",
     "csv_files_directory" : "csv/",
     "multiclassification_directory" : "multiclassification/",
     "all_stays_csv" : "all_stays.csv",

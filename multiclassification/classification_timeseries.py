@@ -59,12 +59,9 @@ data_csv = pd.read_csv(dataset_path)
 data_csv = data_csv.sort_values(['episode'])
 # Get the paths for the files
 data = np.array(data_csv['structured_path'].tolist())
+episodes = data_csv['episode'].tolist()
 print_with_time("Class distribution")
-print(data_csv['label'].value_counts())
 classes = np.array(data_csv['label'].tolist())
-data, X_val, classes, classes_evaluation = train_test_split(data, classes, stratify=classes,
-                                                             test_size=.10)
-print(pd.Series(classes).value_counts())
 print_with_time("Computing class weights")
 class_weights = class_weight.compute_class_weight('balanced',
                                                  np.unique(classes),
@@ -73,6 +70,7 @@ mapped_weights = dict()
 for value in np.unique(classes):
     mapped_weights[value] = class_weights[value]
 class_weights = mapped_weights
+class_weights = None
 
 
 # Using a seed always will get the same data split even if the training stops
@@ -87,113 +85,140 @@ aux = pd.read_csv(data[0])
 aux = functions.remove_columns_for_classification(aux)
 inputShape = (None, len(aux.columns))
 
-if parameters['model_tunning']:
-    training_samples_path = training_directory + parameters['training_samples_filename']
-    training_classes_path = training_directory + parameters['training_classes_filename']
-    optimization_samples_path = training_directory + parameters['optimization_samples_filename']
-    optimization_classes_path = training_directory + parameters['optimization_classes_filename']
+training_samples_path = training_directory + parameters['training_samples_filename']
+training_classes_path = training_directory + parameters['training_classes_filename']
+testing_samples_path = training_directory + parameters['testing_samples_filename']
+testing_classes_path = training_directory + parameters['testing_classes_filename']
 
-    if not os.path.exists(training_samples_path):
-        data, data_opt, classes, classes_opt = train_test_split(data, classes, stratify=classes,
-                                                                test_size=parameters['optimization_split_rate'])
-        with open(training_samples_path, 'wb') as f:
-            pickle.dump(data, f)
-        with open(training_classes_path, 'wb') as f:
-            pickle.dump(classes, f)
-        with open(optimization_samples_path, 'wb') as f:
-            pickle.dump(data_opt, f)
-        with open(optimization_classes_path, 'wb') as f:
-            pickle.dump(classes_opt, f)
-    else:
-        with open(training_samples_path, 'rb') as f:
-            data = pickle.load(f)
-        with open(training_classes_path, 'rb') as f:
-            classes = pickle.load(f)
-        with open(optimization_samples_path, 'rb') as f:
-            data_opt = pickle.load(f)
-        with open(optimization_classes_path, 'rb') as f:
-            classes_opt = pickle.load(f)
-    opt_normalization_values_path = training_directory + parameters['optimization_normalization_values_filename']
-    values = normalization_values.get_normalization_values(data_opt,
-                                                           saved_file_name=opt_normalization_values_path)
-    opt_normalization_temporary_data_path = training_directory + parameters[
-        'optimization_normalization_temporary_data_directory']
-    normalizer = Normalization(values, temporary_path=opt_normalization_temporary_data_path)
-    print_with_time("Normalizing optimization data")
-    normalizer.normalize_files(data_opt)
-    normalized_data = np.array(normalizer.get_new_paths(data_opt))
-    print_with_time("Creating optimization generators")
-    training_events_sizes_file_path = training_directory + parameters['training_events_sizes_filename'].format('opt')
-    training_events_sizes_labels_file_path = training_directory + parameters[
-        'training_events_sizes_labels_filename'].format('opt')
-    testing_events_sizes_file_path = training_directory + parameters['testing_events_sizes_filename'].format('opt')
-    testing_events_sizes_labels_file_path = training_directory + parameters[
-        'testing_events_sizes_labels_filename'].format('opt')
+optimization_samples_path = training_directory + parameters['optimization_samples_filename']
+optimization_classes_path = training_directory + parameters['optimization_classes_filename']
 
-    train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data
-                                                                  , classes_opt
-                                                                  , sizes_filename=training_events_sizes_file_path
-                                                                  ,
-                                                                  classes_filename=training_events_sizes_labels_file_path)
-    dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
-                                                         max_batch_size=parameters['batchSize'])
-    dataTrainGenerator.create_batches()
+if not os.path.exists(training_samples_path):
+    len_dataset = len(data_csv)
+    len_evaluation_dataset = int(len_dataset * parameters['train_test_split_rate'])
+    len_optimization_dataset = int(len_dataset * parameters['optimization_split_rate'])
+    data, data_val, classes, classes_evaluation = train_test_split(data_csv, classes, stratify=classes,
+                                                             test_size=len_evaluation_dataset)
 
-    model_builder = MultilayerTemporalConvolutionalNNHyperModel(inputShape, parameters['numOutputNeurons'],
-                                                                [AUC()], tuner_parameters)
-    tunning_directory = checkpoint_directory + parameters['tunning_directory']
-    tuner = kt.Hyperband(model_builder,
-                         objective=kt.Objective('auc', direction="max"),
-                         max_epochs=10,
-                         directory=tunning_directory,
-                         project_name='timeseries',
-                         factor=3)
-    tuner.search(dataTrainGenerator, epochs=10)
-    modelCreator = KerasTunerModelCreator(tuner)
+    #############################################
+    ### Balancing instances on trainning data ###
+    #############################################
+
+    len_positive = len(data[data['label'] == 1])
+    subsample = data[data['label'] == 0].sample(len_positive)
+    data = subsample.append(data[data['label'] == 1])
+    classes = data['label'].tolist()
+
+    data, data_opt, classes, classes_opt = train_test_split(data, classes, stratify=classes,
+                                                      test_size=len_optimization_dataset)
+    with open(training_samples_path, 'wb') as f:
+        pickle.dump(data, f)
+    with open(training_classes_path, 'wb') as f:
+        pickle.dump(classes, f)
+    with open(testing_samples_path, 'wb') as f:
+        pickle.dump(data_val, f)
+    with open(testing_classes_path, 'wb') as f:
+        pickle.dump(classes_evaluation, f)
+    with open(optimization_samples_path, 'wb') as f :
+        pickle.dump(data_opt, f)
+    with open(optimization_classes_path, 'wb') as f:
+        pickle.dump(classes_opt, f)
 else:
-    if not parameters['tcn']:
-        modelCreator = MultilayerKerasRecurrentNNCreator(inputShape, parameters['outputUnits'],
-                                                         parameters['numOutputNeurons'],
-                                                         loss=parameters['loss'],
-                                                         layersActivations=parameters['layersActivations'],
-                                                         networkActivation=parameters['networkActivation'],
-                                                         gru=parameters['gru'], use_dropout=parameters['useDropout'],
-                                                         dropout=parameters['dropout'], kernel_regularizer=None,
-                                                         metrics=[keras.metrics.binary_accuracy],
-                                                         optimizer=parameters['optimizer'])
-    else:
-        modelCreator = MultilayerTemporalConvolutionalNNCreator(inputShape, parameters['outputUnits'],
-                                                                parameters['numOutputNeurons'],
-                                                                loss=parameters['loss'],
-                                                                layersActivations=parameters['layersActivations'],
-                                                                networkActivation=parameters['networkActivation'],
-                                                                pooling=parameters['pooling'],
-                                                                kernel_sizes=parameters['kernel_sizes'],
-                                                                use_dropout=parameters['useDropout'],
-                                                                dilations=parameters['dilations'],
-                                                                nb_stacks=parameters['nb_stacks'],
-                                                                dropout=parameters['dropout'], kernel_regularizer=None,
-                                                                metrics=[keras.metrics.binary_accuracy],
-                                                                optimizer=parameters['optimizer'])
+    with open(training_samples_path, 'rb') as f:
+        data = pickle.load(f)
+    with open(training_classes_path, 'rb') as f:
+        classes = pickle.load(f)
+    with open(testing_samples_path, 'rb') as f:
+        data_val = pickle.load(f)
+    with open(testing_classes_path, 'rb') as f:
+        classes_evaluation = pickle.load(f)
+    with open(optimization_samples_path, 'rb') as f :
+        data_opt = pickle.load(f)
+    with open(optimization_classes_path, 'rb') as f:
+        classes_opt = pickle.load(f)
 
-i = 0
+optimization_df = data_opt #data_csv[data_csv['episode'].isin(data_opt)]
+classes_opt = np.asarray(optimization_df['label'].tolist())
+optimization_sdata = np.asarray(optimization_df['structured_path'].tolist())
+opt_normalization_values_path = training_directory + parameters['optimization_normalization_values_filename']
+values = normalization_values.get_normalization_values(optimization_sdata,
+                                                       saved_file_name=opt_normalization_values_path)
+opt_normalization_temporary_data_path = training_directory + parameters[
+    'optimization_normalization_temporary_data_directory']
+normalizer = Normalization(values, temporary_path=opt_normalization_temporary_data_path)
+print_with_time("Normalizing optimization data")
+normalizer.normalize_files(optimization_sdata)
+normalized_data = np.array(normalizer.get_new_paths(optimization_sdata))
+
+print_with_time("Creating optimization generators")
+training_events_sizes_file_path = training_directory + parameters['training_events_sizes_filename'].format('opt')
+training_events_sizes_labels_file_path = training_directory + parameters[
+    'training_events_sizes_labels_filename'].format('opt')
+
+train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data
+                                                              , classes_opt
+                                                              , sizes_filename=training_events_sizes_file_path
+                                                              ,
+                                                              classes_filename=training_events_sizes_labels_file_path)
+dataTrainGenerator = LengthLongitudinalDataGenerator(train_sizes, train_labels,
+                                                     max_batch_size=parameters['batchSize'])
+dataTrainGenerator.create_batches()
+
+model_builder = MultilayerTemporalConvolutionalNNHyperModel(inputShape, parameters['numOutputNeurons'],
+                                                            [AUC()], tuner_parameters)
+tunning_directory = checkpoint_directory + parameters['tunning_directory']
+tuner = kt.Hyperband(model_builder,
+                     objective=kt.Objective('auc', direction="max"),
+                     max_epochs=10,
+                     directory=tunning_directory,
+                     project_name='timeseries',
+                     factor=3)
+tuner.search(dataTrainGenerator, epochs=10)
+modelCreator = KerasTunerModelCreator(tuner, "LSTM_ml")
+
+
+evaluation_data = np.asarray(data_val['structured_path'].tolist())
+eval_normalization_values_path = training_directory + parameters['evaluation_normalization_values_filename']
+eval_values = normalization_values.get_normalization_values(evaluation_data,
+                                                       saved_file_name=eval_normalization_values_path)
+eval_normalization_temporary_data_path = training_directory + parameters[
+    'evaluation_normalization_temporary_data_directory']
+eval_normalizer = Normalization(eval_values, temporary_path=eval_normalization_temporary_data_path)
+print_with_time("Normalizing evaluation data")
+eval_normalizer.normalize_files(evaluation_data)
+eval_normalized_data = np.array(eval_normalizer.get_new_paths(evaluation_data))
+
+evaluation_events_sizes_file_path = training_directory + parameters['evaluation_events_sizes_filename']
+evaluation_events_sizes_labels_file_path = training_directory + parameters['evaluation_events_sizes_labels_filename']
+evaluation_sizes, evaluation_labels = functions.divide_by_events_lenght(eval_normalized_data
+                                                                      , data_val['label'].tolist()
+                                                                      , sizes_filename=training_events_sizes_file_path
+                                                                      , classes_filename=training_events_sizes_labels_file_path)
+evaluationGenerator = LengthLongitudinalDataGenerator(evaluation_sizes, evaluation_labels, max_batch_size=parameters['batchSize'])
+evaluationGenerator.create_batches()
+classes = np.asarray(data['label'].tolist())
+data = np.asarray(data['structured_path'].tolist())
+
+fold = 0
 # ====================== Script that start training new models
 result_file_path = checkpoint_directory + parameters['result_filename']
-with open(result_file_path, 'a+') as cvsFileHandler: # where the results for each fold are appended
+eval_file_path = checkpoint_directory + "eval_results.csv"
+with open(result_file_path, 'a+') as cvsFileHandler, open(eval_file_path, 'a+') as evalFileHandler: # where the results for each fold are appended
     dictWriter = None
+    eval_results = None
     for trainIndex, testIndex in kf.split(data, classes):
-        trained_model_path = checkpoint_directory + parameters['trained_model_filename'].format(i)
-        # if os.path.exists(trained_model_path):
-        #     print("Pass fold {}".format(i))
-        #     i += 1
-        #     continue
-        print_with_time("Fold {}".format(i))
+        trained_model_path = checkpoint_directory + parameters['trained_model_filename'].format(fold)
+        if os.path.exists(trained_model_path):
+            print("Pass fold {}".format(fold))
+            fold += 1
+            continue
+        print_with_time("Fold {}".format(fold))
         print_with_time("Getting values for normalization")
         # normalization_values = Normalization.get_normalization_values(data[trainIndex])
-        fold_normalization_values_path = training_directory + parameters['fold_normalization_values_filename'].format(i)
+        fold_normalization_values_path = training_directory + parameters['fold_normalization_values_filename'].format(fold)
         values = normalization_values.get_normalization_values(data[trainIndex],
                                                                saved_file_name=fold_normalization_values_path)
-        fold_normalization_temporary_data_path = training_directory + parameters['fold_normalization_temporary_data_directory'].format(i)
+        fold_normalization_temporary_data_path = training_directory + parameters['fold_normalization_temporary_data_directory'].format(fold)
         normalizer = Normalization(values, temporary_path=fold_normalization_temporary_data_path)
         print_with_time("Normalizing fold data")
         normalizer.normalize_files(data)
@@ -204,10 +229,10 @@ with open(result_file_path, 'a+') as cvsFileHandler: # where the results for eac
         # dataTestGenerator = LongitudinalDataGenerator(normalized_data[testIndex],
         #                                               classes[testIndex], parameters['batchSize'])
 
-        training_events_sizes_file_path = training_directory + parameters['training_events_sizes_filename'].format(i)
-        training_events_sizes_labels_file_path = training_directory + parameters['training_events_sizes_labels_filename'].format(i)
-        testing_events_sizes_file_path = training_directory + parameters['testing_events_sizes_filename'].format(i)
-        testing_events_sizes_labels_file_path = training_directory + parameters['testing_events_sizes_labels_filename'].format(i)
+        training_events_sizes_file_path = training_directory + parameters['training_events_sizes_filename'].format(fold)
+        training_events_sizes_labels_file_path = training_directory + parameters['training_events_sizes_labels_filename'].format(fold)
+        testing_events_sizes_file_path = training_directory + parameters['testing_events_sizes_filename'].format(fold)
+        testing_events_sizes_labels_file_path = training_directory + parameters['testing_events_sizes_labels_filename'].format(fold)
 
         train_sizes, train_labels = functions.divide_by_events_lenght(normalized_data[trainIndex]
                                                                       , classes[trainIndex]
@@ -231,13 +256,25 @@ with open(result_file_path, 'a+') as cvsFileHandler: # where the results for eac
         else:
             kerasAdapter = KerasAdapter.load_model(trained_model_path)
         print_with_time("Testing model")
-        metrics = test_model(kerasAdapter, dataTestGenerator, i)
+        metrics = test_model(kerasAdapter, dataTestGenerator, fold)
+        keys = list(metrics.keys())
+        keys.sort()
         if dictWriter is None:
-            dictWriter = csv.DictWriter(cvsFileHandler, metrics.keys())
-        if metrics['fold'] == 0:
+            dictWriter = csv.DictWriter(cvsFileHandler, keys)
+        if fold == 0:
             dictWriter.writeheader()
         dictWriter.writerow(metrics)
-        i += 1
+
+
+        metrics = test_model(kerasAdapter, evaluationGenerator, fold)
+        keys = list(metrics.keys())
+        keys.sort()
+        if eval_results is None:
+            eval_results = csv.DictWriter(evalFileHandler, keys)
+        if fold == 0:
+            eval_results.writeheader()
+        eval_results.writerow(metrics)
+        fold += 1
 
 # Evaluating k-fold
 results = pd.read_csv(result_file_path)
