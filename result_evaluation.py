@@ -8,12 +8,15 @@ class ModelEvaluation():
     """
     Evaluate model trained in binary classification
     """
-    def __init__(self, model, files, true_classes, predictions_scores):
+    def __init__(self, model, files, true_classes, predictions_scores, predictions=None):
         self.model = model
         self.files = files
         self.true_classes = true_classes
         self.predictions_scores = predictions_scores
-        self.predictions_classes = np.array([score > 0.5 for score in predictions_scores]).astype(np.int)
+        if predictions is None:
+            self.predictions_classes = np.array([score > 0.5 for score in predictions_scores]).astype(np.int)
+        else:
+            self.predictions_classes = predictions
         self.__get_metrics()
 
     def __get_metrics(self):

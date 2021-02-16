@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import pickle
+from collections import Counter
 from multiprocessing import set_start_method
 
 import pandas
@@ -24,7 +25,9 @@ from sklearn.utils import class_weight
 from tensorflow.keras.models import Model
 from tensorflow.keras.regularizers import l1
 from tensorflow.keras.metrics import AUC
-from multiclassification.parameters.classification_parameters import ensemble_stacking_parameters as parameters
+
+from multiclassification.ensemble_kappa_agreement import kappa_aggreement
+from multiclassification.parameters.classification_parameters import ensemble_parameters as parameters
 
 from resources import functions
 from adapter import KerasAdapter
@@ -65,7 +68,7 @@ def train_meta_model_on_data(data, classes, parameters):
     kerasAdapter = modelCreator.create()
     epochs = parameters['meta_learner_training_epochs']
     models = []
-    models.append(kerasAdapter)
+    # models.append(kerasAdapter)
     models.append(LinearSVC())
     models.append(LogisticRegression())
     models.append(GaussianNB())
@@ -89,52 +92,71 @@ def train_meta_model_on_data(data, classes, parameters):
             model.fit(data, classes)
     return models
 
-def test_meta_model_on_data(models, data, classes, parameters, data_origin):
-    dataGenerator = ArrayDataGenerator(data, classes, parameters['meta_learner_batch_size'])
+def test_meta_model_on_data(models, data, data_columns, data_origin):
     results = []
+    results_prediction_score = []
     for model in models:
-        if isinstance(model, KerasAdapter):
-            result = test_model(model, dataGenerator, -1)
-            result['model'] = "keras_model"
-        else:
-            result = test_sklearn_meta_models_on_generator(model, dataGenerator)
-            result['model'] = model.__class__.__name__
+        model_evaluation = test_sklearn_meta_models_on_generator(model, data, data_columns)
+        result = model_evaluation.metrics
+        for f, p, c in zip(model_evaluation.files, model_evaluation.predictions_scores, model_evaluation.predictions_classes):
+            results_prediction_score.append({'episode':f, 'probas':p, 'classes':c, 'model':model.__class__.__name__, "origin":data_origin})
         result['origin'] = data_origin
+        result['model'] = model.__class__.__name__
         results.append(result)
-    return results
+    return results, results_prediction_score
 
 
-def test_sklearn_meta_models_on_generator(model, generator):
+def test_sklearn_meta_models_on_generator(model, data:pandas.DataFrame, data_columns) -> ModelEvaluation:
     predicted = []
     trueClasses = []
     files = []
-    for i in range(len(generator)):
-        sys.stderr.write('\rdone {0:%}'.format(i / len(generator)))
-        data = generator[i]
+    i = 0
+    testing_data = data.loc[:, data_columns].values
+    try:
+        positive = np.argmax(model.classes_)
+        r = model.predict_proba(testing_data)
+        if len(r[0]) > 1:
+            new_r = []
+            for probas in r:
+                new_r.append(probas[positive])
+            r = np.asarray(new_r)
+    except:
         try:
-            positive = np.argmax(model.classes_)
-            r = model.predict_proba(data[0])
-            if len(r[0]) > 1:
-                new_r = []
-                for probas in r:
-                    new_r.append(probas[positive])
-                r = np.asarray(new_r)
+            r = model.decision_function(testing_data)
+            r = (r - r.min()) / (r.max() - r.min())
         except:
-            try:
-                r = model.decision_function(data[0])
-                if len(r[0]) > 1:
-                    new_r = []
-                    for probas in r:
-                        new_r.append(probas[positive])
-                    r = np.asarray(new_r)
-            except:
-                r = model.predict(data[0])
-        r = r.flatten()
-        predicted.extend(r)
-        trueClasses.extend(data[1])
-        files.extend(generator.batches[i])
+            r = model.predict(testing_data)
+    r = r.flatten()
+    predicted = r
+    trueClasses = data.loc[:, 'label']
+    files = data.loc[:, 'episode']
+    # for i in range(len(generator)):
+    #     sys.stderr.write('\rdone {0:%}'.format(i / len(generator)))
+    #     data = generator[i]
+    #     try:
+    #         positive = np.argmax(model.classes_)
+    #         r = model.predict_proba(data[0])
+    #         if len(r[0]) > 1:
+    #             new_r = []
+    #             for probas in r:
+    #                 new_r.append(probas[positive])
+    #             r = np.asarray(new_r)
+    #     except:
+    #         try:
+    #             r = model.decision_function(data[0])
+    #             if len(r[0]) > 1:
+    #                 new_r = []
+    #                 for probas in r:
+    #                     new_r.append(probas[positive])
+    #                 r = np.asarray(new_r)
+    #         except:
+    #             r = model.predict(data[0])
+    #     r = r.flatten()
+    #     predicted.extend(r)
+    #     trueClasses.extend(data[1])
+    #     files.extend(generator.batches[i])
     evaluation =  ModelEvaluation(model, files, trueClasses, predicted)
-    return evaluation.metrics
+    return evaluation
 
 if __name__ == '__main__':
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -264,10 +286,23 @@ if __name__ == '__main__':
                                                                                     textual_tuning_parameters))
         if not os.path.exists(training_samples_path):
             len_dataset = len(episodes)
+            print("Dataset size: ", len_dataset)
+            print("Test split rate: ",parameters['train_test_split_rate'])
+            print("Optimization split rate: ", parameters['optimization_split_rate'])
             len_evaluation_dataset = int(len_dataset * parameters['train_test_split_rate'])
             len_optimization_dataset = int(len_dataset * parameters['optimization_split_rate'])
+            print("Test dataset len: ", len_evaluation_dataset)
+            print("Optimization dataset len: ", len_optimization_dataset)
             X, X_val, classes, classes_evaluation = train_test_split(episodes, classes, stratify=classes,
                                                                      test_size=len_evaluation_dataset)
+            print("Após split de teste", Counter(classes))
+            print("Contagem de dados de teste", Counter(classes_evaluation))
+
+            X, X_opt, classes, classes_opt = train_test_split(X, classes, stratify=classes,
+                                                              test_size=len_optimization_dataset)
+            print("Distribuição após split dos dados de otimização")
+            print(Counter(classes))
+            print("Distribuição de classes dados de otimização:", Counter(classes_opt))
 
             if parameters['balance_training_data']:
                 #############################################
@@ -277,11 +312,19 @@ if __name__ == '__main__':
                 len_positive = len(aux[aux['label'] == 1])
                 subsample = aux[aux['label'] == 0].sample(len_positive)
                 subsample = subsample.append(aux[aux['label'] == 1])
+                print("Distribuição dados de treinamento depois do balanceamento:", subsample['label'].value_counts())
                 X = subsample['episode'].tolist()
                 classes = subsample['label'].tolist()
-
-            X, X_opt, classes, classes_opt = train_test_split(X, classes, stratify=classes,
-                                                                     test_size=len_optimization_dataset)
+                #############################################
+                ### Balancing instances on optimization data ###
+                #############################################
+                aux = data_csv[data_csv['episode'].isin(X_opt)]
+                len_positive = len(aux[aux['label'] == 1])
+                subsample = aux[aux['label'] == 0].sample(len_positive)
+                subsample = subsample.append(aux[aux['label'] == 1])
+                print("Distribuição dados de otimização depois do balanceamento:", subsample['label'].value_counts())
+                X_opt = subsample['episode'].tolist()
+                classes_opt = subsample['label'].tolist()
             with open(training_samples_path, 'wb') as f:
                 pickle.dump(X, f)
             with open(training_classes_path, 'wb') as f:
@@ -777,6 +820,7 @@ if __name__ == '__main__':
 
         fold_structured_representations = fold_structured_representations.add_prefix("s_")
         fold_textual_representations = fold_textual_representations.add_prefix("t_")
+
         fold_metrics = pandas.DataFrame(fold_metrics)
 
         fold_structured_predictions.to_csv(fold_structured_predictions_path)
@@ -789,23 +833,18 @@ if __name__ == '__main__':
             fold_evaluation_metrics = pandas.DataFrame(fold_evaluation_metrics)
             fold_evaluation_metrics.to_csv(fold_evaluation_metrics_path)
 
-        if all_predictions is None:
+        if all_metrics is None:
             structured_predictions = fold_structured_predictions
             structured_representations = fold_structured_representations
             textual_predictions = fold_textual_predictions
             textual_representations = fold_textual_representations
             all_metrics = fold_metrics
         else:
-            structured_predictions = pd.merge(structured_predictions, fold_structured_predictions, how="left",
-                                              left_index=True, right_index=True)
-            structured_representations = pd.merge(structured_representations, fold_structured_representations, how="left",
-                                              left_index=True, right_index=True)
-            textual_predictions = pd.merge(textual_predictions, fold_textual_predictions, how="left",
-                                              left_index=True, right_index=True)
-            textual_representations = pd.merge(textual_representations, fold_textual_representations, how="left",
-                                              left_index=True, right_index=True)
-            all_metrics = pd.merge(all_metrics, fold_metrics, how="left",
-                                              left_index=True, right_index=True)
+            structured_predictions = structured_predictions.append(fold_structured_predictions)
+            structured_representations = structured_representations.append(fold_structured_representations)
+            textual_predictions = textual_predictions.append(fold_textual_predictions)
+            textual_representations = textual_representations.append(fold_textual_representations)
+            all_metrics = all_metrics.append(fold_metrics, ignore_index=True)
         fold += 1
     from scipy.stats import zscore
 
@@ -984,8 +1023,13 @@ if __name__ == '__main__':
     textual_evaluate_representations.index = textual_evaluate_representations.index.astype(str)
 
     ensemble_results = []
+    ensemble_predictions = []
     all_predictions = pd.merge(structured_predictions, textual_predictions, left_index=True, right_index=True,
                                how="left")
+    # kappas, kappas_positive, kappas_negative = kappa_aggreement(all_predictions, data_csv)
+    # kappas.to_csv(os.path.join(checkpoint_directory, 'kappas.csv'))
+    # kappas_positive.to_csv(os.path.join(checkpoint_directory, 'kappas_positive.csv'))
+    # kappas_negative.to_csv(os.path.join(checkpoint_directory, 'kappas_negative.csv'))
     all_predictions = pd.merge(all_predictions, data_csv[['episode', 'icustay_id', 'label']], left_index=True,
                                       right_on='episode', how="left")
     all_evaluations = pd.merge(structured_evaluation_predictions, textual_evaluate_predictions,
@@ -1019,6 +1063,21 @@ if __name__ == '__main__':
     dataset_patients[['age', 'is_male', 'height', 'weight']] = dataset_patients[['age', 'is_male', 'height', 'weight']].fillna(0)
     meta_data_extra = dataset_patients[['icustay_id', 'age', 'is_male', 'height', 'weight']]
 
+    # Testing only structured non-temporal data
+    metadata_dataset = pandas.merge(meta_data_extra, data_csv[['episode', 'icustay_id', 'label']], left_on="icustay_id", right_on="icustay_id")
+    training_metadata_dataset = metadata_dataset[metadata_dataset['episode'].isin(X)]
+    training_metadata_classes = training_metadata_dataset['label']
+    training_metadata_dataset = training_metadata_dataset[['age', 'is_male', 'height', 'weight']].values
+    meta_adapters = train_meta_model_on_data(training_metadata_dataset, training_metadata_classes, parameters)
+
+    evaluation_metadata_dataset = metadata_dataset[metadata_dataset['episode'].isin(X_val)]
+    results, result_predictions = test_meta_model_on_data(meta_adapters, evaluation_metadata_dataset,
+                                                          ['age', 'is_male', 'height', 'weight'], 'metadata')
+    result_predictions = pandas.DataFrame(result_predictions)
+    result_predictions.to_csv(os.path.join(checkpoint_directory, "metamodel_metadata_predictions.csv"))
+    results = pandas.DataFrame(results)
+    results.to_csv(os.path.join(checkpoint_directory, 'metadata_results.csv'))
+
     # Using only structured data
     meta_data_predictions_structured = pandas.merge(structured_predictions, meta_data_extra, left_on="icustay_id",
                                                     right_on="icustay_id", how="left")
@@ -1050,8 +1109,10 @@ if __name__ == '__main__':
     testing_classes = np.asarray(meta_evaluation_predictions_structured['label'].tolist())
 
     meta_adapters = train_meta_model_on_data(training_values, training_classes, parameters)
-    results = test_meta_model_on_data(meta_adapters, testing_values, testing_classes, parameters, 'struct_pred')
+    # results, result_predictions = test_meta_model_on_data(meta_adapters, testing_values, testing_classes, parameters, 'struct_pred')
+    results, result_predictions = test_meta_model_on_data(meta_adapters, meta_evaluation_predictions_structured, columns_evaluation, 'struct_pred')
     ensemble_results.extend(results)
+    ensemble_predictions.extend(result_predictions)
     # Using both types of data
 
     print(all_predictions.columns)
@@ -1085,73 +1146,78 @@ if __name__ == '__main__':
     testing_classes = np.asarray(meta_data_evaluation['label'].tolist())
 
     meta_adapters = train_meta_model_on_data(training_values, training_classes, parameters)
-    results = test_meta_model_on_data(meta_adapters, testing_values, testing_classes, parameters, 'both_pred')
+    # results, result_predictions = test_meta_model_on_data(meta_adapters, testing_values, testing_classes, parameters, 'both_pred')
+    results, result_predictions = test_meta_model_on_data(meta_adapters, meta_data_evaluation, columns_evaluation, 'both_pred')
     ensemble_results.extend(results)
+    ensemble_predictions.extend(result_predictions)
 
-    # REPRESENTATIONS
-
-    # structured_representations = structured_representations.set_index(pd.to_numeric(structured_representations.index))
-    # print(structured_representations)
-    meta_data_representations_structured = pandas.merge(structured_representations, meta_data_extra, left_on="icustay_id",
-                                                    right_on="icustay_id", how="left")
-    meta_data_representations_structured.index = meta_data_representations_structured.index.astype(str)
-    meta_evaluation_representations_structured = pandas.merge(structured_evaluation_representations, meta_data_extra,
-                                                              left_on="icustay_id", right_on="icustay_id", how="left")
-    meta_evaluation_representations_structured.index = meta_evaluation_representations_structured.index.astype(str)
-
-    print(meta_data_representations_structured)
-    print(meta_data_representations_structured.columns)
-    if 'Unnamed: 0' in meta_data_representations_structured.columns:
-        meta_data_representations_structured = meta_data_representations_structured.drop(columns=['Unnamed: 0'])
-    if 'Unnamed: 0' in meta_evaluation_representations_structured.columns:
-        meta_evaluation_representations_structured = meta_evaluation_representations_structured.drop(columns=['Unnamed: 0'])
-    columns = [c for c in meta_data_representations_structured.columns if 'label' not in c and 'icustay' not in c and 'episode' not in c]
-    columns_evaluation = [c for c in meta_evaluation_representations_structured.columns if 'label' not in c and 'icustay' not in c and 'episode' not in c]
-    print(columns)
-    print(meta_data_representations_structured.columns)
-    training_values = meta_data_representations_structured.loc[:, columns]
-    training_values = training_values.values
-    training_classes = np.asarray(meta_data_representations_structured['label'].tolist())
-
-    testing_values = meta_evaluation_representations_structured.loc[:, columns_evaluation]
-    testing_values = testing_values.values
-    testing_classes = np.asarray(meta_evaluation_representations_structured['label'].tolist())
-
-    meta_adapters = train_meta_model_on_data(training_values, training_classes, parameters)
-    results = test_meta_model_on_data(meta_adapters, testing_values, testing_classes, parameters, 'struct_repr')
-    ensemble_results.extend(results)
-
-    textual_columns = [c for c in textual_representations.columns if 't_' in c]
-
-    all_representations = pd.merge(structured_representations, textual_representations[textual_columns],
-                                   left_index=True, right_index=True, how="left")
-    all_evaluations = pd.merge(structured_evaluation_representations, textual_evaluate_representations[textual_columns],
-                                   left_index=True, right_index=True, how="left")
-    meta_data_representations = pandas.merge(all_representations, meta_data_extra, left_on="icustay_id",
-                                                    right_on="icustay_id", how="left")
-    meta_evaluation_representations = pandas.merge(all_evaluations, meta_data_extra, left_on="icustay_id",
-                                                    right_on="icustay_id", how="left")
-    print(meta_data_representations.columns)
-    if 'Unnamed: 0' in meta_data_representations.columns:
-        meta_data_representations = meta_data_representations.drop(columns=['Unnamed: 0'])
-    if 'Unnamed: 0' in meta_evaluation_representations.columns:
-        meta_evaluation_representations = meta_evaluation_representations.drop(columns=['Unnamed: 0'])
-    columns = [c for c in meta_data_representations.columns if 'label' not in c and 'icustay' not in c and 'episode' not in c]
-    columns_evaluation = [c for c in meta_evaluation_representations.columns if 'label' not in c and 'icustay' not in c and 'episode' not in c]
-    print(columns)
-    print(meta_data_representations.columns)
-    training_values = meta_data_representations.loc[:, columns]
-    training_values = training_values.values
-    training_classes = np.asarray(meta_data_representations['label'].tolist())
-
-    testing_values = meta_evaluation_representations.loc[:, columns_evaluation]
-    testing_values = testing_values.values
-    texting_classes = np.asarray(meta_evaluation_representations['label'].tolist())
-
-    meta_adapters = train_meta_model_on_data(training_values, training_classes, parameters)
-    results = test_meta_model_on_data(meta_adapters, testing_values, testing_classes, parameters, 'both_repr')
-    ensemble_results.extend(results)
+    # # REPRESENTATIONS
+    #
+    # # structured_representations = structured_representations.set_index(pd.to_numeric(structured_representations.index))
+    # # print(structured_representations)
+    # meta_data_representations_structured = pandas.merge(structured_representations, meta_data_extra, left_on="icustay_id",
+    #                                                 right_on="icustay_id", how="left")
+    # meta_data_representations_structured.index = meta_data_representations_structured.index.astype(str)
+    # meta_evaluation_representations_structured = pandas.merge(structured_evaluation_representations, meta_data_extra,
+    #                                                           left_on="icustay_id", right_on="icustay_id", how="left")
+    # meta_evaluation_representations_structured.index = meta_evaluation_representations_structured.index.astype(str)
+    #
+    # print(meta_data_representations_structured)
+    # print(meta_data_representations_structured.columns)
+    # if 'Unnamed: 0' in meta_data_representations_structured.columns:
+    #     meta_data_representations_structured = meta_data_representations_structured.drop(columns=['Unnamed: 0'])
+    # if 'Unnamed: 0' in meta_evaluation_representations_structured.columns:
+    #     meta_evaluation_representations_structured = meta_evaluation_representations_structured.drop(columns=['Unnamed: 0'])
+    # columns = [c for c in meta_data_representations_structured.columns if 'label' not in c and 'icustay' not in c and 'episode' not in c]
+    # columns_evaluation = [c for c in meta_evaluation_representations_structured.columns if 'label' not in c and 'icustay' not in c and 'episode' not in c]
+    # print(columns)
+    # print(meta_data_representations_structured.columns)
+    # training_values = meta_data_representations_structured.loc[:, columns]
+    # training_values = training_values.values
+    # training_classes = np.asarray(meta_data_representations_structured['label'].tolist())
+    #
+    # testing_values = meta_evaluation_representations_structured.loc[:, columns_evaluation]
+    # testing_values = testing_values.values
+    # testing_classes = np.asarray(meta_evaluation_representations_structured['label'].tolist())
+    #
+    # meta_adapters = train_meta_model_on_data(training_values, training_classes, parameters)
+    # results = test_meta_model_on_data(meta_adapters, testing_values, testing_classes, parameters, 'struct_repr')
+    # ensemble_results.extend(results)
+    #
+    # textual_columns = [c for c in textual_representations.columns if 't_' in c]
+    #
+    # all_representations = pd.merge(structured_representations, textual_representations[textual_columns],
+    #                                left_index=True, right_index=True, how="left")
+    # all_evaluations = pd.merge(structured_evaluation_representations, textual_evaluate_representations[textual_columns],
+    #                                left_index=True, right_index=True, how="left")
+    # meta_data_representations = pandas.merge(all_representations, meta_data_extra, left_on="icustay_id",
+    #                                                 right_on="icustay_id", how="left")
+    # meta_evaluation_representations = pandas.merge(all_evaluations, meta_data_extra, left_on="icustay_id",
+    #                                                 right_on="icustay_id", how="left")
+    # print(meta_data_representations.columns)
+    # if 'Unnamed: 0' in meta_data_representations.columns:
+    #     meta_data_representations = meta_data_representations.drop(columns=['Unnamed: 0'])
+    # if 'Unnamed: 0' in meta_evaluation_representations.columns:
+    #     meta_evaluation_representations = meta_evaluation_representations.drop(columns=['Unnamed: 0'])
+    # columns = [c for c in meta_data_representations.columns if 'label' not in c and 'icustay' not in c and 'episode' not in c]
+    # columns_evaluation = [c for c in meta_evaluation_representations.columns if 'label' not in c and 'icustay' not in c and 'episode' not in c]
+    # print(columns)
+    # print(meta_data_representations.columns)
+    # training_values = meta_data_representations.loc[:, columns]
+    # training_values = training_values.values
+    # training_classes = np.asarray(meta_data_representations['label'].tolist())
+    #
+    # testing_values = meta_evaluation_representations.loc[:, columns_evaluation]
+    # testing_values = testing_values.values
+    # texting_classes = np.asarray(meta_evaluation_representations['label'].tolist())
+    #
+    # # TODO: Get predictions
+    # meta_adapters = train_meta_model_on_data(training_values, training_classes, parameters)
+    # results = test_meta_model_on_data(meta_adapters, testing_values, testing_classes, parameters, 'both_repr')
+    # ensemble_results.extend(results)
 
     ensemble_results = pandas.DataFrame(ensemble_results)
     ensemble_results.to_csv(checkpoint_directory + parameters['ensemble_results_filename'])
     all_metrics.to_csv(checkpoint_directory + parameters['metrics_filename'])
+    ensemble_predictions = pandas.DataFrame(ensemble_predictions)
+    ensemble_predictions.to_csv(os.path.join(checkpoint_directory, 'metamodels_predictions.csv'))

@@ -50,9 +50,12 @@ def create_episodes(dataset, manager_queue, hours_since_intime=24,
         if len(structured_events.dropna(how="all")) == 0:
             manager_queue.put(['removed', 'only_missing_events'], icustay_id)
             continue
+        icustay_textual_path = os.path.join(note_events_path, '{}.csv'.format(icustay_id))
+        if not os.path.exists(icustay_textual_path):
+            manager_queue.put(['removed', 'missing_textual_events'], icustay_id)
+            continue
         structured_events.to_csv(new_structured_events_path, index=False)
         manager_queue.put([icustay_id, icustay_id, 'structured', new_structured_events_path, label])
-        icustay_textual_path = os.path.join(note_events_path, '{}.csv'.format(icustay_id))
         if os.path.exists(icustay_textual_path):
             textual_events = pd.read_csv(icustay_textual_path)
             textual_events.loc[:, 'endtime'] = pd.to_datetime(textual_events['endtime'],
@@ -76,18 +79,19 @@ def create_episodes(dataset, manager_queue, hours_since_intime=24,
             textual_events.to_csv(new_textual_events_path, index=False)
             manager_queue.put([icustay_id, icustay_id, 'textual', new_textual_events_path, label])
         else:
-            empty_rows = []
-            for index, srow in structured_events.iterrows():
-                empty_row = dict()
-                empty_row['starttime'] = srow['starttime']
-                empty_row['endtime'] = srow['endtime']
-                empty_row['bucket'] = srow['bucket']
-                empty_row['text'] = constants.NO_TEXT_CONSTANT
-                empty_rows.append(empty_row)
-            empty_rows = pd.DataFrame(empty_rows)
-            empty_rows = empty_rows.sort_values(by='bucket')
-            empty_rows.to_csv(new_textual_events_path, index=False)
-            manager_queue.put([icustay_id, icustay_id, 'textual', new_textual_events_path, label])
+            manager_queue.put(['removed', 'missing_textual_events'], icustay_id)
+            # empty_rows = []
+            # for index, srow in structured_events.iterrows():
+            #     empty_row = dict()
+            #     empty_row['starttime'] = srow['starttime']
+            #     empty_row['endtime'] = srow['endtime']
+            #     empty_row['bucket'] = srow['bucket']
+            #     empty_row['text'] = constants.NO_TEXT_CONSTANT
+            #     empty_rows.append(empty_row)
+            # empty_rows = pd.DataFrame(empty_rows)
+            # empty_rows = empty_rows.sort_values(by='bucket')
+            # empty_rows.to_csv(new_textual_events_path, index=False)
+            # manager_queue.put([icustay_id, icustay_id, 'textual', new_textual_events_path, label])
     # return manager_queue
 
 
@@ -185,6 +189,7 @@ with mp.Pool(processes=4) as pool:
     mortality_dataset = mortality_dataset.T
     mortality_dataset.to_csv(parameters['mimic_data_path'] + parameters['multiclassification_directory'] \
                              + parameters['mortality_directory'] + parameters['mortality_dataset_csv'])
+    print("Total icustays", original_len)
     print(mortality_dataset['label'].value_counts())
     for key in removed_icustays.keys():
         print(key, removed_icustays[key])

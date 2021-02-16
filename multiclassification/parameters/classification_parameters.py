@@ -94,6 +94,87 @@ timeseries_model_parameters = {
     'optimization_normalization_temporary_data_directory': "opt_data_tmp/"
 }
 
+cuis_execution_saving_parameters = {
+    "execution_saving_path" : "cuis_balanced_training/",
+    "training_checkpoint": "checkpoint/",
+    "execution_parameters_filename": "training_parameters.pkl",
+
+    "use_class_weight": False,
+    "balance_training_data": False,
+
+    "normalization_value_counts_directory" : "value_counts/",
+    "fold_normalization_values_filename": "normalization_values_{}.pkl",
+    "fold_normalization_temporary_data_directory" : "data_tmp_{}/",
+    'tunning_directory' : 'tunning/',
+
+    "training_events_sizes_filename" : "training_sizes_{}.pkl",
+    "training_events_sizes_labels_filename" : "training_sizes_labels_{}.pkl",
+    "testing_events_sizes_filename" : "testing_sizes_{}.pkl",
+    "testing_events_sizes_labels_filename" : "testing_sizes_labels_{}.pkl",
+
+
+    "evaluation_normalization_values_filename": "eval_normalization_values.pkl",
+    "evaluation_normalization_temporary_data_directory": "evaluation_normalization_tmp/",
+    "evaluation_events_sizes_filename": "evaluation_sizes.pkl",
+    "evaluation_events_sizes_labels_filename": "evaluation_sizes_labels.pkl",
+
+    "training_samples_filename" : "training_samples.pkl",
+    "training_classes_filename" : "training_classes.pkl",
+    "testing_samples_filename": "testing_samples.pkl",
+    "testing_classes_filename": "testing_classes.pkl",
+    "optimization_samples_filename" : "optimization_samples.pkl",
+    "optimization_classes_filename" : "optimization_classes.pkl",
+
+    "result_filename" : "result.csv",
+    "trained_model_filename" : "trained_{}.model"
+}
+
+cuis_model_parameters = {
+    "outputUnits": [
+        16,
+        16
+    ],
+    "numOutputNeurons": 1,
+    "loss": "binary_crossentropy",
+    "optimizer": Adam(
+        learning_rate=0.01,
+        beta_1=0.9,
+        beta_2=0.999,
+        epsilon=1e-07,
+        amsgrad=True
+    ),
+    "layersActivations": [
+        LeakyReLU(),
+        LeakyReLU()
+    ],
+    "networkActivation" : "sigmoid",
+    "gru": False,
+    "tcn": False,
+    "useDropout": True,
+    "dropout": 0.3,
+    "trainingEpochs": 28,
+    "batchSize": 8,
+
+    # Convolution only parameters
+    "kernel_sizes": [
+        3
+    ],
+    "pooling": [
+        False
+    ],
+    "dilations": [
+        [1, 2, 4]
+    ],
+    "nb_stacks": [
+        1
+    ],
+
+    'model_tunning': True,
+    'optimization_split_rate': .20,
+    'optimization_normalization_values_filename': "opt_normalization_values.pkl",
+    'optimization_normalization_temporary_data_directory': "opt_data_tmp/"
+}
+
 textual_execution_saving_parameters = {
     "execution_saving_path" : "doc2vec_300_ntemporal/",
     "training_checkpoint": "checkpoint/",
@@ -236,14 +317,15 @@ textual_tuning_parameters = {
     'optimizers': ["adam"]
 }
 
-ensemble_stacking_parameters = {
-    "execution_saving_path" : "ensemble_training_wt_no_text_constraint_balanced/",
+ensemble_parameters = {
+    "execution_saving_path" : "ensemble_training_wt_no_text_constant_balanced/",
     "training_checkpoint" : "checkpoint/",
 
     "use_structured_data" : True,
     "use_textual_data": True,
     "use_class_weight": False,
     "balance_training_data": True,
+    "remove_no_text_constant" : True,
 
     "train_test_split_rate": .10,
     "training_samples_filename" : "training_samples.pkl",
@@ -308,7 +390,6 @@ ensemble_stacking_parameters = {
     "notes_textual_representation_directory" : "transformed_wt_no_text_constant/",
     'textual_representation_model_path': os.path.expanduser("~/Documents/mimic/trained_doc2vec/"),
     'textual_representation_model_filename' : 'doc2vec.model',
-    "remove_no_text_constant" : True,
 
     "normalized_structured_data_path" : "normalized_data_{}/",
     "normalization_data_path": "normalization_values_{}.pkl",
@@ -439,12 +520,17 @@ ensemble_stacking_parameters = {
         epsilon=1e-07,
         amsgrad=True
     ),
-    "meta_learner_training_epochs": 60,
+    "meta_learner_training_epochs": 20,
     "use_class_prediction": False,
 
     "structured_model_input_name": "structured",
     "textual_model_input_name": "textual"
 }
+
+cuis_training_parameters = dict()
+cuis_training_parameters.update(path_parameters)
+cuis_training_parameters.update(cuis_execution_saving_parameters)
+cuis_training_parameters.update(cuis_model_parameters)
 
 timeseries_training_parameters = dict()
 timeseries_training_parameters.update(path_parameters)
@@ -456,4 +542,4 @@ timeseries_textual_training_parameters.update(path_parameters)
 timeseries_textual_training_parameters.update(textual_execution_saving_parameters)
 timeseries_textual_training_parameters.update(textual_model_parameters)
 
-ensemble_stacking_parameters.update(path_parameters)
+ensemble_parameters.update(path_parameters)

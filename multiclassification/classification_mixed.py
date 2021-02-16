@@ -46,7 +46,7 @@ from result_evaluation import ModelEvaluation
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
-from multiclassification.parameters.classification_parameters import ensemble_stacking_parameters as parameters
+from multiclassification.parameters.classification_parameters import ensemble_parameters as parameters
 
 problem = 'mortality'
 training_base_directory = parameters['multiclassification_base_path'] + parameters['training_directory_path']

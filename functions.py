@@ -45,13 +45,9 @@ def remove_empty_textual_data_episodes(data:pd.DataFrame, textual_path_column:st
     for index, row in data.iterrows():
         textual_data = pd.read_csv(row[textual_path_column])
         textual_data = textual_data[ ~(textual_data['text'] == NO_TEXT_CONSTANT)]
-        print(textual_data)
         if textual_data.empty:
             episodes_to_remove.append(row['episode'])
-    print(len(episodes_to_remove))
-    print(len(data))
     data = data[~data['episode'].isin(episodes_to_remove)]
-    print(len(data))
     return data
 
 
@@ -303,9 +299,9 @@ def mixed_divide_by_events_lenght(data_df:pd.DataFrame, path_column, sizes_filen
 
 
 def load_ctakes_parameters_file():
-    if not os.path.exists('ctakes_parameters.json'):
+    if not os.path.exists('multiclassification/ctakes_parameters.json'):
         raise FileNotFoundError("cTakes parameter file doesn't exists!")
-    parameters = json.load(open('ctakes_parameters.json'))
+    parameters = json.load(open('multiclassification/ctakes_parameters.json'))
     return parameters
 
 

@@ -34,7 +34,9 @@ parameters = {
     "ctakes_output_path" : "noteevents_ctakes_output/",
     "noteevents_ctakes_processed_data_path" : "noteevents_processed_ctakes/",
     "noteevents_cuis_normalized_sentences" : "noteevents_sentences/",
-    "bag_of_cuis_files_path" : "bag_of_cuis_files_path/",
+    "bag_of_cuis_files_path" : "bag_of_cuis/",
+    "bag_of_cuis_frequent_path" : "bag_of_cuis_freq/",
+
 
     "features_after_binarized_file_name" : "features_after_binarized_undersampled.pkl",
     "features_types_file_name" : "features_types.pkl",

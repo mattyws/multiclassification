@@ -203,7 +203,7 @@ class NormalizationValues(object):
 
 class Normalization(object):
 
-    def __init__(self, normalization_values, temporary_path='./data_tmp/'):
+    def __init__(self, normalization_values, temporary_path='./data_tmp/', remove_min_max_values:bool=False):
         self.normalization_values = normalization_values
         self.temporary_path = temporary_path
         if not os.path.exists(temporary_path):
@@ -211,6 +211,7 @@ class Normalization(object):
         if not temporary_path.endswith('/'):
             temporary_path += '/'
         self.new_paths = None
+        self.remove_min_max_values = remove_min_max_values
 
     def normalize_files(self, filesList):
         """
@@ -269,6 +270,13 @@ class Normalization(object):
             print(file)
             print(e)
             raise Exception()
+        if self.remove_min_max_values:
+            drop_columns = []
+            for column in data.columns:
+                if "_min" in column or "_max" in column:
+                    drop_columns.append(column)
+            data = data.drop(columns=drop_columns)
+
         # Fill na
         data = data.fillna(method='ffill')
         data = data.fillna(method='backfill')

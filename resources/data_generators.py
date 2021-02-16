@@ -116,6 +116,7 @@ class LengthLongitudinalDataGenerator(tsSeq):
         for fileName in filesNames:
             with open(fileName, 'rb') as data_file:
                 data = pickle.load(data_file)
+            data = np.asarray(data).astype('float32')
             x.append(data)
             # if max_len is None or len(data) > max_len:
             #     max_len = len(data)
@@ -143,7 +144,6 @@ class LengthLongitudinalDataGenerator(tsSeq):
                 print(fileName)
                 with open(fileName, 'rb') as data_file:
                     data = pickle.load(data_file)
-                test = np.array(data)
                 x.append(data)
                 try:
                     np.array(x)
